@@ -37,6 +37,9 @@
 #include <cuda/std/type_traits>
 #include <cuda/std/utility>
 
+#include <ostream>
+#include <sstream>
+
 // autodiff includes
 #include <autodiff/common/numbertraits.hpp>
 #include <autodiff/common/meta.hpp>
@@ -1704,33 +1707,31 @@ __host__ __device__ constexpr void apply(Dual<T, G>& self)
     apply(self, Op{});
 }
 
-#if 0
 template<typename T, typename G>
-std::ostream& operator<<(std::ostream& out, const Dual<T, G>& x)
+__host__ std::ostream& operator<<(std::ostream& out, const Dual<T, G>& x)
 {
     out << x.val;
     return out;
 }
 
 template<typename T, EnableIf<isArithmetic<T>> = true>
-auto reprAux(const T& x)
+__host__ auto reprAux(const T& x)
 {
     std::stringstream ss; ss << x;
     return ss.str();
 }
 
 template<typename T, typename G>
-auto reprAux(const Dual<T, G>& x)
+__host__ auto reprAux(const Dual<T, G>& x)
 {
     return "(" + reprAux(x.val) + ", " + reprAux(x.grad) + ")";
 }
 
 template<typename T, typename G>
-auto repr(const Dual<T, G>& x)
+__host__ auto repr(const Dual<T, G>& x)
 {
     return "autodiff.dual" + reprAux(x);
 }
-#endif
 
 //=====================================================================================================================
 //

@@ -37,10 +37,8 @@
 #include <cuda/std/utility>
 #include <array>
 
-#ifndef __CUDA_ARCH__
 #include <ostream>
 #include <sstream>
-#endif
 
 // autodiff includes
 #include <autodiff/common/binomialcoefficient.hpp>
@@ -834,7 +832,6 @@ __host__ __device__ constexpr auto max(const U& x, const Real<N, T>& y)
 //
 //=====================================================================================================================
 
-#ifndef __CUDA_ARCH__
 template<size_t N, typename T>
 __host__ std::ostream& operator<<(std::ostream& out, const Real<N, T>& x)
 {
@@ -852,7 +849,6 @@ __host__ auto repr(const Real<N, T>& x)
     ss << ")";
     return ss.str();
 };
-#endif
 
 //=====================================================================================================================
 //

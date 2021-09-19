@@ -8,7 +8,7 @@ using namespace autodiff;
 // The single-variable function for which derivatives are needed
 dual f(dual x)
 {
-    return x + x*x + 1/x + log(x);
+    return 1 + x + x*x + 1/x + log(x);
 }
 
 int main()

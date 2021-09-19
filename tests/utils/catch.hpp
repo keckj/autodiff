@@ -33,7 +33,7 @@
 #include <catch2/catch.hpp>
 
 template<typename T>
-auto approx(T&& number) -> Approx
+__host__ __device__ auto approx(T&& number) -> Approx
 {
     const double val = static_cast<double>(number);
     return Approx(val).margin(1e-12);
