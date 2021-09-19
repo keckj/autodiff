@@ -27,16 +27,17 @@
 // OUT OF OR IN CONNECTION WITH THE SOFTWARE OR THE USE OR OTHER DEALINGS IN THE
 // SOFTWARE.
 
-#pragma once
+#ifndef VAR_HPP_BEMV7CTF
+#define VAR_HPP_BEMV7CTF
 
 // C++ includes
+#include <cuda/std/cstddef>
+#include <cuda/std/functional>
 #include <array>
-#include <cassert>
-#include <cmath>
-#include <cstddef>
-#include <functional>
-#include <memory>
-#include <stdexcept>
+
+#ifndef __CUDA_ARCH__
+#include <ostream>
+#endif
 
 // autodiff includes
 #include <autodiff/common/meta.hpp>
@@ -48,28 +49,24 @@ namespace autodiff {}
 namespace autodiff {
 namespace detail {
 
-using detail::EnableIf;
-using detail::For;
-using detail::isArithmetic;
-
-using std::abs;
-using std::acos;
-using std::asin;
-using std::atan;
-using std::atan2;
-using std::cos;
-using std::cosh;
-using std::erf;
-using std::exp;
-using std::hypot;
-using std::log;
-using std::log10;
-using std::pow;
-using std::sin;
-using std::sinh;
-using std::sqrt;
-using std::tan;
-using std::tanh;
+using ::abs;
+using ::acos;
+using ::asin;
+using ::atan;
+using ::atan2;
+using ::cos;
+using ::cosh;
+using ::erf;
+using ::exp;
+using ::hypot;
+using ::log;
+using ::log10;
+using ::pow;
+using ::sin;
+using ::sinh;
+using ::sqrt;
+using ::tan;
+using ::tanh;
 
 template<typename T> struct Expr;
 template<typename T> struct VariableExpr;
@@ -105,7 +102,7 @@ template<typename T> struct Hypot2Expr;
 template<typename T> struct Hypot3Expr;
 template<typename T> struct Variable;
 
-template<typename T> using ExprPtr = std::shared_ptr<Expr<T>>;
+template<typename T> using ExprPtr = Expr<T>;
 
 namespace traits {
 
@@ -116,7 +113,7 @@ template<typename T>
 struct VariableValueType;
 
 template<typename T>
-struct VariableValueType { using type = std::conditional_t<isArithmetic<T>, T, VariableValueTypeNotDefinedFor<T>>; };
+struct VariableValueType { using type = cuda::std::conditional_t<isArithmetic<T>, T, VariableValueTypeNotDefinedFor<T>>; };
 
 template<typename T>
 struct VariableValueType<Variable<T>> { using type = typename VariableValueType<T>::type; };
@@ -1082,12 +1079,13 @@ struct Hypot3Expr : TernaryExpr<T>
 };
 
 // Any expression yielding a boolean depending on arithmetic subexpressions
+template <typename Functor>
 struct BooleanExpr
 {
-    std::function<bool()> expr;
+    Functor expr;
     bool val = {};
 
-    explicit BooleanExpr(std::function<bool()> expression) : expr(std::move(expression)) { update(); }
+    explicit BooleanExpr(Functor&& expression) : expr(cuda::std::move(expression)) { update(); }
     operator bool() const { return val; }
 
     void update() { val = expr(); }
@@ -1105,27 +1103,29 @@ auto expr_comparison(const ExprPtr<T>& l, const ExprPtr<T>& r, Comparator&& comp
     });
 }
 
-template<typename Op> auto bool_expr_op(BooleanExpr& l, BooleanExpr& r, Op op) {
+template<typename F0, typename F1, typename Op> auto bool_expr_op(BooleanExpr<F0>& l, BooleanExpr<F1>& r, Op op) {
     return BooleanExpr([=]() mutable -> bool {
         l.update();
         r.update();
         return op(l, r);
     });
 }
+template<typename F0, typename F1>
+inline auto operator && (BooleanExpr<F0>&& l, BooleanExpr<F1>&& r) { return bool_expr_op(l, r, cuda::std::logical_and<> {}); }
 
-inline auto operator && (BooleanExpr&& l, BooleanExpr&& r) { return bool_expr_op(l, r, std::logical_and<> {}); }
-inline auto operator || (BooleanExpr&& l, BooleanExpr&& r) { return bool_expr_op(l, r, std::logical_or<> {}); }
+template<typename F0, typename F1>
+inline auto operator || (BooleanExpr<F0>&& l, BooleanExpr<F1>&& r) { return bool_expr_op(l, r, cuda::std::logical_or<> {}); }
 
 /// Select between expression branches depending on a boolean expression
-template<typename T>
+template<typename T, typename F>
 struct ConditionalExpr : Expr<T>
 {
     // Using declarations for data members of base class
-    BooleanExpr predicate;
+    BooleanExpr<F> predicate;
     using Expr<T>::val;
     ExprPtr<T> l, r;
 
-    ConditionalExpr(const BooleanExpr& wrappedPred, const ExprPtr<T>& ll, const ExprPtr<T>& rr) : Expr<T>(wrappedPred ? ll->val : rr->val), predicate(wrappedPred), l(ll), r(rr) {}
+    ConditionalExpr(const BooleanExpr<F>& wrappedPred, const ExprPtr<T>& ll, const ExprPtr<T>& rr) : Expr<T>(wrappedPred ? ll->val : rr->val), predicate(wrappedPred), l(ll), r(rr) {}
 
     void propagate(const T& wprime) override
     {
@@ -1152,25 +1152,25 @@ struct ConditionalExpr : Expr<T>
     }
 
     ExprPtr<T> derive(const ExprPtr<T>& left, const ExprPtr<T>& right) const {
-      return std::make_shared<ConditionalExpr>(predicate, left, right);
+      return ConditionalExpr(predicate, left, right);
     }
 };
 
 //------------------------------------------------------------------------------
 // CONVENIENT FUNCTIONS
 //------------------------------------------------------------------------------
-template<typename T> ExprPtr<T> constant(const T& val) { return std::make_shared<ConstantExpr<T>>(val); }
+template<typename T> ExprPtr<T> constant(const T& val) { return ConstantExpr<T>(val); }
 
 //------------------------------------------------------------------------------
 // ARITHMETIC OPERATORS
 //------------------------------------------------------------------------------
 template<typename T> ExprPtr<T> operator+(const ExprPtr<T>& r) { return r; }
-template<typename T> ExprPtr<T> operator-(const ExprPtr<T>& r) { return std::make_shared<NegativeExpr<T>>(-r->val, r); }
+template<typename T> ExprPtr<T> operator-(const ExprPtr<T>& r) { return NegativeExpr<T>(-r->val, r); }
 
-template<typename T> ExprPtr<T> operator+(const ExprPtr<T>& l, const ExprPtr<T>& r) { return std::make_shared<AddExpr<T>>(l->val + r->val, l, r); }
-template<typename T> ExprPtr<T> operator-(const ExprPtr<T>& l, const ExprPtr<T>& r) { return std::make_shared<SubExpr<T>>(l->val - r->val, l, r); }
-template<typename T> ExprPtr<T> operator*(const ExprPtr<T>& l, const ExprPtr<T>& r) { return std::make_shared<MulExpr<T>>(l->val * r->val, l, r); }
-template<typename T> ExprPtr<T> operator/(const ExprPtr<T>& l, const ExprPtr<T>& r) { return std::make_shared<DivExpr<T>>(l->val / r->val, l, r); }
+template<typename T> ExprPtr<T> operator+(const ExprPtr<T>& l, const ExprPtr<T>& r) { return AddExpr<T>(l->val + r->val, l, r); }
+template<typename T> ExprPtr<T> operator-(const ExprPtr<T>& l, const ExprPtr<T>& r) { return SubExpr<T>(l->val - r->val, l, r); }
+template<typename T> ExprPtr<T> operator*(const ExprPtr<T>& l, const ExprPtr<T>& r) { return MulExpr<T>(l->val * r->val, l, r); }
+template<typename T> ExprPtr<T> operator/(const ExprPtr<T>& l, const ExprPtr<T>& r) { return DivExpr<T>(l->val / r->val, l, r); }
 
 template<typename T, typename U, EnableIf<isArithmetic<U>>...> ExprPtr<T> operator+(const U& l, const ExprPtr<T>& r) { return constant<T>(l) + r; }
 template<typename T, typename U, EnableIf<isArithmetic<U>>...> ExprPtr<T> operator-(const U& l, const ExprPtr<T>& r) { return constant<T>(l) - r; }
@@ -1185,66 +1185,67 @@ template<typename T, typename U, EnableIf<isArithmetic<U>>...> ExprPtr<T> operat
 //------------------------------------------------------------------------------
 // TRIGONOMETRIC FUNCTIONS
 //------------------------------------------------------------------------------
-template<typename T> ExprPtr<T> sin(const ExprPtr<T>& x) { return std::make_shared<SinExpr<T>>(sin(x->val), x); }
-template<typename T> ExprPtr<T> cos(const ExprPtr<T>& x) { return std::make_shared<CosExpr<T>>(cos(x->val), x); }
-template<typename T> ExprPtr<T> tan(const ExprPtr<T>& x) { return std::make_shared<TanExpr<T>>(tan(x->val), x); }
-template<typename T> ExprPtr<T> asin(const ExprPtr<T>& x) { return std::make_shared<ArcSinExpr<T>>(asin(x->val), x); }
-template<typename T> ExprPtr<T> acos(const ExprPtr<T>& x) { return std::make_shared<ArcCosExpr<T>>(acos(x->val), x); }
-template<typename T> ExprPtr<T> atan(const ExprPtr<T>& x) { return std::make_shared<ArcTanExpr<T>>(atan(x->val), x); }
-template<typename T> ExprPtr<T> atan2(const ExprPtr<T>& l, const ExprPtr<T>& r) { return std::make_shared<ArcTan2Expr<T>>(atan2(l->val, r->val), l, r); }
-template<typename T, typename U, EnableIf<isArithmetic<U>>...> ExprPtr<T> atan2(const U& l, const ExprPtr<T>& r) { return std::make_shared<ArcTan2Expr<T>>(atan2(l, r->val), constant<T>(l), r); }
-template<typename T, typename U, EnableIf<isArithmetic<U>>...> ExprPtr<T> atan2(const ExprPtr<T>& l, const U& r) { return std::make_shared<ArcTan2Expr<T>>(atan2(l->val, r), l, constant<T>(r)); }
+template<typename T> ExprPtr<T> sin(const ExprPtr<T>& x) { return SinExpr<T>(sin(x->val), x); }
+template<typename T> ExprPtr<T> cos(const ExprPtr<T>& x) { return CosExpr<T>(cos(x->val), x); }
+template<typename T> ExprPtr<T> tan(const ExprPtr<T>& x) { return TanExpr<T>(tan(x->val), x); }
+template<typename T> ExprPtr<T> asin(const ExprPtr<T>& x) { return ArcSinExpr<T>(asin(x->val), x); }
+template<typename T> ExprPtr<T> acos(const ExprPtr<T>& x) { return ArcCosExpr<T>(acos(x->val), x); }
+template<typename T> ExprPtr<T> atan(const ExprPtr<T>& x) { return ArcTanExpr<T>(atan(x->val), x); }
+template<typename T> ExprPtr<T> atan2(const ExprPtr<T>& l, const ExprPtr<T>& r) { return ArcTan2Expr<T>(atan2(l->val, r->val), l, r); }
+template<typename T, typename U, EnableIf<isArithmetic<U>>...> ExprPtr<T> atan2(const U& l, const ExprPtr<T>& r) { return ArcTan2Expr<T>(atan2(l, r->val), constant<T>(l), r); }
+template<typename T, typename U, EnableIf<isArithmetic<U>>...> ExprPtr<T> atan2(const ExprPtr<T>& l, const U& r) { return ArcTan2Expr<T>(atan2(l->val, r), l, constant<T>(r)); }
 
 
 //------------------------------------------------------------------------------
 // HYPOT2 FUNCTIONS
 //------------------------------------------------------------------------------
-template<typename T> ExprPtr<T> hypot(const ExprPtr<T>& l, const ExprPtr<T>& r) { return std::make_shared<Hypot2Expr<T>>(hypot(l->val, r->val), l, r); }
-template<typename T, typename U, EnableIf<isArithmetic<U>>...> ExprPtr<T> hypot(const U& l, const ExprPtr<T>& r) { return std::make_shared<Hypot2Expr<T>>(hypot(l, r->val), constant<T>(l), r); }
-template<typename T, typename U, EnableIf<isArithmetic<U>>...> ExprPtr<T> hypot(const ExprPtr<T>& l, const U& r) { return std::make_shared<Hypot2Expr<T>>(hypot(l->val, r), l, constant<T>(r)); }
+template<typename T> ExprPtr<T> hypot(const ExprPtr<T>& l, const ExprPtr<T>& r) { return Hypot2Expr<T>(hypot(l->val, r->val), l, r); }
+template<typename T, typename U, EnableIf<isArithmetic<U>>...> ExprPtr<T> hypot(const U& l, const ExprPtr<T>& r) { return Hypot2Expr<T>(hypot(l, r->val), constant<T>(l), r); }
+template<typename T, typename U, EnableIf<isArithmetic<U>>...> ExprPtr<T> hypot(const ExprPtr<T>& l, const U& r) { return Hypot2Expr<T>(hypot(l->val, r), l, constant<T>(r)); }
 
 //------------------------------------------------------------------------------
 // HYPOT3 FUNCTIONS
 //------------------------------------------------------------------------------
-template<typename T> ExprPtr<T> hypot(const ExprPtr<T>& l, const ExprPtr<T>& c, const ExprPtr<T>& r) { return std::make_shared<Hypot3Expr<T>>(hypot(l->val,c->val, r->val), l, c, r); }
-template<typename T, typename U, EnableIf<isArithmetic<U>>...> ExprPtr<T> hypot(const ExprPtr<T>& l, const ExprPtr<T>& c, const U& r) { return std::make_shared<Hypot3Expr<T>>(hypot(l->val, c->val, r), l, c, constant<T>(r)); }
-template<typename T, typename U, EnableIf<isArithmetic<U>>...> ExprPtr<T> hypot(const U& l, const ExprPtr<T>& c, const ExprPtr<T>& r) { return std::make_shared<Hypot3Expr<T>>(hypot(l, c->val, r->val), constant<T>(l), c, r); }
-template<typename T, typename U, EnableIf<isArithmetic<U>>...> ExprPtr<T> hypot(const ExprPtr<T>& l,const U& c, const ExprPtr<T>& r) { return std::make_shared<Hypot3Expr<T>>(hypot(l->val, c, r->val), l, constant<T>(c), r); }
-template<typename T, typename U, typename V, EnableIf<isArithmetic<U> && isArithmetic<V>>...> ExprPtr<T> hypot(const ExprPtr<T>& l, const U& c, const V& r) { return std::make_shared<Hypot3Expr<T>>(hypot(l->val, c, r), l, constant<T>(c), constant<T>(r)); }
-template<typename T, typename U, typename V, EnableIf<isArithmetic<U> && isArithmetic<V>>...> ExprPtr<T> hypot(const U& l, const ExprPtr<T>& c, const V& r) { return std::make_shared<Hypot3Expr<T>>(hypot(l, c->val, r), constant<T>(l), c, constant<T>(r)); }
-template<typename T, typename U, typename V, EnableIf<isArithmetic<U> && isArithmetic<V>>...> ExprPtr<T> hypot(const V& l, const U& c, const ExprPtr<T>& r) { return std::make_shared<Hypot3Expr<T>>(hypot(l, c, r->val), constant<T>(l), constant<T>(c), r); }
+template<typename T> ExprPtr<T> hypot(const ExprPtr<T>& l, const ExprPtr<T>& c, const ExprPtr<T>& r) { return Hypot3Expr<T>(hypot(l->val,c->val, r->val), l, c, r); }
+template<typename T, typename U, EnableIf<isArithmetic<U>>...> ExprPtr<T> hypot(const ExprPtr<T>& l, const ExprPtr<T>& c, const U& r) { return Hypot3Expr<T>(hypot(l->val, c->val, r), l, c, constant<T>(r)); }
+template<typename T, typename U, EnableIf<isArithmetic<U>>...> ExprPtr<T> hypot(const U& l, const ExprPtr<T>& c, const ExprPtr<T>& r) { return Hypot3Expr<T>(hypot(l, c->val, r->val), constant<T>(l), c, r); }
+template<typename T, typename U, EnableIf<isArithmetic<U>>...> ExprPtr<T> hypot(const ExprPtr<T>& l,const U& c, const ExprPtr<T>& r) { return Hypot3Expr<T>(hypot(l->val, c, r->val), l, constant<T>(c), r); }
+template<typename T, typename U, typename V, EnableIf<isArithmetic<U> && isArithmetic<V>>...> ExprPtr<T> hypot(const ExprPtr<T>& l, const U& c, const V& r) { return Hypot3Expr<T>(hypot(l->val, c, r), l, constant<T>(c), constant<T>(r)); }
+template<typename T, typename U, typename V, EnableIf<isArithmetic<U> && isArithmetic<V>>...> ExprPtr<T> hypot(const U& l, const ExprPtr<T>& c, const V& r) { return Hypot3Expr<T>(hypot(l, c->val, r), constant<T>(l), c, constant<T>(r)); }
+template<typename T, typename U, typename V, EnableIf<isArithmetic<U> && isArithmetic<V>>...> ExprPtr<T> hypot(const V& l, const U& c, const ExprPtr<T>& r) { return Hypot3Expr<T>(hypot(l, c, r->val), constant<T>(l), constant<T>(c), r); }
 
 //------------------------------------------------------------------------------
 // HYPERBOLIC FUNCTIONS
 //------------------------------------------------------------------------------
-template<typename T> ExprPtr<T> sinh(const ExprPtr<T>& x) { return std::make_shared<SinhExpr<T>>(sinh(x->val), x); }
-template<typename T> ExprPtr<T> cosh(const ExprPtr<T>& x) { return std::make_shared<CoshExpr<T>>(cosh(x->val), x); }
-template<typename T> ExprPtr<T> tanh(const ExprPtr<T>& x) { return std::make_shared<TanhExpr<T>>(tanh(x->val), x); }
+template<typename T> ExprPtr<T> sinh(const ExprPtr<T>& x) { return SinhExpr<T>(sinh(x->val), x); }
+template<typename T> ExprPtr<T> cosh(const ExprPtr<T>& x) { return CoshExpr<T>(cosh(x->val), x); }
+template<typename T> ExprPtr<T> tanh(const ExprPtr<T>& x) { return TanhExpr<T>(tanh(x->val), x); }
 
 //------------------------------------------------------------------------------
 // EXPONENTIAL AND LOGARITHMIC FUNCTIONS
 //------------------------------------------------------------------------------
-template<typename T> ExprPtr<T> exp(const ExprPtr<T>& x) { return std::make_shared<ExpExpr<T>>(exp(x->val), x); }
-template<typename T> ExprPtr<T> log(const ExprPtr<T>& x) { return std::make_shared<LogExpr<T>>(log(x->val), x); }
-template<typename T> ExprPtr<T> log10(const ExprPtr<T>& x) { return std::make_shared<Log10Expr<T>>(log10(x->val), x); }
+template<typename T> ExprPtr<T> exp(const ExprPtr<T>& x) { return ExpExpr<T>(exp(x->val), x); }
+template<typename T> ExprPtr<T> log(const ExprPtr<T>& x) { return LogExpr<T>(log(x->val), x); }
+template<typename T> ExprPtr<T> log10(const ExprPtr<T>& x) { return Log10Expr<T>(log10(x->val), x); }
 
 //------------------------------------------------------------------------------
 // POWER FUNCTIONS
 //------------------------------------------------------------------------------
-template<typename T> ExprPtr<T> sqrt(const ExprPtr<T>& x) { return std::make_shared<SqrtExpr<T>>(sqrt(x->val), x); }
-template<typename T> ExprPtr<T> pow(const ExprPtr<T>& l, const ExprPtr<T>& r) { return std::make_shared<PowExpr<T>>(pow(l->val, r->val), l, r); }
-template<typename T, typename U, EnableIf<isArithmetic<U>>...> ExprPtr<T> pow(const U& l, const ExprPtr<T>& r) { return std::make_shared<PowConstantLeftExpr<T>>(pow(l, r->val), constant<T>(l), r); }
-template<typename T, typename U, EnableIf<isArithmetic<U>>...> ExprPtr<T> pow(const ExprPtr<T>& l, const U& r) { return std::make_shared<PowConstantRightExpr<T>>(pow(l->val, r), l, constant<T>(r)); }
+template<typename T> ExprPtr<T> sqrt(const ExprPtr<T>& x) { return SqrtExpr<T>(sqrt(x->val), x); }
+template<typename T> ExprPtr<T> pow(const ExprPtr<T>& l, const ExprPtr<T>& r) { return PowExpr<T>(pow(l->val, r->val), l, r); }
+template<typename T, typename U, EnableIf<isArithmetic<U>>...> ExprPtr<T> pow(const U& l, const ExprPtr<T>& r) { return PowConstantLeftExpr<T>(pow(l, r->val), constant<T>(l), r); }
+template<typename T, typename U, EnableIf<isArithmetic<U>>...> ExprPtr<T> pow(const ExprPtr<T>& l, const U& r) { return PowConstantRightExpr<T>(pow(l->val, r), l, constant<T>(r)); }
+
 
 //------------------------------------------------------------------------------
 // OTHER FUNCTIONS
 //------------------------------------------------------------------------------
-template<typename T> ExprPtr<T> abs(const ExprPtr<T>& x) { return std::make_shared<AbsExpr<T>>(abs(x->val), x); }
+template<typename T> ExprPtr<T> abs(const ExprPtr<T>& x) { return AbsExpr<T>(abs(x->val), x); }
 template<typename T> ExprPtr<T> abs2(const ExprPtr<T>& x) { return x * x; }
 template<typename T> ExprPtr<T> conj(const ExprPtr<T>& x) { return x; }
 template<typename T> ExprPtr<T> real(const ExprPtr<T>& x) { return x; }
 template<typename T> ExprPtr<T> imag(const ExprPtr<T>&) { return constant<T>(0.0); }
-template<typename T> ExprPtr<T> erf(const ExprPtr<T>& x) { return std::make_shared<ErfExpr<T>>(erf(x->val), x); }
+template<typename T> ExprPtr<T> erf(const ExprPtr<T>& x) { return ErfExpr<T>(erf(x->val), x); }
 
 /// The autodiff variable type used for detail mode automatic differentiation.
 template<typename T>
@@ -1261,25 +1262,27 @@ struct Variable
 
     /// Construct a Variable object with given arithmetic value
     template<typename U, EnableIf<isArithmetic<U>>...>
-    Variable(const U& val) : expr(std::make_shared<IndependentVariableExpr<T>>(val)) {}
+    Variable(const U& val) : expr(IndependentVariableExpr<T>(val)) {}
 
     /// Construct a Variable object with given expression
-    Variable(const ExprPtr<T>& e) : expr(std::make_shared<DependentVariableExpr<T>>(e)) {}
+    Variable(const ExprPtr<T>& e) : expr(DependentVariableExpr<T>(e)) {}
 
     /// Default copy assignment
     Variable& operator=(const Variable&) = default;
 
     /// Update the value of this variable with changes in its expression tree
     void update() { expr->update(); }
-
+    
+#if 0
     void update(T value) {
-      if(auto independentExpr = std::dynamic_pointer_cast<IndependentVariableExpr<T>>(expr)) {
+      if(auto independentExpr = cuda::std::dynamic_pointer_cast<IndependentVariableExpr<T>>(expr)) {
         independentExpr->val = value;
         independentExpr->update();
       } else {
-        throw std::logic_error("Cannot update the value of a dependent expression stored in a variable");
+        throw cuda::std::logic_error("Cannot update the value of a dependent expression stored in a variable");
       }
     }
+#endif
 
     /// Implicitly convert this Variable object into an expression pointer.
     operator const ExprPtr<T>&() const { return expr; }
@@ -1316,11 +1319,11 @@ template<typename T> T expr_value(const ExprPtr<T>& t) { return t->val; }
 template<typename T> T expr_value(const Variable<T>& t) { return t.expr->val; }
 
 template<typename T, typename U>
-using expr_common_t = std::common_type_t<decltype(expr_value(std::declval<T>())), decltype(expr_value(std::declval<U>()))>;
+using expr_common_t = cuda::std::common_type_t<decltype(expr_value(cuda::std::declval<T>())), decltype(expr_value(cuda::std::declval<U>()))>;
 
-template<class> struct sfinae_true : std::true_type {};
-template<typename T> static auto is_expr_test(int) -> sfinae_true<decltype(expr_value(std::declval<T>()))>;
-template<typename T> static auto is_expr_test(long) -> std::false_type;
+template<class> struct sfinae_true : cuda::std::true_type {};
+template<typename T> static auto is_expr_test(int) -> sfinae_true<decltype(expr_value(cuda::std::declval<T>()))>;
+template<typename T> static auto is_expr_test(long) -> cuda::std::false_type;
 template<typename T> struct is_expr : decltype(is_expr_test<T>(0)) {};
 template<typename T> constexpr bool is_expr_v = is_expr<T>::value;
 
@@ -1328,7 +1331,7 @@ template<typename T, typename U, EnableIf<isArithmetic<U>>...> ExprPtr<T> coerce
 template<typename T> ExprPtr<T> coerce_expr(const ExprPtr<T>& t) { return t; }
 template<typename T> ExprPtr<T> coerce_expr(const Variable<T>& t) { return t.expr; }
 
-template<typename T, typename U> struct is_binary_expr : std::conditional_t<!(isArithmetic<T> && isArithmetic<U>) && is_expr_v<T> && is_expr_v<U>, std::true_type, std::false_type> {};
+template<typename T, typename U> struct is_binary_expr : cuda::std::conditional_t<!(isArithmetic<T> && isArithmetic<U>) && is_expr_v<T> && is_expr_v<U>, cuda::std::true_type, cuda::std::false_type> {};
 template<typename T, typename U> constexpr bool is_binary_expr_v = is_binary_expr<T, U>::value;
 
 
@@ -1343,26 +1346,26 @@ auto comparison_operator(const T& t, const U& u) {
 }
 
 template<typename T, typename U, EnableIf<is_binary_expr_v<T, U>>...>
-auto operator == (const T& t, const U& u) { return comparison_operator<std::equal_to<>>(t, u); }
+auto operator == (const T& t, const U& u) { return comparison_operator<cuda::std::equal_to<>>(t, u); }
 template<typename T, typename U, EnableIf<is_binary_expr_v<T, U>>...>
-auto operator != (const T& t, const U& u) { return comparison_operator<std::not_equal_to<>>(t, u); }
+auto operator != (const T& t, const U& u) { return comparison_operator<cuda::std::not_equal_to<>>(t, u); }
 template<typename T, typename U, EnableIf<is_binary_expr_v<T, U>>...>
-auto operator <= (const T& t, const U& u) { return comparison_operator<std::less_equal<>>(t, u); }
+auto operator <= (const T& t, const U& u) { return comparison_operator<cuda::std::less_equal<>>(t, u); }
 template<typename T, typename U, EnableIf<is_binary_expr_v<T, U>>...>
-auto operator >= (const T& t, const U& u) { return comparison_operator<std::greater_equal<>>(t, u); }
+auto operator >= (const T& t, const U& u) { return comparison_operator<cuda::std::greater_equal<>>(t, u); }
 template<typename T, typename U, EnableIf<is_binary_expr_v<T, U>>...>
-auto operator < (const T& t, const U& u) { return comparison_operator<std::less<>>(t, u); }
+auto operator < (const T& t, const U& u) { return comparison_operator<cuda::std::less<>>(t, u); }
 template<typename T, typename U, EnableIf<is_binary_expr_v<T, U>>...>
-auto operator > (const T& t, const U& u) { return comparison_operator<std::greater<>>(t, u); }
+auto operator > (const T& t, const U& u) { return comparison_operator<cuda::std::greater<>>(t, u); }
 
 //------------------------------------------------------------------------------
 // CONDITION AND RELATED FUNCTIONS
 //------------------------------------------------------------------------------
 
-template<typename T, typename U, EnableIf<is_expr_v<T> && is_expr_v<U>>...>
-auto condition(BooleanExpr&& p, const T& t, const U& u) {
+template<typename T, typename U, typename F, EnableIf<is_expr_v<T> && is_expr_v<U>>...>
+auto condition(BooleanExpr<F>&& p, const T& t, const U& u) {
   using C = expr_common_t<T, U>;
-  ExprPtr<C> expr = std::make_shared<ConditionalExpr<C>>(std::forward<BooleanExpr>(p), coerce_expr<C>(t), coerce_expr<C>(u));
+  ExprPtr<C> expr = ConditionalExpr<C,F>(cuda::std::forward<BooleanExpr<F>>(p), coerce_expr<C>(t), coerce_expr<C>(u));
   return expr;
 }
 
@@ -1473,7 +1476,7 @@ template<typename T>
 [[deprecated("Use method `derivatives(y, wrt(a, b, c,...)` instead.")]]
 auto derivatives(const T&)
 {
-    static_assert(!std::is_same_v<T,T>, "Method derivatives(const var&) has been deprecated. Use method derivatives(y, wrt(a, b, c,...) instead.");
+    static_assert(!cuda::std::is_same_v<T,T>, "Method derivatives(const var&) has been deprecated. Use method derivatives(y, wrt(a, b, c,...) instead.");
 }
 
 /// Return the derivatives of a variable y with respect to all independent variables.
@@ -1481,20 +1484,20 @@ template<typename T>
 [[deprecated("Use method derivativesx(y, wrt(a, b, c,...) instead.")]]
 auto derivativesx(const T&)
 {
-    static_assert(!std::is_same_v<T,T>, "Method derivativesx(const var&) has been deprecated. Use method derivativesx(y, wrt(a, b, c,...) instead.");
+    static_assert(!cuda::std::is_same_v<T,T>, "Method derivativesx(const var&) has been deprecated. Use method derivativesx(y, wrt(a, b, c,...) instead.");
 }
 
 template<typename... Vars>
 struct Wrt
 {
-    std::tuple<Vars...> args;
+    cuda::std::tuple<Vars...> args;
 };
 
 /// The keyword used to denote the variables *with respect to* the derivative is calculated.
 template<typename... Args>
 auto wrt(Args&&... args)
 {
-    return Wrt<Args&&...>{ std::forward_as_tuple(std::forward<Args>(args)...) };
+    return Wrt<Args&&...>{ cuda::std::forward_as_tuple(cuda::std::forward<Args>(args)...) };
 }
 
 /// Return the derivatives of a dependent variable y with respect given independent variables.
@@ -1502,17 +1505,17 @@ template<typename T, typename... Vars>
 auto derivatives(const Variable<T>& y, const Wrt<Vars...>& wrt)
 {
     constexpr auto N = sizeof...(Vars);
-    std::array<T, N> values;
+    cuda::std::array<T, N> values;
     values.fill(0.0);
 
     For<N>([&](auto i) constexpr {
-        std::get<i>(wrt.args).expr->bind_value(&values.at(i));
+        cuda::std::get<i>(wrt.args).expr->bind_value(&values.at(i));
     });
 
     y.expr->propagate(1.0);
 
     For<N>([&](auto i) constexpr {
-        std::get<i>(wrt.args).expr->bind_value(nullptr);
+        cuda::std::get<i>(wrt.args).expr->bind_value(nullptr);
     });
 
     return values;
@@ -1523,16 +1526,16 @@ template<typename T, typename... Vars>
 auto derivativesx(const Variable<T>& y, const Wrt<Vars...>& wrt)
 {
     constexpr auto N = sizeof...(Vars);
-    std::array<Variable<T>, N> values;
+    cuda::std::array<Variable<T>, N> values;
 
     For<N>([&](auto i) constexpr {
-        std::get<i>(wrt.args).expr->bind_expr(&values.at(i).expr);
+        cuda::std::get<i>(wrt.args).expr->bind_expr(&values.at(i).expr);
     });
 
     y.expr->propagatex(constant<T>(1.0));
 
     For<N>([&](auto i) constexpr {
-        std::get<i>(wrt.args).expr->bind_expr(nullptr);
+        cuda::std::get<i>(wrt.args).expr->bind_expr(nullptr);
     });
 
     return values;
@@ -1540,7 +1543,7 @@ auto derivativesx(const Variable<T>& y, const Wrt<Vars...>& wrt)
 
 /// Output a Variable object to the output stream.
 template<typename T>
-std::ostream& operator<<(std::ostream& out, const Variable<T>& x)
+__host__ std::ostream& operator<<(std::ostream& out, const Variable<T>& x)
 {
     out << val(x);
     return out;
@@ -1548,7 +1551,7 @@ std::ostream& operator<<(std::ostream& out, const Variable<T>& x)
 
 /// Output an ExprPrt object to the output stream.
 template<typename T>
-std::ostream& operator<<(std::ostream& out, const ExprPtr<T>& x)
+__host__ std::ostream& operator<<(std::ostream& out, const ExprPtr<T>& x)
 {
     out << val(x);
     return out;
@@ -1587,6 +1590,8 @@ using detail::val;
 
 using var = Variable<double>;
 
-inline detail::BooleanExpr boolref(const bool& v) { return detail::BooleanExpr([&]() { return v; }); }
+inline auto boolref(const bool& v) { return detail::BooleanExpr([&]() { return v; }); }
 
 } // namespace autodiff
+
+#endif /* end of include guard: VAR_HPP_BEMV7CTF */

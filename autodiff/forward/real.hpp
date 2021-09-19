@@ -27,9 +27,12 @@
 // OUT OF OR IN CONNECTION WITH THE SOFTWARE OR THE USE OR OTHER DEALINGS IN THE
 // SOFTWARE.
 
-#pragma once
+#ifndef REAL_HPP_VRHUGOOZ
+#define REAL_HPP_VRHUGOOZ
 
 // autodiff includes
 #include <autodiff/forward/real/real.hpp>
 #include <autodiff/forward/utils/derivative.hpp>
 #include <autodiff/forward/utils/taylorseries.hpp>
+
+#endif /* end of include guard: REAL_HPP_VRHUGOOZ */

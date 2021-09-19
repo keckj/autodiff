@@ -27,53 +27,53 @@
 // OUT OF OR IN CONNECTION WITH THE SOFTWARE OR THE USE OR OTHER DEALINGS IN THE
 // SOFTWARE.
 
-#pragma once
+#ifndef META_HPP_PQ3JSZOE
+#define META_HPP_PQ3JSZOE
 
-// C++ includes
-#include <cstddef>
-#include <tuple>
-#include <type_traits>
+#include <cuda/std/type_traits>
+#include <cuda/std/cstddef>
+#include <cuda/std/tuple>
 
 namespace autodiff {
 namespace detail {
 
-template<bool value>
-using EnableIf = typename std::enable_if<value>::type;
+template<bool value, typename T=bool>
+using EnableIf = typename cuda::std::enable_if<value, T>::type;
 
 template<typename T>
-using PlainType = typename std::remove_cv<typename std::remove_reference<T>::type>::type;
+using PlainType = typename cuda::std::remove_cv<typename cuda::std::remove_reference<T>::type>::type;
 
 template<bool Cond, typename WhenTrue, typename WhenFalse>
-using ConditionalType = typename std::conditional<Cond, WhenTrue, WhenFalse>::type;
+using ConditionalType = typename cuda::std::conditional<Cond, WhenTrue, WhenFalse>::type;
 
 template<typename A, typename B>
-using CommonType = typename std::common_type<A, B>::type;
+using CommonType = typename cuda::std::common_type<A, B>::type;
 
 template<typename Fun, typename... Args>
-using ReturnType = std::invoke_result_t<Fun, Args...>;
+using ReturnType = cuda::std::invoke_result_t<Fun, Args...>;
 
 template<typename T, typename U>
-constexpr bool isConvertible = std::is_convertible<PlainType<T>, U>::value;
+constexpr bool isConvertible = cuda::std::is_convertible<PlainType<T>, U>::value;
 
 template<typename A, typename B>
-constexpr bool isSame = std::is_same_v<A, B>;
+constexpr bool isSame = cuda::std::is_same_v<A, B>;
 
 template<typename Tuple>
-constexpr auto TupleSize = std::tuple_size_v<std::decay_t<Tuple>>;
+constexpr auto TupleSize = cuda::std::tuple_size_v<cuda::std::decay_t<Tuple>>;
 
 template<typename Tuple>
-constexpr auto TupleHead(Tuple&& tuple)
+__host__ __device__ constexpr auto TupleHead(Tuple&& tuple)
 {
-    return std::get<0>(std::forward<Tuple>(tuple));
+    return cuda::std::get<0>(cuda::std::forward<Tuple>(tuple));
 }
 
 template<typename Tuple>
-constexpr auto TupleTail(Tuple&& tuple)
+__host__ __device__ constexpr auto TupleTail(Tuple&& tuple)
 {
     auto g = [&](auto&&, auto&&... args) constexpr {
-        return std::forward_as_tuple(args...);
+        return cuda::std::forward_as_tuple(args...);
     };
-    return std::apply(g, std::forward<Tuple>(tuple));
+    return cuda::std::apply(g, cuda::std::forward<Tuple>(tuple));
 }
 
 template<size_t i>
@@ -85,79 +85,79 @@ struct Index
 };
 
 template<size_t i, size_t ibegin, size_t iend, typename Function>
-constexpr auto AuxFor(Function&& f)
+__host__ __device__ constexpr auto AuxFor(Function&& f)
 {
     if constexpr (i < iend) {
         f(Index<i>{});
-        AuxFor<i + 1, ibegin, iend>(std::forward<Function>(f));
+        AuxFor<i + 1, ibegin, iend>(cuda::std::forward<Function>(f));
     }
 }
 
 template<size_t ibegin, size_t iend, typename Function>
-constexpr auto For(Function&& f)
+__host__ __device__ constexpr auto For(Function&& f)
 {
-    AuxFor<ibegin, ibegin, iend>(std::forward<Function>(f));
+    AuxFor<ibegin, ibegin, iend>(cuda::std::forward<Function>(f));
 }
 
 template<size_t iend, typename Function>
-constexpr auto For(Function&& f)
+__host__ __device__ constexpr auto For(Function&& f)
 {
-    For<0, iend>(std::forward<Function>(f));
+    For<0, iend>(cuda::std::forward<Function>(f));
 }
 
 template<size_t i, size_t ibegin, size_t iend, typename Function>
-constexpr auto AuxReverseFor(Function&& f)
+__host__ __device__ constexpr auto AuxReverseFor(Function&& f)
 {
     if constexpr (i < iend)
     {
-        AuxReverseFor<i + 1, ibegin, iend>(std::forward<Function>(f));
+        AuxReverseFor<i + 1, ibegin, iend>(cuda::std::forward<Function>(f));
         f(Index<i>{});
     }
 }
 
 template<size_t ibegin, size_t iend, typename Function>
-constexpr auto ReverseFor(Function&& f)
+__host__ __device__ constexpr auto ReverseFor(Function&& f)
 {
-    AuxReverseFor<ibegin, ibegin, iend>(std::forward<Function>(f));
+    AuxReverseFor<ibegin, ibegin, iend>(cuda::std::forward<Function>(f));
 }
 
 template<size_t iend, typename Function>
-constexpr auto ReverseFor(Function&& f)
+__host__ __device__ constexpr auto ReverseFor(Function&& f)
 {
-    ReverseFor<0, iend>(std::forward<Function>(f));
+    ReverseFor<0, iend>(cuda::std::forward<Function>(f));
 }
 
 template<typename Tuple, typename Function>
-constexpr auto ForEach(Tuple&& tuple, Function&& f)
+__host__ __device__ constexpr auto ForEach(Tuple&& tuple, Function&& f)
 {
     constexpr auto N = TupleSize<Tuple>;
     For<N>([&](auto i) constexpr {
-        f(std::get<i>(tuple));
+        f(cuda::std::get<i>(tuple));
     });
     //------------------------------------------------------------
     // ALTERNATIVE IMPLEMENTATION POSSIBLY USEFUL TO KEEP IT HERE
     // auto g = [&](auto&&... args) constexpr {
-    //     ( f(std::forward<decltype(args)>(args)), ...);
+    //     ( f(cuda::std::forward<decltype(args)>(args)), ...);
     // };
-    // std::apply(g, std::forward<Tuple>(tuple));
+    // cuda::std::apply(g, cuda::std::forward<Tuple>(tuple));
     //------------------------------------------------------------
 }
 
 template<typename Tuple1, typename Tuple2, typename Function>
-constexpr auto ForEach(Tuple1&& tuple1, Tuple2&& tuple2, Function&& f)
+__host__ __device__ constexpr auto ForEach(Tuple1&& tuple1, Tuple2&& tuple2, Function&& f)
 {
     constexpr auto N1 = TupleSize<Tuple1>;
     constexpr auto N2 = TupleSize<Tuple2>;
     static_assert(N1 == N2);
     For<N1>([&](auto i) constexpr {
-        f(std::get<i>(tuple1), std::get<i>(tuple2));
+        f(cuda::std::get<i>(tuple1), cuda::std::get<i>(tuple2));
     });
 }
 
 template<size_t ibegin, size_t iend, typename Function>
-constexpr auto Sum(Function&& f)
+__host__ __device__ constexpr auto Sum(Function&& f)
 {
-    using ResultType = std::invoke_result_t<Function, Index<ibegin>>;
+    using ResultType = cuda::std::invoke_result_t<Function, Index<ibegin>>;
     ResultType res = {};
     For<ibegin, iend>([&](auto i) constexpr {
         res += f(Index<i>{});
@@ -166,9 +166,9 @@ constexpr auto Sum(Function&& f)
 }
 
 template<typename Tuple, typename Function>
-constexpr auto Reduce(Tuple&& tuple, Function&& f)
+__host__ __device__ constexpr auto Reduce(Tuple&& tuple, Function&& f)
 {
-    using ResultType = std::invoke_result_t<Function, decltype(std::get<0>(tuple))>;
+    using ResultType = cuda::std::invoke_result_t<Function, decltype(cuda::std::get<0>(tuple))>;
     ResultType res = {};
     ForEach(tuple, [&](auto&& item) constexpr {
         res += f(item);
@@ -178,3 +178,6 @@ constexpr auto Reduce(Tuple&& tuple, Function&& f)
 
 } // namespace detail
 } // namespace autodiff
+
+#endif /* end of include guard: META_HPP_PQ3JSZOE */
+

@@ -27,10 +27,11 @@
 // OUT OF OR IN CONNECTION WITH THE SOFTWARE OR THE USE OR OTHER DEALINGS IN THE
 // SOFTWARE.
 
-#pragma once
+#ifndef BINOMIALCOEFFICIENT_HPP_GPA9KS8H
+#define BINOMIALCOEFFICIENT_HPP_GPA9KS8H
 
 // C++ includes
-#include <cstddef>
+#include <cuda/std/cstddef>
 
 namespace autodiff {
 namespace detail {
@@ -111,3 +112,5 @@ constexpr double BinomialCoefficient = AuxBinomialCoefficient<i, j>::value;
 
 } // namespace detail
 } // namespace autodiff
+
+#endif /* end of include guard: BINOMIALCOEFFICIENT_HPP_GPA9KS8H */

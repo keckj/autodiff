@@ -27,16 +27,20 @@
 // OUT OF OR IN CONNECTION WITH THE SOFTWARE OR THE USE OR OTHER DEALINGS IN THE
 // SOFTWARE.
 
-#pragma once
+#ifndef REAL_HPP_ASE512KP
+#define REAL_HPP_ASE512KP
+
 
 // C++ includes
-#include <algorithm>
-#include <cassert>
-#include <cmath>
-#include <iostream>
+#include <cuda/std/cassert>
+#include <cuda/std/tuple>
+#include <cuda/std/utility>
+#include <array>
+
+#ifndef __CUDA_ARCH__
+#include <ostream>
 #include <sstream>
-#include <tuple>
-#include <utility>
+#endif
 
 // autodiff includes
 #include <autodiff/common/binomialcoefficient.hpp>
@@ -59,23 +63,23 @@ private:
 
 public:
     /// Construct a default Real number of order *N* and type *T*.
-    constexpr Real()
+    __host__ __device__ constexpr Real()
     {}
 
     /// Construct a Real number with given data.
-    constexpr Real(const T& value)
+    __host__ __device__ constexpr Real(const T& value)
     {
         m_data[0] = value;
     }
 
     /// Construct a Real number with given data.
-    constexpr Real(const std::array<T, N + 1>& data)
+    __host__ __device__ constexpr Real(const std::array<T, N + 1>& data)
     : m_data(data)
     {}
 
     /// Construct a Real number with given data.
-    template<size_t M, typename U, EnableIf<isArithmetic<U>>...>
-    constexpr explicit Real(const Real<M, U>& other)
+    template<size_t M, typename U, EnableIf<isArithmetic<U>> = true>
+    __host__ __device__ constexpr explicit Real(const Real<M, U>& other)
     {
         static_assert(N <= M);
         For<0, N + 1>([&](auto i) constexpr {
@@ -84,84 +88,84 @@ public:
     }
 
     /// Return the value of the Real number.
-    constexpr auto val() -> T&
+    __host__ __device__ constexpr auto val() -> T&
     {
         return m_data[0];
     }
 
     /// Return the value of the Real number.
-    constexpr auto val() const -> const T&
+    __host__ __device__ constexpr auto val() const -> const T&
     {
         return m_data[0];
     }
 
-    constexpr auto operator[](size_t i) -> T&
+    __host__ __device__ constexpr auto operator[](size_t i) -> T&
     {
         return m_data[i];
     }
 
-    constexpr auto operator[](size_t i) const -> const T&
+    __host__ __device__ constexpr auto operator[](size_t i) const -> const T&
     {
         return m_data[i];
     }
 
-    template<typename U, EnableIf<isArithmetic<U>>...>
-    constexpr auto operator=(const U& value) -> Real&
+    template<typename U, EnableIf<isArithmetic<U>> = true>
+    __host__ __device__ constexpr auto operator=(const U& value) -> Real&
     {
         m_data[0] = value;
         For<1, N + 1>([&](auto i) constexpr { m_data[i] = T{}; });
         return *this;
     }
 
-    constexpr auto operator=(const std::array<T, N + 1>& data)
+    __host__ __device__ constexpr auto operator=(const std::array<T, N + 1>& data)
     {
         m_data = data;
         return *this;
     }
 
-    template<typename U, EnableIf<isArithmetic<U>>...>
-    constexpr auto operator+=(const U& value) -> Real&
+    template<typename U, EnableIf<isArithmetic<U>> = true>
+    __host__ __device__ constexpr auto operator+=(const U& value) -> Real&
     {
         m_data[0] += static_cast<T>(value);
         return *this;
     }
 
-    template<typename U, EnableIf<isArithmetic<U>>...>
-    constexpr auto operator-=(const U& value) -> Real&
+    template<typename U, EnableIf<isArithmetic<U>> = true>
+    __host__ __device__ constexpr auto operator-=(const U& value) -> Real&
     {
         m_data[0] -= static_cast<T>(value);
         return *this;
     }
 
-    template<typename U, EnableIf<isArithmetic<U>>...>
-    constexpr auto operator*=(const U& value) -> Real&
+    template<typename U, EnableIf<isArithmetic<U>> = true>
+    __host__ __device__ constexpr auto operator*=(const U& value) -> Real&
     {
         For<0, N + 1>([&](auto i) constexpr { m_data[i] *= static_cast<T>(value); });
         return *this;
     }
 
-    template<typename U, EnableIf<isArithmetic<U>>...>
-    constexpr auto operator/=(const U& value) -> Real&
+    template<typename U, EnableIf<isArithmetic<U>> = true>
+    __host__ __device__ constexpr auto operator/=(const U& value) -> Real&
     {
         For<0, N + 1>([&](auto i) constexpr { m_data[i] /= static_cast<T>(value); });
         return *this;
     }
 
-    constexpr auto operator+=(const Real& y)
+    __host__ __device__ constexpr auto operator+=(const Real& y)
     {
         auto& x = *this;
         For<0, N + 1>([&](auto i) constexpr { x[i] += y[i]; });
         return *this;
     }
 
-    constexpr auto operator-=(const Real& y)
+    __host__ __device__ constexpr auto operator-=(const Real& y)
     {
         auto& x = *this;
         For<0, N + 1>([&](auto i) constexpr { x[i] -= y[i]; });
         return *this;
     }
 
-    constexpr auto operator*=(const Real& y)
+    __host__ __device__ constexpr auto operator*=(const Real& y)
     {
         auto& x = *this;
         ReverseFor<N + 1>([&](auto i) constexpr {
@@ -173,7 +177,7 @@ public:
         return *this;
     }
 
-    constexpr auto operator/=(const Real& y)
+    __host__ __device__ constexpr auto operator/=(const Real& y)
     {
         auto& x = *this;
         For<N + 1>([&](auto i) constexpr {
@@ -188,11 +192,11 @@ public:
 
     /// Convert this Real number into a value of type @p U.
 #if defined(AUTODIFF_ENABLE_IMPLICIT_CONVERSION_REAL) || defined(AUTODIFF_ENABLE_IMPLICIT_CONVERSION)
-    template<typename U, EnableIf<isArithmetic<U>>...>
-    constexpr operator U() const { return static_cast<U>(m_data[0]); }
+    template<typename U, EnableIf<isArithmetic<U>> = true>
+    __host__ __device__ constexpr operator U() const { return static_cast<U>(m_data[0]); }
 #else
-    template<typename U, EnableIf<isArithmetic<U>>...>
-    constexpr explicit operator U() const { return static_cast<U>(m_data[0]); }
+    template<typename U, EnableIf<isArithmetic<U>> = true>
+    __host__ __device__ constexpr explicit operator U() const { return static_cast<U>(m_data[0]); }
 #endif
 };
 
@@ -202,27 +206,27 @@ public:
 //
 //=====================================================================================================================
 
-using std::abs;
-using std::acos;
-using std::acosh;
-using std::asin;
-using std::asinh;
-using std::atan;
-using std::atanh;
-using std::cbrt;
-using std::cos;
-using std::cosh;
-using std::exp;
-using std::log;
-using std::log10;
-using std::max;
-using std::min;
-using std::pow;
-using std::sin;
-using std::sinh;
-using std::sqrt;
-using std::tan;
-using std::tanh;
+using ::abs;
+using ::acos;
+using ::acosh;
+using ::asin;
+using ::asinh;
+using ::atan;
+using ::atanh;
+using ::cbrt;
+using ::cos;
+using ::cosh;
+using ::exp;
+using ::log;
+using ::log10;
+using ::max;
+using ::min;
+using ::pow;
+using ::sin;
+using ::sinh;
+using ::sqrt;
+using ::tan;
+using ::tanh;
 
 //=====================================================================================================================
 //
@@ -249,13 +253,13 @@ constexpr bool areReal = (... && isReal<Args>);
 //=====================================================================================================================
 
 template<size_t N, typename T>
-auto operator+(const Real<N, T>& x)
+__host__ __device__ auto operator+(const Real<N, T>& x)
 {
     return x;
 }
 
 template<size_t N, typename T>
-auto operator-(const Real<N, T>& x)
+__host__ __device__ auto operator-(const Real<N, T>& x)
 {
     Real<N, T> res;
     For<0, N + 1>([&](auto i) constexpr { res[i] = -x[i]; });
@@ -269,19 +273,19 @@ auto operator-(const Real<N, T>& x)
 //=====================================================================================================================
 
 template<size_t N, typename T>
-auto operator+(Real<N, T> x, const Real<N, T>& y)
+__host__ __device__ auto operator+(Real<N, T> x, const Real<N, T>& y)
 {
     return x += y;
 }
 
-template<size_t N, typename T, typename U, EnableIf<isArithmetic<U>>...>
-auto operator+(Real<N, T> x, const U& y)
+template<size_t N, typename T, typename U, EnableIf<isArithmetic<U>> = true>
+__host__ __device__ auto operator+(Real<N, T> x, const U& y)
 {
     return x += y;
 }
 
-template<size_t N, typename T, typename U, EnableIf<isArithmetic<U>>...>
-auto operator+(const U& x, Real<N, T> y)
+template<size_t N, typename T, typename U, EnableIf<isArithmetic<U>> = true>
+__host__ __device__ auto operator+(const U& x, Real<N, T> y)
 {
     return y += x;
 }
@@ -292,19 +296,19 @@ auto operator+(const U& x, Real<N, T> y)
 //
 //=====================================================================================================================
 template<size_t N, typename T>
-auto operator-(Real<N, T> x, const Real<N, T>& y)
+__host__ __device__ auto operator-(Real<N, T> x, const Real<N, T>& y)
 {
     return x -= y;
 }
 
-template<size_t N, typename T, typename U, EnableIf<isArithmetic<U>>...>
-auto operator-(Real<N, T> x, const U& y)
+template<size_t N, typename T, typename U, EnableIf<isArithmetic<U>> = true>
+__host__ __device__ auto operator-(Real<N, T> x, const U& y)
 {
     return x -= y;
 }
 
-template<size_t N, typename T, typename U, EnableIf<isArithmetic<U>>...>
-auto operator-(const U& x, Real<N, T> y)
+template<size_t N, typename T, typename U, EnableIf<isArithmetic<U>> = true>
+__host__ __device__ auto operator-(const U& x, Real<N, T> y)
 {
     y -= x;
     y *= -static_cast<T>(1.0);
@@ -318,19 +322,19 @@ auto operator-(const U& x, Real<N, T> y)
 //=====================================================================================================================
 
 template<size_t N, typename T>
-auto operator*(Real<N, T> x, const Real<N, T>& y)
+__host__ __device__ auto operator*(Real<N, T> x, const Real<N, T>& y)
 {
     return x *= y;
 }
 
-template<size_t N, typename T, typename U, EnableIf<isArithmetic<U>>...>
-auto operator*(Real<N, T> x, const U& y)
+template<size_t N, typename T, typename U, EnableIf<isArithmetic<U>> = true>
+__host__ __device__ auto operator*(Real<N, T> x, const U& y)
 {
     return x *= y;
 }
 
-template<size_t N, typename T, typename U, EnableIf<isArithmetic<U>>...>
-auto operator*(const U& x, Real<N, T> y)
+template<size_t N, typename T, typename U, EnableIf<isArithmetic<U>> = true>
+__host__ __device__ auto operator*(const U& x, Real<N, T> y)
 {
     return y *= x;
 }
@@ -342,19 +346,19 @@ auto operator*(const U& x, Real<N, T> y)
 //=====================================================================================================================
 
 template<size_t N, typename T>
-auto operator/(Real<N, T> x, const Real<N, T>& y)
+__host__ __device__ auto operator/(Real<N, T> x, const Real<N, T>& y)
 {
     return x /= y;
 }
 
-template<size_t N, typename T, typename U, EnableIf<isArithmetic<U>>...>
-auto operator/(Real<N, T> x, const U& y)
+template<size_t N, typename T, typename U, EnableIf<isArithmetic<U>> = true>
+__host__ __device__ auto operator/(Real<N, T> x, const U& y)
 {
     return x /= y;
 }
 
-template<size_t N, typename T, typename U, EnableIf<isArithmetic<U>>...>
-auto operator/(const U& x, Real<N, T> y)
+template<size_t N, typename T, typename U, EnableIf<isArithmetic<U>> = true>
+__host__ __device__ auto operator/(const U& x, Real<N, T> y)
 {
     Real<N, T> z = x;
     return z /= y;
@@ -367,7 +371,7 @@ auto operator/(const U& x, Real<N, T> y)
 //=====================================================================================================================
 
 template<size_t N, typename T>
-constexpr auto exp(const Real<N, T>& x)
+__host__ __device__ constexpr auto exp(const Real<N, T>& x)
 {
     Real<N, T> expx;
     expx[0] = exp(x[0]);
@@ -381,7 +385,7 @@ constexpr auto exp(const Real<N, T>& x)
 }
 
 template<size_t N, typename T>
-constexpr auto log(const Real<N, T>& x)
+__host__ __device__ constexpr auto log(const Real<N, T>& x)
 {
     assert(x[0] != 0 && "autodiff::log(x) has undefined value and derivatives when x = 0");
     Real<N, T> logx;
@@ -397,7 +401,7 @@ constexpr auto log(const Real<N, T>& x)
 }
 
 template<size_t N, typename T>
-constexpr auto log10(const Real<N, T>& x)
+__host__ __device__ constexpr auto log10(const Real<N, T>& x)
 {
     assert(x[0] != 0 && "autodiff::log10(x) has undefined value and derivatives when x = 0");
     const auto ln10 = 2.302585092994046;
@@ -406,7 +410,7 @@ constexpr auto log10(const Real<N, T>& x)
 }
 
 template<size_t N, typename T>
-constexpr auto sqrt(const Real<N, T>& x)
+__host__ __device__ constexpr auto sqrt(const Real<N, T>& x)
 {
     Real<N, T> res;
     res[0] = sqrt(x[0]);
@@ -433,7 +437,7 @@ constexpr auto sqrt(const Real<N, T>& x)
 }
 
 template<size_t N, typename T>
-constexpr auto cbrt(const Real<N, T>& x)
+__host__ __device__ constexpr auto cbrt(const Real<N, T>& x)
 {
     Real<N, T> res;
     res[0] = cbrt(x[0]);
@@ -460,7 +464,7 @@ constexpr auto cbrt(const Real<N, T>& x)
 }
 
 template<size_t N, typename T>
-constexpr auto pow(const Real<N, T>& x, const Real<N, T>& y)
+__host__ __device__ constexpr auto pow(const Real<N, T>& x, const Real<N, T>& y)
 {
     Real<N, T> res;
     res[0] = pow(x[0], y[0]);
@@ -485,8 +489,8 @@ constexpr auto pow(const Real<N, T>& x, const Real<N, T>& y)
     return res;
 }
 
-template<size_t N, typename T, typename U, EnableIf<isArithmetic<U>>...>
-constexpr auto pow(const Real<N, T>& x, const U& c)
+template<size_t N, typename T, typename U, EnableIf<isArithmetic<U>> = true>
+__host__ __device__ constexpr auto pow(const Real<N, T>& x, const U& c)
 {
     Real<N, T> res;
     res[0] = pow(x[0], static_cast<T>(c));
@@ -505,8 +509,8 @@ constexpr auto pow(const Real<N, T>& x, const U& c)
     return res;
 }
 
-template<size_t N, typename T, typename U, EnableIf<isArithmetic<U>>...>
-constexpr auto pow(const U& c, const Real<N, T>& y)
+template<size_t N, typename T, typename U, EnableIf<isArithmetic<U>> = true>
+__host__ __device__ constexpr auto pow(const U& c, const Real<N, T>& y)
 {
     Real<N, T> res;
     res[0] = pow(static_cast<T>(c), y[0]);
@@ -532,7 +536,7 @@ constexpr auto pow(const U& c, const Real<N, T>& y)
 //=====================================================================================================================
 
 template<size_t N, typename T>
-auto sincos(const Real<N, T>& x) -> std::tuple<Real<N, T>, Real<N, T>>
+__host__ __device__ auto sincos(const Real<N, T>& x) -> cuda::std::tuple<Real<N, T>, Real<N, T>>
 {
     Real<N, T> sinx;
     Real<N, T> cosx;
@@ -556,19 +560,19 @@ auto sincos(const Real<N, T>& x) -> std::tuple<Real<N, T>, Real<N, T>>
 }
 
 template<size_t N, typename T>
-auto sin(const Real<N, T>& x)
+__host__ __device__ auto sin(const Real<N, T>& x)
 {
-    return std::get<0>(sincos(x));
+    return cuda::std::get<0>(sincos(x));
 }
 
 template<size_t N, typename T>
-auto cos(const Real<N, T>& x)
+__host__ __device__ auto cos(const Real<N, T>& x)
 {
-    return std::get<1>(sincos(x));
+    return cuda::std::get<1>(sincos(x));
 }
 
 template<size_t N, typename T>
-auto tan(const Real<N, T>& x)
+__host__ __device__ auto tan(const Real<N, T>& x)
 {
     Real<N, T> tanx;
     tanx[0] = tan(x[0]);
@@ -595,7 +599,7 @@ auto tan(const Real<N, T>& x)
 }
 
 template<size_t N, typename T>
-constexpr auto asin(const Real<N, T>& x)
+__host__ __device__ constexpr auto asin(const Real<N, T>& x)
 {
     Real<N, T> res;
     res[0] = asin(x[0]);
@@ -612,7 +616,7 @@ constexpr auto asin(const Real<N, T>& x)
 }
 
 template<size_t N, typename T>
-constexpr auto acos(const Real<N, T>& x)
+__host__ __device__ constexpr auto acos(const Real<N, T>& x)
 {
     Real<N, T> res;
     res[0] = acos(x[0]);
@@ -629,7 +633,7 @@ constexpr auto acos(const Real<N, T>& x)
 }
 
 template<size_t N, typename T>
-constexpr auto atan(const Real<N, T>& x)
+__host__ __device__ constexpr auto atan(const Real<N, T>& x)
 {
     Real<N, T> res;
     res[0] = atan(x[0]);
@@ -651,7 +655,7 @@ constexpr auto atan(const Real<N, T>& x)
 //=====================================================================================================================
 
 template<size_t N, typename T>
-auto sinhcosh(const Real<N, T>& x) -> std::tuple<Real<N, T>, Real<N, T>>
+__host__ __device__ auto sinhcosh(const Real<N, T>& x) -> cuda::std::tuple<Real<N, T>, Real<N, T>>
 {
     Real<N, T> sinhx;
     Real<N, T> coshx;
@@ -675,20 +679,20 @@ auto sinhcosh(const Real<N, T>& x) -> std::tuple<Real<N, T>, Real<N, T>>
 }
 
 template<size_t N, typename T>
-auto sinh(const Real<N, T>& x)
+__host__ __device__ auto sinh(const Real<N, T>& x)
 {
-    return std::get<0>(sinhcosh(x));
+    return cuda::std::get<0>(sinhcosh(x));
 }
 
 template<size_t N, typename T>
-auto cosh(const Real<N, T>& x)
+__host__ __device__ auto cosh(const Real<N, T>& x)
 {
-    return std::get<1>(sinhcosh(x));
+    return cuda::std::get<1>(sinhcosh(x));
 }
 
 
 template<size_t N, typename T>
-auto tanh(const Real<N, T>& x)
+__host__ __device__ auto tanh(const Real<N, T>& x)
 {
     Real<N, T> tanhx;
     tanhx[0] = tanh(x[0]);
@@ -716,7 +720,7 @@ auto tanh(const Real<N, T>& x)
 }
 
 template<size_t N, typename T>
-constexpr auto asinh(const Real<N, T>& x)
+__host__ __device__ constexpr auto asinh(const Real<N, T>& x)
 {
     Real<N, T> res;
     res[0] = asinh(x[0]);
@@ -732,7 +736,7 @@ constexpr auto asinh(const Real<N, T>& x)
 }
 
 template<size_t N, typename T>
-constexpr auto acosh(const Real<N, T>& x)
+__host__ __device__ constexpr auto acosh(const Real<N, T>& x)
 {
     Real<N, T> res;
     res[0] = acosh(x[0]);
@@ -749,7 +753,7 @@ constexpr auto acosh(const Real<N, T>& x)
 }
 
 template<size_t N, typename T>
-constexpr auto atanh(const Real<N, T>& x)
+__host__ __device__ constexpr auto atanh(const Real<N, T>& x)
 {
     Real<N, T> res;
     res[0] = atanh(x[0]);
@@ -772,15 +776,15 @@ constexpr auto atanh(const Real<N, T>& x)
 //=====================================================================================================================
 
 template<size_t N, typename T>
-constexpr auto abs(const Real<N, T>& x)
+__host__ __device__ constexpr auto abs(const Real<N, T>& x)
 {
     Real<N, T> res;
-    res[0] = std::abs(x[0]);
+    res[0] = ::abs(x[0]);
     if constexpr (N > 0)
     {
         // assert(x[0] != 0 && "autodiff::abs(x) has undefined derivatives when x = 0");
         if(x[0] == 0) return res;
-        const T s = std::copysign(1.0, x[0]);
+        const T s = ::copysign(1.0, x[0]);
         For<1, N + 1>([&](auto i) constexpr {
             res[i] = s * x[i];
         });
@@ -789,37 +793,37 @@ constexpr auto abs(const Real<N, T>& x)
 }
 
 template<size_t N, typename T>
-constexpr auto min(const Real<N, T>& x, const Real<N, T>& y)
+__host__ __device__ constexpr auto min(const Real<N, T>& x, const Real<N, T>& y)
 {
     return (x[0] <= y[0]) ? x : y;
 }
 
-template<size_t N, typename T, typename U, EnableIf<isArithmetic<U>>...>
-constexpr auto min(const Real<N, T>& x, const U& y)
+template<size_t N, typename T, typename U, EnableIf<isArithmetic<U>> = true>
+__host__ __device__ constexpr auto min(const Real<N, T>& x, const U& y)
 {
     return (x[0] <= y) ? x : y;
 }
 
-template<size_t N, typename T, typename U, EnableIf<isArithmetic<U>>...>
-constexpr auto min(const U& x, const Real<N, T>& y)
+template<size_t N, typename T, typename U, EnableIf<isArithmetic<U>> = true>
+__host__ __device__ constexpr auto min(const U& x, const Real<N, T>& y)
 {
     return (x < y[0]) ? x : y;
 }
 
 template<size_t N, typename T>
-constexpr auto max(const Real<N, T>& x, const Real<N, T>& y)
+__host__ __device__ constexpr auto max(const Real<N, T>& x, const Real<N, T>& y)
 {
     return (x[0] >= y[0]) ? x : y;
 }
 
-template<size_t N, typename T, typename U, EnableIf<isArithmetic<U>>...>
-constexpr auto max(const Real<N, T>& x, const U& y)
+template<size_t N, typename T, typename U, EnableIf<isArithmetic<U>> = true>
+__host__ __device__ constexpr auto max(const Real<N, T>& x, const U& y)
 {
     return (x[0] >= y) ? x : y;
 }
 
-template<size_t N, typename T, typename U, EnableIf<isArithmetic<U>>...>
-constexpr auto max(const U& x, const Real<N, T>& y)
+template<size_t N, typename T, typename U, EnableIf<isArithmetic<U>> = true>
+__host__ __device__ constexpr auto max(const U& x, const Real<N, T>& y)
 {
     return (x > y[0]) ? x : y;
 }
@@ -830,15 +834,16 @@ constexpr auto max(const U& x, const Real<N, T>& y)
 //
 //=====================================================================================================================
 
+#ifndef __CUDA_ARCH__
 template<size_t N, typename T>
-std::ostream& operator<<(std::ostream& out, const Real<N, T>& x)
+__host__ std::ostream& operator<<(std::ostream& out, const Real<N, T>& x)
 {
     out << x[0];
     return out;
 }
 
 template<size_t N, typename T>
-auto repr(const Real<N, T>& x)
+__host__ auto repr(const Real<N, T>& x)
 {
     std::stringstream ss;
     ss << "autodiff.real(";
@@ -847,6 +852,7 @@ auto repr(const Real<N, T>& x)
     ss << ")";
     return ss.str();
 };
+#endif
 
 //=====================================================================================================================
 //
@@ -855,7 +861,7 @@ auto repr(const Real<N, T>& x)
 //=====================================================================================================================
 
 template<size_t N, typename T>
-bool operator==(const Real<N, T>& x, const Real<N, T>& y)
+__host__ __device__ bool operator==(const Real<N, T>& x, const Real<N, T>& y)
 {
     bool res = true;
     For<0, N + 1>([&](auto i) constexpr {
@@ -864,25 +870,25 @@ bool operator==(const Real<N, T>& x, const Real<N, T>& y)
     return res;
 }
 
-template<size_t N, typename T> bool operator!=(const Real<N, T>& x, const Real<N, T>& y) { return !(x == y); }
-template<size_t N, typename T> bool operator< (const Real<N, T>& x, const Real<N, T>& y) { return x[0] <  y[0]; }
-template<size_t N, typename T> bool operator> (const Real<N, T>& x, const Real<N, T>& y) { return x[0] >  y[0]; }
-template<size_t N, typename T> bool operator<=(const Real<N, T>& x, const Real<N, T>& y) { return x[0] <= y[0]; }
-template<size_t N, typename T> bool operator>=(const Real<N, T>& x, const Real<N, T>& y) { return x[0] >= y[0]; }
+template<size_t N, typename T> __host__ __device__ bool operator!=(const Real<N, T>& x, const Real<N, T>& y) { return !(x == y); }
+template<size_t N, typename T> __host__ __device__ bool operator< (const Real<N, T>& x, const Real<N, T>& y) { return x[0] <  y[0]; }
+template<size_t N, typename T> __host__ __device__ bool operator> (const Real<N, T>& x, const Real<N, T>& y) { return x[0] >  y[0]; }
+template<size_t N, typename T> __host__ __device__ bool operator<=(const Real<N, T>& x, const Real<N, T>& y) { return x[0] <= y[0]; }
+template<size_t N, typename T> __host__ __device__ bool operator>=(const Real<N, T>& x, const Real<N, T>& y) { return x[0] >= y[0]; }
 
-template<size_t N, typename T, typename U, EnableIf<isArithmetic<U>>...> bool operator==(const Real<N, T>& x, const U& y) { return x[0] == y; }
-template<size_t N, typename T, typename U, EnableIf<isArithmetic<U>>...> bool operator!=(const Real<N, T>& x, const U& y) { return x[0] != y; }
-template<size_t N, typename T, typename U, EnableIf<isArithmetic<U>>...> bool operator< (const Real<N, T>& x, const U& y) { return x[0] <  y; }
-template<size_t N, typename T, typename U, EnableIf<isArithmetic<U>>...> bool operator> (const Real<N, T>& x, const U& y) { return x[0] >  y; }
-template<size_t N, typename T, typename U, EnableIf<isArithmetic<U>>...> bool operator<=(const Real<N, T>& x, const U& y) { return x[0] <= y; }
-template<size_t N, typename T, typename U, EnableIf<isArithmetic<U>>...> bool operator>=(const Real<N, T>& x, const U& y) { return x[0] >= y; }
+template<size_t N, typename T, typename U, EnableIf<isArithmetic<U>> = true> __host__ __device__ bool operator==(const Real<N, T>& x, const U& y) { return x[0] == y; }
+template<size_t N, typename T, typename U, EnableIf<isArithmetic<U>> = true> __host__ __device__ bool operator!=(const Real<N, T>& x, const U& y) { return x[0] != y; }
+template<size_t N, typename T, typename U, EnableIf<isArithmetic<U>> = true> __host__ __device__ bool operator< (const Real<N, T>& x, const U& y) { return x[0] <  y; }
+template<size_t N, typename T, typename U, EnableIf<isArithmetic<U>> = true> __host__ __device__ bool operator> (const Real<N, T>& x, const U& y) { return x[0] >  y; }
+template<size_t N, typename T, typename U, EnableIf<isArithmetic<U>> = true> __host__ __device__ bool operator<=(const Real<N, T>& x, const U& y) { return x[0] <= y; }
+template<size_t N, typename T, typename U, EnableIf<isArithmetic<U>> = true> __host__ __device__ bool operator>=(const Real<N, T>& x, const U& y) { return x[0] >= y; }
 
-template<size_t N, typename T, typename U, EnableIf<isArithmetic<U>>...> bool operator==(const U& x, const Real<N, T>& y) { return x == y[0]; }
-template<size_t N, typename T, typename U, EnableIf<isArithmetic<U>>...> bool operator!=(const U& x, const Real<N, T>& y) { return x != y[0]; }
-template<size_t N, typename T, typename U, EnableIf<isArithmetic<U>>...> bool operator< (const U& x, const Real<N, T>& y) { return x <  y[0]; }
-template<size_t N, typename T, typename U, EnableIf<isArithmetic<U>>...> bool operator> (const U& x, const Real<N, T>& y) { return x >  y[0]; }
-template<size_t N, typename T, typename U, EnableIf<isArithmetic<U>>...> bool operator<=(const U& x, const Real<N, T>& y) { return x <= y[0]; }
-template<size_t N, typename T, typename U, EnableIf<isArithmetic<U>>...> bool operator>=(const U& x, const Real<N, T>& y) { return x >= y[0]; }
+template<size_t N, typename T, typename U, EnableIf<isArithmetic<U>> = true> __host__ __device__ bool operator==(const U& x, const Real<N, T>& y) { return x == y[0]; }
+template<size_t N, typename T, typename U, EnableIf<isArithmetic<U>> = true> __host__ __device__ bool operator!=(const U& x, const Real<N, T>& y) { return x != y[0]; }
+template<size_t N, typename T, typename U, EnableIf<isArithmetic<U>> = true> __host__ __device__ bool operator< (const U& x, const Real<N, T>& y) { return x <  y[0]; }
+template<size_t N, typename T, typename U, EnableIf<isArithmetic<U>> = true> __host__ __device__ bool operator> (const U& x, const Real<N, T>& y) { return x >  y[0]; }
+template<size_t N, typename T, typename U, EnableIf<isArithmetic<U>> = true> __host__ __device__ bool operator<=(const U& x, const Real<N, T>& y) { return x <= y[0]; }
+template<size_t N, typename T, typename U, EnableIf<isArithmetic<U>> = true> __host__ __device__ bool operator>=(const U& x, const Real<N, T>& y) { return x >= y[0]; }
 
 //=====================================================================================================================
 //
@@ -891,7 +897,7 @@ template<size_t N, typename T, typename U, EnableIf<isArithmetic<U>>...> bool op
 //=====================================================================================================================
 
 template<size_t order, size_t N, typename T, typename U>
-auto seed(Real<N, T>& real, U&& seedval)
+__host__ __device__ auto seed(Real<N, T>& real, U&& seedval)
 {
     static_assert(order == 1,
         "Real<N, T> is optimized for higher-order **directional** derivatives. "
@@ -909,14 +915,14 @@ auto seed(Real<N, T>& real, U&& seedval)
 
 /// Return the value of a Real number.
 template<size_t N, typename T>
-constexpr auto val(const Real<N, T>& x)
+__host__ __device__ constexpr auto val(const Real<N, T>& x)
 {
     return x[0];
 }
 
 /// Return the derivative of a Real number with given order.
 template<size_t order = 1, size_t N, typename T>
-constexpr auto derivative(const Real<N, T>& x)
+__host__ __device__ constexpr auto derivative(const Real<N, T>& x)
 {
     return x[order];
 }
@@ -948,7 +954,9 @@ struct NumberTraits<Real<N, T>>
 using detail::Real;
 using detail::val;
 using detail::derivative;
+#if 0
 using detail::repr;
+#endif
 
 using real0th = Real<0, double>;
 using real1st = Real<1, double>;
@@ -959,3 +967,5 @@ using real4th = Real<4, double>;
 using real = real1st;
 
 } // namespace autodiff
+
+#endif /* end of include guard: REAL_HPP_ASE512KP */

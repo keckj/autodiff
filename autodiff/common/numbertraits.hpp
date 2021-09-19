@@ -27,7 +27,8 @@
 // OUT OF OR IN CONNECTION WITH THE SOFTWARE OR THE USE OR OTHER DEALINGS IN THE
 // SOFTWARE.
 
-#pragma once
+#ifndef NUMBERTRAITS_HPP_VDOX4HCH
+#define NUMBERTRAITS_HPP_VDOX4HCH
 
 // C++ includes
 #include <autodiff/common/meta.hpp>
@@ -39,7 +40,7 @@ namespace detail {
 template<typename T>
 struct ArithmeticTraits
 {
-    static constexpr bool isArithmetic = std::is_arithmetic_v<T>;
+    static constexpr bool isArithmetic = cuda::std::is_arithmetic_v<T>;
 };
 
 /// A compile-time constant that indicates whether a type is arithmetic.
@@ -55,7 +56,7 @@ template<typename T>
 struct NumberTraits
 {
     /// The underlying floating point type of the autodiff number type.
-    using NumericType = std::conditional_t<isArithmetic<T>, T, NumericTypeInfoNotDefinedFor<T>>;
+    using NumericType = cuda::std::conditional_t<isArithmetic<T>, T, NumericTypeInfoNotDefinedFor<T>>;
 
     /// The order of the autodiff number type.
     static constexpr auto Order = 0;
@@ -71,3 +72,5 @@ constexpr auto Order = NumberTraits<PlainType<T>>::Order;
 
 } // namespace detail
 } // namespace autodiff
+
+#endif /* end of include guard: NUMBERTRAITS_HPP_VDOX4HCH */

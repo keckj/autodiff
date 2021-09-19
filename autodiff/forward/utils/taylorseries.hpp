@@ -27,7 +27,8 @@
 // OUT OF OR IN CONNECTION WITH THE SOFTWARE OR THE USE OR OTHER DEALINGS IN THE
 // SOFTWARE.
 
-#pragma once
+#ifndef TAYLORSERIES_HPP_YYO0SIG9
+#define TAYLORSERIES_HPP_YYO0SIG9
 
 // C++ includes
 #include <array>
@@ -53,12 +54,12 @@ public:
     TaylorSeries() = default;
 
     /// Construct a TaylorSeries object with given directional derivatives.
-    explicit TaylorSeries(const std::array<V, N + 1>& derivatives)
+    __host__ __device__ explicit TaylorSeries(const std::array<V, N + 1>& derivatives)
     : _derivatives(derivatives)
     {}
 
     /// Evaluate the Taylor series object with given directional derivatives.
-    auto operator()(const T& t)
+    __host__ __device__ auto operator()(const T& t)
     {
         auto res = _derivatives[0];
         auto factor = t;
@@ -70,7 +71,7 @@ public:
     }
 
     /// Return the directional derivatives of this TaylorSeries.
-    auto derivatives()
+    __host__ __device__ auto derivatives()
     {
         return _derivatives;
     }
@@ -82,7 +83,7 @@ private:
 
 /// Return a TaylorSeries of a scalar or vector function *f* along a direction *v* at *x*.
 template<typename Fun, typename...Vecs, typename... Args>
-auto taylorseries(const Fun& f, const Along<Vecs...>& along, const At<Args...>& at)
+__host__ __device__ auto taylorseries(const Fun& f, const Along<Vecs...>& along, const At<Args...>& at)
 {
     auto data = derivatives(f, along, at);
     constexpr auto N = data.size() - 1;
@@ -95,3 +96,5 @@ auto taylorseries(const Fun& f, const Along<Vecs...>& along, const At<Args...>& 
 using detail::taylorseries;
 
 } // namespace autodiff
+
+#endif /* end of include guard: TAYLORSERIES_HPP_YYO0SIG9 */

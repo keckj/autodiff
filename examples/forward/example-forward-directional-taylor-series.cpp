@@ -3,11 +3,10 @@
 
 // autodiff include
 #include <autodiff/forward/real.hpp>
-#include <autodiff/forward/real/eigen.hpp>
 using namespace autodiff;
 
 // The scalar function for which a 4th order directional Taylor series will be computed.
-real4th f(const real4th& x, const real4th& y, const real4th& z)
+__host__ __device__ real4th f(const real4th& x, const real4th& y, const real4th& z)
 {
     return sin(x * y) * cos(x * z) * exp(z);
 }
@@ -28,7 +27,7 @@ int main()
 
     std::cout << std::fixed;
     std::cout << "Comparison between exact evaluation and 4th order Taylor estimate of f(x + t, y + t, z + 2t):" << std::endl;
-    std::cout << "u(exact)  = " << u << std::endl;
+    std::cout << "u(exact)  = " << u.val() << std::endl;
     std::cout << "u(taylor) = " << utaylor << std::endl;
 }
 

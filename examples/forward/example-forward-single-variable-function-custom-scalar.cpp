@@ -1,6 +1,6 @@
 // C++ includes
 #include <iostream>
-#include <complex>
+#include <cuda/std/complex>
 using namespace std;
 
 // autodiff include
@@ -11,11 +11,19 @@ using namespace autodiff;
 namespace autodiff::detail {
 
 template<typename T>
-struct ArithmeticTraits<complex<T>> : ArithmeticTraits<T> {};
+struct ArithmeticTraits<cuda::std::complex<T>> : ArithmeticTraits<T> {};
 
 } // autodiff::detail
 
-using cxdual = Dual<complex<double>, complex<double>>;
+
+template<typename T>
+__host__ std::ostream& operator<<(std::ostream& os, const cuda::std::complex<T>& v)
+{
+    os << v.real() << " + " << v.imag() << "i";
+    return os;
+}
+
+using cxdual = Dual<cuda::std::complex<double>, cuda::std::complex<double>>;
 
 // The single-variable function for which derivatives are needed
 cxdual f(cxdual x)
@@ -25,7 +33,7 @@ cxdual f(cxdual x)
 
 int main()
 {
-    cxdual x = 2.0;   // the input variable x
+    cxdual x = cuda::std::complex<double>(2.0,4.0);   // the input variable x
     cxdual u = f(x);  // the output variable u
 
     cxdual dudx = derivative(f, wrt(x), at(x));  // evaluate the derivative du/dx

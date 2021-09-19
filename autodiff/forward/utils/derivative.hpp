@@ -28,14 +28,17 @@
 // SOFTWARE.
 
 // C++ includes
-#include <cassert>
-#include <cstddef>
+#include <cuda/std/cassert>
+#include <cuda/std/cstddef>
+#include <array>
 
 // autodiff includes
 #include <autodiff/common/meta.hpp>
+#include <autodiff/common/numbertraits.hpp>
 #include <autodiff/common/vectortraits.hpp>
 
-#pragma once
+#ifndef DERIVATIVE_HPP_TRKOHDOL
+#define DERIVATIVE_HPP_TRKOHDOL
 
 namespace autodiff {
 namespace detail {
@@ -43,40 +46,40 @@ namespace detail {
 template<typename... Args>
 struct At
 {
-    std::tuple<Args...> args;
+    cuda::std::tuple<Args...> args;
 };
 
 template<typename... Args>
 struct Wrt
 {
-    std::tuple<Args...> args;
+    cuda::std::tuple<Args...> args;
 };
 
 template<typename... Args>
 struct Along
 {
-    std::tuple<Args...> args;
+    cuda::std::tuple<Args...> args;
 };
 
 /// The keyword used to denote the variables *with respect to* the derivative is calculated.
 template<typename... Args>
-auto wrt(Args&&... args)
+__host__ __device__ auto wrt(Args&&... args)
 {
-    return Wrt<Args&&...>{ std::forward_as_tuple(std::forward<Args>(args)...) };
+    return Wrt<Args&&...>{ cuda::std::forward_as_tuple(cuda::std::forward<Args>(args)...) };
 }
 
 /// The keyword used to denote the variables *at* which the derivatives are calculated.
 template<typename... Args>
-auto at(Args&&... args)
+__host__ __device__ auto at(Args&&... args)
 {
-    return At<Args&&...>{ std::forward_as_tuple(std::forward<Args>(args)...) };
+    return At<Args&&...>{ cuda::std::forward_as_tuple(cuda::std::forward<Args>(args)...) };
 }
 
 /// The keyword used to denote the direction vector *along* which the derivatives are calculated.
 template<typename... Args>
-auto along(Args&&... args)
+__host__ __device__ auto along(Args&&... args)
 {
-    return Along<Args&&...>{ std::forward_as_tuple(std::forward<Args>(args)...) };
+    return Along<Args&&...>{ cuda::std::forward_as_tuple(cuda::std::forward<Args>(args)...) };
 }
 
 /// Seed each dual number in the **wrt** list using its position as the derivative order to be seeded.
@@ -89,33 +92,34 @@ auto along(Args&&... args)
 /// y, z, z, z)`. This automatic seeding permits derivatives `fx`, `fxy`,
 /// `fxyz`, `fxyzz`, and `fxyzzz` to be computed in a more convenient way.
 template<typename Var, typename... Vars, typename T>
-auto seed(const Wrt<Var&, Vars&...>& wrt, T&& seedval)
+__host__ __device__ auto seed(const Wrt<Var&, Vars&...>& wrt, T&& seedval)
 {
     constexpr static auto N = Order<Var>;
     constexpr static auto size = 1 + sizeof...(Vars);
     static_assert(size <= N, "It is not possible to compute higher-order derivatives with order greater than that of the autodiff number (e.g., using wrt(x, x, y, z) will fail if the autodiff numbers in use have order below 4).");
     For<N>([&](auto i) constexpr {
-        if constexpr (i < size)
-            seed<i.index + 1>(std::get<i>(wrt.args), seedval);
+        if constexpr (i.index < size)
+            seed<i.index + 1>(cuda::std::get<i>(wrt.args), seedval);
         else
-            seed<i.index + 1>(std::get<size - 1>(wrt.args), seedval); // use the last variable in the wrt list as the variable for which the remaining higher-order derivatives are calculated (e.g., derivatives(f, wrt(x), at(x)) will produce [f0, fx, fxx, fxxx, fxxxx] when x is a 4th order dual number).
+            seed<i.index + 1>(cuda::std::get<size - 1>(wrt.args), seedval); // use the last variable in the wrt list as the variable for which the remaining higher-order derivatives are calculated (e.g., derivatives(f, wrt(x), at(x)) will produce [f0, fx, fxx, fxxx, fxxxx] when x is a 4th order dual number).
+        __builtin_unreachable();
     });
 }
 
 template<typename... Vars>
-auto seed(const Wrt<Vars...>& wrt)
+__host__ __device__ auto seed(const Wrt<Vars...>& wrt)
 {
     seed(wrt, 1.0);
 }
 
 template<typename... Vars>
-auto unseed(const Wrt<Vars...>& wrt)
+__host__ __device__ auto unseed(const Wrt<Vars...>& wrt)
 {
     seed(wrt, 0.0);
 }
 
 template<typename... Args, typename... Vecs>
-auto seed(const At<Args...>& at, const Along<Vecs...>& along)
+__host__ __device__ auto seed(const At<Args...>& at, const Along<Vecs...>& along)
 {
     static_assert(sizeof...(Args) == sizeof...(Vecs));
 
@@ -131,7 +135,7 @@ auto seed(const At<Args...>& at, const Along<Vecs...>& along)
 }
 
 template<typename... Args>
-auto unseed(const At<Args...>& at)
+__host__ __device__ auto unseed(const At<Args...>& at)
 {
     ForEach(at.args, [&](auto& arg) constexpr {
         if constexpr (isVector<decltype(arg)>) {
@@ -142,39 +146,39 @@ auto unseed(const At<Args...>& at)
     });
 }
 
-template<size_t order = 1, typename T, EnableIf<Order<T>>...>
-auto seed(T& x)
+template<size_t order = 1, typename T, EnableIf<Order<T>> = true>
+__host__ __device__ auto seed(T& x)
 {
     seed<order>(x, 1.0);
 }
 
-template<size_t order = 1, typename T, EnableIf<Order<T>>...>
-auto unseed(T& x)
+template<size_t order = 1, typename T, EnableIf<Order<T>> = true>
+__host__ __device__ auto unseed(T& x)
 {
     seed<order>(x, 0.0);
 }
 
 template<typename Fun, typename... Args, typename... Vars>
-auto eval(const Fun& f, const At<Args...>& at, const Wrt<Vars...>& wrt)
+__host__ __device__ auto eval(const Fun& f, const At<Args...>& at, const Wrt<Vars...>& wrt)
 {
     seed(wrt);
-    auto u = std::apply(f, at.args);
+    auto u = cuda::std::apply(f, at.args);
     unseed(wrt);
     return u;
 }
 
 template<typename Fun, typename... Args, typename... Vecs>
-auto eval(const Fun& f, const At<Args...>& at, const Along<Vecs...>& along)
+__host__ __device__ auto eval(const Fun& f, const At<Args...>& at, const Along<Vecs...>& along)
 {
     seed(at, along);
-    auto u = std::apply(f, at.args);
+    auto u = cuda::std::apply(f, at.args);
     unseed(at);
     return u;
 }
 
 /// Extract the derivative of given order from a vector of dual/real numbers.
-template<size_t order = 1, typename Vec, EnableIf<isVector<Vec>>...>
-auto derivative(const Vec& u)
+template<size_t order = 1, typename Vec, EnableIf<isVector<Vec>> = true>
+__host__ __device__ auto derivative(const Vec& u)
 {
     size_t len = u.size(); // the length of the vector containing dual/real numbers
     using NumType = decltype(u[0]); // get the type of the dual/real number
@@ -188,14 +192,14 @@ auto derivative(const Vec& u)
 
 /// Alias method to `derivative<order>(x)` where `x` is either a dual/real number or vector/array of such numbers.
 template<size_t order = 1, typename T>
-auto grad(const T& x)
+__host__ __device__ auto grad(const T& x)
 {
     return derivative<order>(x);
 }
 
 /// Unpack the derivatives from the result of an @ref eval call into an array.
 template<typename Result>
-auto derivatives(const Result& result)
+__host__ __device__ auto derivatives(const Result& result)
 {
     if constexpr (isVector<Result>) // check if the argument is a vector container of dual/real numbers
     {
@@ -222,30 +226,31 @@ auto derivatives(const Result& result)
         });
         return values;
     }
+    __builtin_unreachable();
 }
 
 template<typename Fun, typename... Vars, typename... Args>
-auto derivatives(const Fun& f, const Wrt<Vars...>& wrt, const At<Args...>& at)
+__host__ __device__ auto derivatives(const Fun& f, const Wrt<Vars...>& wrt, const At<Args...>& at)
 {
     return derivatives(eval(f, at, wrt));
 }
 
 template<size_t order=1, typename Fun, typename... Vars, typename... Args, typename Result>
-auto derivative(const Fun& f, const Wrt<Vars...>& wrt, const At<Args...>& at, Result& u)
+__host__ __device__ auto derivative(const Fun& f, const Wrt<Vars...>& wrt, const At<Args...>& at, Result& u)
 {
     u = derivatives(f, wrt, at);
     return derivative<order>(u);
 }
 
 template<size_t order=1, typename Fun, typename... Vars, typename... Args>
-auto derivative(const Fun& f, const Wrt<Vars...>& wrt, const At<Args...>& at)
+__host__ __device__ auto derivative(const Fun& f, const Wrt<Vars...>& wrt, const At<Args...>& at)
 {
     auto u = eval(f, at, wrt);
     return derivative<order>(u);
 }
 
 template<typename Fun, typename... Vecs, typename... Args>
-auto derivatives(const Fun& f, const Along<Vecs...>& along, const At<Args...>& at)
+__host__ __device__ auto derivatives(const Fun& f, const Along<Vecs...>& along, const At<Args...>& at)
 {
     return derivatives(eval(f, at, along));
 }
@@ -266,3 +271,5 @@ using detail::At;
 using detail::Wrt;
 
 } // namespace autodiff
+
+#endif /* end of include guard: DERIVATIVE_HPP_TRKOHDOL */

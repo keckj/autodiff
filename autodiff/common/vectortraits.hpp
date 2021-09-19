@@ -27,10 +27,13 @@
 // OUT OF OR IN CONNECTION WITH THE SOFTWARE OR THE USE OR OTHER DEALINGS IN THE
 // SOFTWARE.
 
-#pragma once
+#ifndef VECTORTRAITS_HPP_YR1Y0AVW
+#define VECTORTRAITS_HPP_YR1Y0AVW
 
 // C++ includes
+#if 0
 #include <vector>
+#endif 
 
 // autodiff includes
 #include <autodiff/common/meta.hpp>
@@ -67,9 +70,10 @@ using VectorReplaceValueType = typename VectorTraits<PlainType<V>>::template Rep
 
 /// A compile-time constant that indicates with a type is a vector type.
 template<typename V>
-constexpr bool isVector = !std::is_same_v<VectorValueType<PlainType<V>>, VectorTraitsNotDefinedFor<PlainType<V>>>;
+constexpr bool isVector = !cuda::std::is_same_v<VectorValueType<PlainType<V>>, VectorTraitsNotDefinedFor<PlainType<V>>>;
 
 
+#if 0
 /// Implementation of VectorTraits for std::vector.
 template<typename T, template<class> typename Allocator>
 struct VectorTraits<std::vector<T, Allocator<T>>>
@@ -79,6 +83,9 @@ struct VectorTraits<std::vector<T, Allocator<T>>>
     template<typename NewValueType>
     using ReplaceValueType = std::vector<NewValueType, Allocator<NewValueType>>;
 };
+#endif
 
 } // namespace detail
 } // namespace autodiff
+
+#endif /* end of include guard: VECTORTRAITS_HPP_YR1Y0AVW */

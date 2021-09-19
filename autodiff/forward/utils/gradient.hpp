@@ -27,7 +27,8 @@
 // OUT OF OR IN CONNECTION WITH THE SOFTWARE OR THE USE OR OTHER DEALINGS IN THE
 // SOFTWARE.
 
-#pragma once
+#ifndef GRADIENT_HPP_LOWVCJTR
+#define GRADIENT_HPP_LOWVCJTR
 
 // autodiff includes
 #include <autodiff/common/eigen.hpp>
@@ -39,7 +40,7 @@ namespace detail {
 
 /// Return the length of an item in a `wrt(...)` list.
 template<typename Item>
-auto wrt_item_length(const Item& item) -> size_t
+__host__ __device__ auto wrt_item_length(const Item& item) -> size_t
 {
     if constexpr (isVector<Item>)
         return item.size(); // if item is a vector, return its size
@@ -49,7 +50,7 @@ auto wrt_item_length(const Item& item) -> size_t
 
 /// Return the sum of lengths of all itens in a `wrt(...)` list.
 template<typename... Vars>
-auto wrt_total_length(const Wrt<Vars...>& wrt) -> size_t
+__host__ __device__ auto wrt_total_length(const Wrt<Vars...>& wrt) -> size_t
 {
     return Reduce(wrt.args, [&](auto&& item) constexpr {
         return wrt_item_length(item);
@@ -60,7 +61,7 @@ auto wrt_total_length(const Wrt<Vars...>& wrt) -> size_t
 // accepts an index i and the variable x[i], where i is the global index of the
 // variable in the list.
 template<typename Function, typename... Vars>
-constexpr auto ForEachWrtVar(const Wrt<Vars...>& wrt, Function&& f)
+__host__ __device__ constexpr auto ForEachWrtVar(const Wrt<Vars...>& wrt, Function&& f)
 {
     const auto n = wrt_total_length(wrt); // the sum of lengths of all items in the wrt list
     auto i = 0; // the current index of the variable in the wrt list
@@ -76,7 +77,7 @@ constexpr auto ForEachWrtVar(const Wrt<Vars...>& wrt, Function&& f)
 
 /// Return the gradient of scalar function *f* with respect to some or all variables *x*.
 template<typename Fun, typename... Vars, typename... Args, typename Y, typename G>
-void gradient(const Fun& f, const Wrt<Vars...>& wrt, const At<Args...>& at, Y& u, G& g)
+__host__ __device__ void gradient(const Fun& f, const Wrt<Vars...>& wrt, const At<Args...>& at, Y& u, G& g)
 {
     static_assert(sizeof...(Vars) >= 1);
     static_assert(sizeof...(Args) >= 1);
@@ -97,7 +98,7 @@ void gradient(const Fun& f, const Wrt<Vars...>& wrt, const At<Args...>& at, Y& u
 
 /// Return the gradient of scalar function *f* with respect to some or all variables *x*.
 template<typename Fun, typename... Vars, typename... Args, typename Y>
-auto gradient(const Fun& f, const Wrt<Vars...>& wrt, const At<Args...>& at, Y& u)
+__host__ __device__ auto gradient(const Fun& f, const Wrt<Vars...>& wrt, const At<Args...>& at, Y& u)
 {
     using T = NumericType<decltype(u)>; // the underlying numeric floating point type in the autodiff number u
     using Vec = VectorX<T>; // the gradient vector type with floating point values (not autodiff numbers!)
@@ -109,7 +110,7 @@ auto gradient(const Fun& f, const Wrt<Vars...>& wrt, const At<Args...>& at, Y& u
 
 /// Return the gradient of scalar function *f* with respect to some or all variables *x*.
 template<typename Fun, typename... Vars, typename... Args>
-auto gradient(const Fun& f, const Wrt<Vars...>& wrt, const At<Args...>& at)
+__host__ __device__ auto gradient(const Fun& f, const Wrt<Vars...>& wrt, const At<Args...>& at)
 {
     ReturnType<Fun, Args...> u;
     return gradient(f, wrt, at, u);
@@ -117,7 +118,7 @@ auto gradient(const Fun& f, const Wrt<Vars...>& wrt, const At<Args...>& at)
 
 /// Return the Jacobian matrix of a function *f* with respect to some or all variables.
 template<typename Fun, typename... Vars, typename... Args, typename Y, typename Jac>
-void jacobian(const Fun& f, const Wrt<Vars...>& wrt, const At<Args...>& at, Y& F, Jac& J)
+__host__ __device__ void jacobian(const Fun& f, const Wrt<Vars...>& wrt, const At<Args...>& at, Y& F, Jac& J)
 {
     static_assert(sizeof...(Vars) >= 1);
     static_assert(sizeof...(Args) >= 1);
@@ -135,7 +136,7 @@ void jacobian(const Fun& f, const Wrt<Vars...>& wrt, const At<Args...>& at, Y& F
 
 /// Return the Jacobian matrix of a function *f* with respect to some or all variables.
 template<typename Fun, typename... Vars, typename... Args, typename Y>
-auto jacobian(const Fun& f, const Wrt<Vars...>& wrt, const At<Args...>& at, Y& F)
+__host__ __device__ auto jacobian(const Fun& f, const Wrt<Vars...>& wrt, const At<Args...>& at, Y& F)
 {
     using U = VectorValueType<decltype(F)>; // the type of the autodiff numbers in vector F
     using T = NumericType<U>; // the underlying numeric floating point type in the autodiff number U
@@ -148,7 +149,7 @@ auto jacobian(const Fun& f, const Wrt<Vars...>& wrt, const At<Args...>& at, Y& F
 
 /// Return the Jacobian matrix of a function *f* with respect to some or all variables.
 template<typename Fun, typename... Vars, typename... Args>
-auto jacobian(const Fun& f, const Wrt<Vars...>& wrt, const At<Args...>& at)
+__host__ __device__ auto jacobian(const Fun& f, const Wrt<Vars...>& wrt, const At<Args...>& at)
 {
     using Y = ReturnType<Fun, Args...>;
     static_assert(!std::is_same_v<Y, void>,
@@ -162,7 +163,7 @@ auto jacobian(const Fun& f, const Wrt<Vars...>& wrt, const At<Args...>& at)
 
 /// Return the hessian matrix of scalar function *f* with respect to some or all variables *x*.
 template<typename Fun, typename... Vars, typename... Args, typename U, typename G, typename H>
-void hessian(const Fun& f, const Wrt<Vars...>& wrt, const At<Args...>& at, U& u, G& g, H& h)
+__host__ __device__ void hessian(const Fun& f, const Wrt<Vars...>& wrt, const At<Args...>& at, U& u, G& g, H& h)
 {
     static_assert(sizeof...(Vars) >= 1);
     static_assert(sizeof...(Args) >= 1);
@@ -186,7 +187,7 @@ void hessian(const Fun& f, const Wrt<Vars...>& wrt, const At<Args...>& at, U& u,
 
 /// Return the hessian matrix of scalar function *f* with respect to some or all variables *x*.
 template<typename Fun, typename... Vars, typename... Args, typename U, typename G>
-auto hessian(const Fun& f, const Wrt<Vars...>& wrt, const At<Args...>& at, U& u, G& g)
+__host__ __device__ auto hessian(const Fun& f, const Wrt<Vars...>& wrt, const At<Args...>& at, U& u, G& g)
 {
     using T = NumericType<decltype(u)>; // the underlying numeric floating point type in the autodiff number u
     using Mat = MatrixX<T>; // the Hessian matrix type with floating point values (not autodiff numbers!)
@@ -198,7 +199,7 @@ auto hessian(const Fun& f, const Wrt<Vars...>& wrt, const At<Args...>& at, U& u,
 
 /// Return the hessian matrix of scalar function *f* with respect to some or all variables *x*.
 template<typename Fun, typename... Vars, typename... Args>
-auto hessian(const Fun& f, const Wrt<Vars...>& wrt, const At<Args...>& at)
+__host__ __device__ auto hessian(const Fun& f, const Wrt<Vars...>& wrt, const At<Args...>& at)
 {
     using U = ReturnType<Fun, Args...>;
     using T = NumericType<U>;
@@ -216,3 +217,4 @@ using detail::hessian;
 
 } // namespace autodiff
 
+#endif /* end of include guard: GRADIENT_HPP_LOWVCJTR */

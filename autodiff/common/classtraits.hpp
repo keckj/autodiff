@@ -27,7 +27,8 @@
 // OUT OF OR IN CONNECTION WITH THE SOFTWARE OR THE USE OR OTHER DEALINGS IN THE
 // SOFTWARE.
 
-#pragma once
+#ifndef CLASSTRAITS_HPP_F3BG1D9T
+#define CLASSTRAITS_HPP_F3BG1D9T
 
 // autodiff includes
 #include <autodiff/common/meta.hpp>
@@ -97,3 +98,5 @@ constexpr bool hasSize = has_member_size<PlainType<T>>::value;
 
 } // namespace detail
 } // namespace autodiff
+
+#endif /* end of include guard: CLASSTRAITS_HPP_F3BG1D9T */
