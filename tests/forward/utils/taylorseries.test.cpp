@@ -65,13 +65,13 @@ auto taylor_projection_at(const Array& dfdv, double t)
                                                                                                                                             \
     CHECK( dfdv.size() == detail::Order<type> + 1 );                                                                                        \
                                                                                                                                             \
-    CHECK_APPROX( g(0.0), taylor_projection_at(dfdv, 0.0) );                                                                                  \
+    CHECK_APPROX( g(0.0), taylor_projection_at(dfdv, 0.0) );                                                                                \
                                                                                                                                             \
-    CHECK_APPROX( g(1.0), taylor_projection_at(dfdv, 1.0) );                                                                                  \
-    CHECK_APPROX( g(2.0), taylor_projection_at(dfdv, 2.0) );                                                                                  \
+    CHECK_APPROX( g(1.0), taylor_projection_at(dfdv, 1.0) );                                                                                \
+    CHECK_APPROX( g(2.0), taylor_projection_at(dfdv, 2.0) );                                                                                \
                                                                                                                                             \
-    CHECK_APPROX( g(-1.0), taylor_projection_at(dfdv, -1.0) );                                                                                \
-    CHECK_APPROX( g(-2.0), taylor_projection_at(dfdv, -2.0) );                                                                                \
+    CHECK_APPROX( g(-1.0), taylor_projection_at(dfdv, -1.0) );                                                                              \
+    CHECK_APPROX( g(-2.0), taylor_projection_at(dfdv, -2.0) );                                                                              \
 }
 
 #define CHECK_TAYLOR_SERIES_VECTOR_FUN(type, expr)                                                                                          \

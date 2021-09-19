@@ -31,7 +31,7 @@
 #define VECTORTRAITS_HPP_YR1Y0AVW
 
 // C++ includes
-#include <vector>
+#include <array>
 
 // autodiff includes
 #include <autodiff/common/meta.hpp>
@@ -71,14 +71,14 @@ template<typename V>
 constexpr bool isVector = !cuda::std::is_same_v<VectorValueType<PlainType<V>>, VectorTraitsNotDefinedFor<PlainType<V>>>;
 
 
-/// Implementation of VectorTraits for std::vector.
-template<typename T, template<class> typename Allocator>
-struct VectorTraits<std::vector<T, Allocator<T>>>
+/// Implementation of VectorTraits for std::array.
+template<typename T, size_t N>
+struct VectorTraits<std::array<T, N>>
 {
     using ValueType = T;
 
     template<typename NewValueType>
-    using ReplaceValueType = std::vector<NewValueType, Allocator<NewValueType>>;
+    using ReplaceValueType = std::array<NewValueType, N>;
 };
 
 } // namespace detail

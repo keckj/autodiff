@@ -210,7 +210,9 @@ __host__ __device__ auto derivatives(const Result& result)
         constexpr auto N = Order<NumType>; // the order of the dual/real number
         std::array<Vec, N + 1> values; // create an array to store the derivatives stored inside the dual/real number
         For<N + 1>([&](auto i) constexpr {
+#if 0
             values[i].resize(len);
+#endif
             for(auto j = 0; j < len; ++j)
                 values[i][j] = derivative<i>(result[j]); // get the ith derivative of the jth dual/real number
         });

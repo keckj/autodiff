@@ -28,7 +28,7 @@
 // SOFTWARE.
 
 // C++ includes
-#include <vector>
+#include <array>
 
 // autodiff includes
 #include <autodiff/forward/dual.hpp>
@@ -72,13 +72,13 @@ TEST_CASE("testing forward derivative module", "[forward][utils][derivative]")
         CHECK( derivative<1>(y) == 3.0 );
     }
 
-    SECTION("testing seed operations for higher-order directional derivatives using std::vector...")
+    SECTION("testing seed operations for higher-order directional derivatives using std::array...")
     {
-        std::vector<real4th> x(4);
+        std::array<real4th,4> x;
 
         real4th y;
 
-        std::vector<double> v = {2.0, 3.0, 4.0, 5.0};
+        std::array<double,4> v = {2.0, 3.0, 4.0, 5.0};
 
         seed(at(x, y), along(v, 7.0));
 
