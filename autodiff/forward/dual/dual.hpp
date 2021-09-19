@@ -706,7 +706,7 @@ __host__ __device__ auto& gradnode(Dual<T, G>& dual)
 
 /// Set the `grad` node of a dual number along the `val` branch at a depth `order`.
 template<size_t order, typename T, typename G, typename U>
-__host__ __device__ auto seed(Dual<T, G>& dual, U&& seedval)
+__host__ __device__ void seed(Dual<T, G>& dual, U&& seedval)
 {
     gradnode<order>(dual) = static_cast<NumericType<T>>(seedval);
 }

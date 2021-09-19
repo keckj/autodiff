@@ -23,8 +23,8 @@ int main()
     double dudy = derivative(f, wrt(y), at(x, y, z));
     double dudz = derivative(f, wrt(z), at(x, y, z));
 
-    std::cout << "u = " << u << std::endl;         // print the evaluated output u = f(x, y, z)
-    std::cout << "du/dx = " << dudx << std::endl;  // print the evaluated derivative du/dx
-    std::cout << "du/dy = " << dudy << std::endl;  // print the evaluated derivative du/dy
-    std::cout << "du/dz = " << dudz << std::endl;  // print the evaluated derivative du/dz
+    std::cout << "u = " << u << " (expected 27.2113)" << std::endl;         // print the evaluated output u = f(x, y, z)
+    std::cout << "du/dx = " << dudx << " (expected 13.6056)" << std::endl;  // print the evaluated derivative du/dx
+    std::cout << "du/dy = " << dudy << " (expected 8.26761)" << std::endl;  // print the evaluated derivative du/dy
+    std::cout << "du/dz = " << dudz << " (expected 5.28638)" << std::endl;  // print the evaluated derivative du/dz
 }

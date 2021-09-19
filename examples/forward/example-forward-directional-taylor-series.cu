@@ -27,8 +27,8 @@ int main()
 
     std::cout << std::fixed;
     std::cout << "Comparison between exact evaluation and 4th order Taylor estimate of f(x + t, y + t, z + 2t):" << std::endl;
-    std::cout << "u(exact)  = " << u.val() << std::endl;
-    std::cout << "u(taylor) = " << utaylor << std::endl;
+    std::cout << "u(exact)  = " << u << " (expected value: -16.847071)" << std::endl;
+    std::cout << "u(taylor) = " << utaylor << " (expected value: -16.793986)" << std::endl;
 }
 
 /*-------------------------------------------------------------------------------------------------

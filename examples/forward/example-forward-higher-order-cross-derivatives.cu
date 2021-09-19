@@ -19,11 +19,11 @@ int main()
 
     auto [u0, ux, uxy, uxyx, uxyxz] = derivatives(f, wrt(x, y, x, z), at(x, y, z));
 
-    std::cout << "u0 = " << u0 << std::endl;       // print the evaluated value of u = f(x, y, z)
-    std::cout << "ux = " << ux << std::endl;       // print the evaluated derivative du/dx
-    std::cout << "uxy = " << uxy << std::endl;     // print the evaluated derivative d²u/dxdy
-    std::cout << "uxyx = " << uxyx << std::endl;   // print the evaluated derivative d³u/dx²dy
-    std::cout << "uxyxz = " << uxyxz << std::endl; // print the evaluated derivative d⁴u/dx²dydz
+    std::cout << "u0 = " << u0 << " (expected 27.2113)" << std::endl;         // print the evaluated value of u = f(x, y, z)
+    std::cout << "ux = " << ux << " (expected 13.6056)" << std::endl;         // print the evaluated derivative du/dx
+    std::cout << "uxy = " << uxy << " (expected 3.33099)" << std::endl;       // print the evaluated derivative d²u/dxdy
+    std::cout << "uxyx = " << uxyx << " (expected -0.735916)" << std::endl;   // print the evaluated derivative d³u/dx²dy
+    std::cout << "uxyxz = " << uxyxz << " (expected 0.074335)" << std::endl;  // print the evaluated derivative d⁴u/dx²dydz
 }
 
 /*-------------------------------------------------------------------------------------------------

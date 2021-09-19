@@ -35,11 +35,11 @@ int main()
     double dudb = derivative(f, wrt(params.b), at(x, params)); // evaluate the derivative du/db
     double dudc = derivative(f, wrt(params.c), at(x, params)); // evaluate the derivative du/dc
 
-    std::cout << "u = " << u << std::endl;         // print the evaluated output u
-    std::cout << "du/dx = " << dudx << std::endl;  // print the evaluated derivative du/dx
-    std::cout << "du/da = " << duda << std::endl;  // print the evaluated derivative du/da
-    std::cout << "du/db = " << dudb << std::endl;  // print the evaluated derivative du/db
-    std::cout << "du/dc = " << dudc << std::endl;  // print the evaluated derivative du/dc
+    std::cout << "u = " << u << " (expected 3.4968)" << std::endl;         // print the evaluated output u
+    std::cout << "du/dx = " << dudx << " (expected 1.53964)" << std::endl;  // print the evaluated derivative du/dx
+    std::cout << "du/da = " << duda << " (expected 0.479426)" << std::endl;  // print the evaluated derivative du/da
+    std::cout << "du/db = " << dudb << " (expected 0.877583)" << std::endl;  // print the evaluated derivative du/db
+    std::cout << "du/dc = " << dudc << " (expected 0.420735)" << std::endl;  // print the evaluated derivative du/dc
 }
 
 /*-------------------------------------------------------------------------------------------------

@@ -80,12 +80,12 @@ template<size_t i>
 struct Index
 {
     constexpr static size_t index = i;
-    constexpr operator size_t() const { return index; }
-    constexpr operator size_t() { return index; }
+    __host__ __device__ constexpr operator size_t() const { return index; }
+    __host__ __device__ constexpr operator size_t() { return index; }
 };
 
 template<size_t i, size_t ibegin, size_t iend, typename Function>
-__host__ __device__ constexpr auto AuxFor(Function&& f)
+__host__ __device__ constexpr void AuxFor(Function&& f)
 {
     if constexpr (i < iend) {
         f(Index<i>{});
@@ -94,19 +94,19 @@ __host__ __device__ constexpr auto AuxFor(Function&& f)
 }
 
 template<size_t ibegin, size_t iend, typename Function>
-__host__ __device__ constexpr auto For(Function&& f)
+__host__ __device__ constexpr void For(Function&& f)
 {
     AuxFor<ibegin, ibegin, iend>(cuda::std::forward<Function>(f));
 }
 
 template<size_t iend, typename Function>
-__host__ __device__ constexpr auto For(Function&& f)
+__host__ __device__ constexpr void For(Function&& f)
 {
     For<0, iend>(cuda::std::forward<Function>(f));
 }
 
 template<size_t i, size_t ibegin, size_t iend, typename Function>
-__host__ __device__ constexpr auto AuxReverseFor(Function&& f)
+__host__ __device__ constexpr void AuxReverseFor(Function&& f)
 {
     if constexpr (i < iend)
     {
@@ -116,19 +116,19 @@ __host__ __device__ constexpr auto AuxReverseFor(Function&& f)
 }
 
 template<size_t ibegin, size_t iend, typename Function>
-__host__ __device__ constexpr auto ReverseFor(Function&& f)
+__host__ __device__ constexpr void ReverseFor(Function&& f)
 {
     AuxReverseFor<ibegin, ibegin, iend>(cuda::std::forward<Function>(f));
 }
 
 template<size_t iend, typename Function>
-__host__ __device__ constexpr auto ReverseFor(Function&& f)
+__host__ __device__ constexpr void ReverseFor(Function&& f)
 {
     ReverseFor<0, iend>(cuda::std::forward<Function>(f));
 }
 
 template<typename Tuple, typename Function>
-__host__ __device__ constexpr auto ForEach(Tuple&& tuple, Function&& f)
+__host__ __device__ constexpr void ForEach(Tuple&& tuple, Function&& f)
 {
     constexpr auto N = TupleSize<Tuple>;
     For<N>([&](auto i) constexpr {

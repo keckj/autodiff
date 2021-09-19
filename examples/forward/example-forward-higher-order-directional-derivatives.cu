@@ -6,7 +6,7 @@
 using namespace autodiff;
 
 // The multi-variable function for which higher-order derivatives are needed (up to 4th order)
-real4th f(real4th x, real4th y, real4th z)
+__host__ __device__ real4th f(real4th x, real4th y, real4th z)
 {
     return sin(x) * cos(y) * exp(z);
 }
@@ -19,11 +19,11 @@ int main()
 
     auto dfdv = derivatives(f, along(1.0, 1.0, 2.0), at(x, y, z)); // the directional derivatives of f along direction v = (1, 1, 2) at (x, y, z) = (1, 2, 3)
 
-    std::cout << "dfdv[0] = " << dfdv[0] << std::endl; // print the evaluated 0th order directional derivative of f along v (equivalent to f(x, y, z))
-    std::cout << "dfdv[1] = " << dfdv[1] << std::endl; // print the evaluated 1st order directional derivative of f along v
-    std::cout << "dfdv[2] = " << dfdv[2] << std::endl; // print the evaluated 2nd order directional derivative of f along v
-    std::cout << "dfdv[3] = " << dfdv[3] << std::endl; // print the evaluated 3rd order directional derivative of f along v
-    std::cout << "dfdv[4] = " << dfdv[4] << std::endl; // print the evaluated 4th order directional derivative of f along v
+    std::cout << "dfdv[0] = " << dfdv[0] << " (expected -7.03346)" << std::endl; // print the evaluated 0th order directional derivative of f along v (equivalent to f(x, y, z))
+    std::cout << "dfdv[1] = " << dfdv[1] << " (expected -33.9515)" << std::endl; // print the evaluated 1st order directional derivative of f along v
+    std::cout << "dfdv[2] = " << dfdv[2] << " (expected -113.341)" << std::endl; // print the evaluated 2nd order directional derivative of f along v
+    std::cout << "dfdv[3] = " << dfdv[3] << " (expected -249.358)" << std::endl; // print the evaluated 3rd order directional derivative of f along v
+    std::cout << "dfdv[4] = " << dfdv[4] << " (expected -225.914)" << std::endl; // print the evaluated 4th order directional derivative of f along v
 }
 
 /*-------------------------------------------------------------------------------------------------
