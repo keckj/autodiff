@@ -46,6 +46,7 @@ __host__ __device__ constexpr size_t wrt_item_length()
         return VectorSize<Item>; // if item is a vector, return its size
     else 
         return 1; // if not a vector, say, a number, return 1 for its length
+    __builtin_unreachable();
 }
 
 
@@ -121,9 +122,6 @@ __host__ __device__ constexpr void jacobian(const Fun& f, const Wrt<Vars...>& wr
     static_assert(sizeof...(Vars) >= 1);
     static_assert(sizeof...(Args) >= 1);
 
-    constexpr size_t N = wrt_total_length<Vars...>();
-    size_t m = 0;
-
     ForEachWrtVar(wrt, [&](auto&& i, auto&& xi) constexpr {
         F = eval(f, at, detail::wrt(xi)); // evaluate F with xi seeded so that dF/dxi is also computed
         for(size_t row = 0; row < VectorSize<decltype(F)>; ++row)
@@ -170,7 +168,7 @@ __host__ __device__ constexpr void hessian(const Fun& f, const Wrt<Vars...>& wrt
 
     ForEachWrtVar(wrt, [&](auto&& i, auto&& xi) constexpr {
         ForEachWrtVar(wrt, [&](auto&& j, auto&& xj) constexpr {
-            if constexpr(j >= i) { // this take advantage of the fact the Hessian matrix is symmetric
+            if (j >= i) { // this take advantage of the fact the Hessian matrix is symmetric
                 u = eval(f, at, detail::wrt(xi, xj)); // evaluate u with xi and xj seeded to produce u0, du/dxi, d2u/dxidxj
                 g[i] = derivative<1>(u);              // get du/dxi from u
                 h(i, j) = h(j, i) = derivative<2>(u); // get d2u/dxidxj from u
