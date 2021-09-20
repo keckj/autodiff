@@ -40,7 +40,7 @@ namespace detail {
 
 /// Return the length of an item in a `wrt(...)` list.
 template<typename Item>
-__host__ __device__ constexpr size_t wrt_item_length(const Item& item)
+__host__ __device__ constexpr size_t wrt_item_length()
 {
     if constexpr (isVector<Item>)
         return VectorSize<Item>; // if item is a vector, return its size
@@ -51,11 +51,9 @@ __host__ __device__ constexpr size_t wrt_item_length(const Item& item)
 
 /// Return the sum of lengths of all itens in a `wrt(...)` list.
 template<typename... Vars>
-__host__ __device__ constexpr size_t wrt_total_length(const Wrt<Vars...>& wrt)
+__host__ __device__ constexpr size_t wrt_total_length()
 {
-    return Reduce(wrt.args, [&](auto&& item) constexpr {
-        return wrt_item_length(item);
-    });
+    return (wrt_item_length<Vars>() + ...);
 }
 
 // Loop through each variable in a wrt list and apply a function f(i, x) that
@@ -64,7 +62,6 @@ __host__ __device__ constexpr size_t wrt_total_length(const Wrt<Vars...>& wrt)
 template<typename Function, typename... Vars>
 __host__ __device__ constexpr void ForEachWrtVar(const Wrt<Vars...>& wrt, Function&& f)
 {
-    constexpr size_t N = wrt_total_length(wrt); // the sum of lengths of all items in the wrt list
     auto i = 0; // the current index of the variable in the wrt list
     ForEach(wrt.args, [&](auto& item) constexpr
     {
@@ -83,7 +80,7 @@ __host__ __device__ constexpr void gradient(const Fun& f, const Wrt<Vars...>& wr
     static_assert(sizeof...(Vars) >= 1);
     static_assert(sizeof...(Args) >= 1);
 
-    constexpr size_t N = wrt_total_length(wrt);
+    constexpr size_t N = wrt_total_length<Vars...>();
 
     if constexpr(N == 0) 
         return;
@@ -100,7 +97,7 @@ __host__ __device__ constexpr void gradient(const Fun& f, const Wrt<Vars...>& wr
 template<typename Fun, typename... Vars, typename... Args, typename Y>
 __host__ __device__ constexpr auto gradient(const Fun& f, const Wrt<Vars...>& wrt, const At<Args...>& at, Y& u)
 {
-    constexpr size_t N = wrt_total_length(wrt);
+    constexpr size_t N = wrt_total_length<Vars...>();
     using T = NumericType<decltype(u)>; // the underlying numeric floating point type in the autodiff number u
     using Vec = VectorX<T,N>; // the gradient vector type with floating point values (not autodiff numbers!)
 
@@ -124,7 +121,7 @@ __host__ __device__ constexpr void jacobian(const Fun& f, const Wrt<Vars...>& wr
     static_assert(sizeof...(Vars) >= 1);
     static_assert(sizeof...(Args) >= 1);
 
-    constexpr size_t N = wrt_total_length(wrt);
+    constexpr size_t N = wrt_total_length<Vars...>();
     size_t m = 0;
 
     ForEachWrtVar(wrt, [&](auto&& i, auto&& xi) constexpr {
@@ -139,7 +136,7 @@ template<typename Fun, typename... Vars, typename... Args, typename Y>
 __host__ __device__ constexpr auto jacobian(const Fun& f, const Wrt<Vars...>& wrt, const At<Args...>& at, Y& F)
 {
     constexpr size_t M = VectorSize<decltype(F)>;
-    constexpr size_t N = wrt_total_length(wrt);
+    constexpr size_t N = wrt_total_length<Vars...>();
 
     using U = VectorValueType<decltype(F)>; // the type of the autodiff numbers in vector F
     using T = NumericType<U>; // the underlying numeric floating point type in the autodiff number U
@@ -186,7 +183,7 @@ __host__ __device__ constexpr void hessian(const Fun& f, const Wrt<Vars...>& wrt
 template<typename Fun, typename... Vars, typename... Args, typename U, typename G>
 __host__ __device__ constexpr auto hessian(const Fun& f, const Wrt<Vars...>& wrt, const At<Args...>& at, U& u, G& g)
 {
-    constexpr size_t N = wrt_total_length(wrt);
+    constexpr size_t N = wrt_total_length<Vars...>();
     using T = NumericType<decltype(u)>; // the underlying numeric floating point type in the autodiff number u
     using Mat = MatrixX<T,N,N>; // the Hessian matrix type with floating point values (not autodiff numbers!)
 
@@ -199,7 +196,7 @@ __host__ __device__ constexpr auto hessian(const Fun& f, const Wrt<Vars...>& wrt
 template<typename Fun, typename... Vars, typename... Args>
 __host__ __device__ constexpr auto hessian(const Fun& f, const Wrt<Vars...>& wrt, const At<Args...>& at)
 {
-    constexpr size_t N = wrt_total_length(wrt);
+    constexpr size_t N = wrt_total_length<Vars...>();
     using U = ReturnType<Fun, Args...>;
     using T = NumericType<U>;
     using Vec = VectorX<T,N>;
