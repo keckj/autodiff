@@ -6,16 +6,17 @@
 #include <autodiff/forward/real/eigen.hpp>
 using namespace autodiff;
 
+#if 0
 // The vector function for which a 4th order directional Taylor series will be computed.
 ArrayXreal4th f(const ArrayXreal4th& x)
 {
     return x.sin() / x;
 }
+#endif
 
 int main()
 {
-    using Eigen::ArrayXd;
-
+#if 0
     ArrayXreal4th x(5);                        // the input vector x
     x << 1.0, 2.0, 3.0, 4.0, 5.0;
 
@@ -34,6 +35,7 @@ int main()
     std::cout << "Comparison between exact evaluation and 4th order Taylor estimate of f(x + t·v):" << std::endl;
     std::cout << "u(exact)  = " << u.transpose() << std::endl;
     std::cout << "u(taylor) = " << utaylor.transpose() << std::endl;
+#endif
 }
 
 /*-------------------------------------------------------------------------------------------------

@@ -40,17 +40,18 @@ namespace detail {
 
 /// Return the length of an item in a `wrt(...)` list.
 template<typename Item>
-__host__ __device__ auto wrt_item_length(const Item& item) -> size_t
+__host__ __device__ constexpr size_t wrt_item_length(const Item& item)
 {
     if constexpr (isVector<Item>)
-        return item.size(); // if item is a vector, return its size
-    else return 1; // if not a vector, say, a number, return 1 for its length
+        return VectorTraits<Item>::size; // if item is a vector, return its size
+    else 
+        return 1; // if not a vector, say, a number, return 1 for its length
 }
 
 
 /// Return the sum of lengths of all itens in a `wrt(...)` list.
 template<typename... Vars>
-__host__ __device__ auto wrt_total_length(const Wrt<Vars...>& wrt) -> size_t
+__host__ __device__ constexpr size_t wrt_total_length(const Wrt<Vars...>& wrt)
 {
     return Reduce(wrt.args, [&](auto&& item) constexpr {
         return wrt_item_length(item);
@@ -63,12 +64,12 @@ __host__ __device__ auto wrt_total_length(const Wrt<Vars...>& wrt) -> size_t
 template<typename Function, typename... Vars>
 __host__ __device__ constexpr auto ForEachWrtVar(const Wrt<Vars...>& wrt, Function&& f)
 {
-    const auto n = wrt_total_length(wrt); // the sum of lengths of all items in the wrt list
+    constexpr size_t N = wrt_total_length(wrt); // the sum of lengths of all items in the wrt list
     auto i = 0; // the current index of the variable in the wrt list
     ForEach(wrt.args, [&](auto& item) constexpr
     {
         if constexpr (isVector<decltype(item)>) {
-            for(auto j = 0; j < item.size(); ++j)
+            for(auto j = 0; j < VectorTraits<decltype(item)>::size; ++j)
                 f(i++, item[j]); // call given f with current index and variable from item (a vector)
         }
         else f(i++, item); // call given f with current index and variable from item (a number, not a vector)
@@ -77,16 +78,15 @@ __host__ __device__ constexpr auto ForEachWrtVar(const Wrt<Vars...>& wrt, Functi
 
 /// Return the gradient of scalar function *f* with respect to some or all variables *x*.
 template<typename Fun, typename... Vars, typename... Args, typename Y, typename G>
-__host__ __device__ void gradient(const Fun& f, const Wrt<Vars...>& wrt, const At<Args...>& at, Y& u, G& g)
+__host__ __device__ constexpr void gradient(const Fun& f, const Wrt<Vars...>& wrt, const At<Args...>& at, Y& u, G& g)
 {
     static_assert(sizeof...(Vars) >= 1);
     static_assert(sizeof...(Args) >= 1);
 
-    const size_t n = wrt_total_length(wrt);
+    constexpr size_t N = wrt_total_length(wrt);
 
-    g.resize(n);
-
-    if(n == 0) return;
+    if constexpr(N == 0) 
+        return;
 
     ForEachWrtVar(wrt, [&](auto&& i, auto&& xi) constexpr
     {
@@ -98,10 +98,11 @@ __host__ __device__ void gradient(const Fun& f, const Wrt<Vars...>& wrt, const A
 
 /// Return the gradient of scalar function *f* with respect to some or all variables *x*.
 template<typename Fun, typename... Vars, typename... Args, typename Y>
-__host__ __device__ auto gradient(const Fun& f, const Wrt<Vars...>& wrt, const At<Args...>& at, Y& u)
+__host__ __device__ constexpr auto gradient(const Fun& f, const Wrt<Vars...>& wrt, const At<Args...>& at, Y& u)
 {
+    constexpr size_t N = wrt_total_length(wrt);
     using T = NumericType<decltype(u)>; // the underlying numeric floating point type in the autodiff number u
-    using Vec = VectorX<T>; // the gradient vector type with floating point values (not autodiff numbers!)
+    using Vec = VectorX<T,N>; // the gradient vector type with floating point values (not autodiff numbers!)
 
     Vec g;
     gradient(f, wrt, at, u, g);
@@ -110,7 +111,7 @@ __host__ __device__ auto gradient(const Fun& f, const Wrt<Vars...>& wrt, const A
 
 /// Return the gradient of scalar function *f* with respect to some or all variables *x*.
 template<typename Fun, typename... Vars, typename... Args>
-__host__ __device__ auto gradient(const Fun& f, const Wrt<Vars...>& wrt, const At<Args...>& at)
+__host__ __device__ constexpr auto gradient(const Fun& f, const Wrt<Vars...>& wrt, const At<Args...>& at)
 {
     ReturnType<Fun, Args...> u;
     return gradient(f, wrt, at, u);
@@ -118,17 +119,17 @@ __host__ __device__ auto gradient(const Fun& f, const Wrt<Vars...>& wrt, const A
 
 /// Return the Jacobian matrix of a function *f* with respect to some or all variables.
 template<typename Fun, typename... Vars, typename... Args, typename Y, typename Jac>
-__host__ __device__ void jacobian(const Fun& f, const Wrt<Vars...>& wrt, const At<Args...>& at, Y& F, Jac& J)
+__host__ __device__ constexpr void jacobian(const Fun& f, const Wrt<Vars...>& wrt, const At<Args...>& at, Y& F, Jac& J)
 {
+    static_assert(false);
     static_assert(sizeof...(Vars) >= 1);
     static_assert(sizeof...(Args) >= 1);
 
-    size_t n = wrt_total_length(wrt); /// using const size_t produces an error in GCC 7.3 because of the capture in the constexpr lambda in the ForEach block
+    constexpr size_t N = wrt_total_length(wrt);
     size_t m = 0;
 
     ForEachWrtVar(wrt, [&](auto&& i, auto&& xi) constexpr {
         F = eval(f, at, detail::wrt(xi)); // evaluate F with xi seeded so that dF/dxi is also computed
-        if(m == 0) { m = F.rows(); J.resize(m, n); };
         for(size_t row = 0; row < m; ++row)
             J(row, i) = derivative<1>(F[row]);
     });
@@ -136,8 +137,9 @@ __host__ __device__ void jacobian(const Fun& f, const Wrt<Vars...>& wrt, const A
 
 /// Return the Jacobian matrix of a function *f* with respect to some or all variables.
 template<typename Fun, typename... Vars, typename... Args, typename Y>
-__host__ __device__ auto jacobian(const Fun& f, const Wrt<Vars...>& wrt, const At<Args...>& at, Y& F)
+__host__ __device__ constexpr auto jacobian(const Fun& f, const Wrt<Vars...>& wrt, const At<Args...>& at, Y& F)
 {
+    static_assert(false);
     using U = VectorValueType<decltype(F)>; // the type of the autodiff numbers in vector F
     using T = NumericType<U>; // the underlying numeric floating point type in the autodiff number U
     using Mat = MatrixX<T>; // the jacobian matrix type with floating point values (not autodiff numbers!)
@@ -149,7 +151,7 @@ __host__ __device__ auto jacobian(const Fun& f, const Wrt<Vars...>& wrt, const A
 
 /// Return the Jacobian matrix of a function *f* with respect to some or all variables.
 template<typename Fun, typename... Vars, typename... Args>
-__host__ __device__ auto jacobian(const Fun& f, const Wrt<Vars...>& wrt, const At<Args...>& at)
+__host__ __device__ constexpr auto jacobian(const Fun& f, const Wrt<Vars...>& wrt, const At<Args...>& at)
 {
     using Y = ReturnType<Fun, Args...>;
     static_assert(!std::is_same_v<Y, void>,
@@ -163,20 +165,15 @@ __host__ __device__ auto jacobian(const Fun& f, const Wrt<Vars...>& wrt, const A
 
 /// Return the hessian matrix of scalar function *f* with respect to some or all variables *x*.
 template<typename Fun, typename... Vars, typename... Args, typename U, typename G, typename H>
-__host__ __device__ void hessian(const Fun& f, const Wrt<Vars...>& wrt, const At<Args...>& at, U& u, G& g, H& h)
+__host__ __device__ constexpr void hessian(const Fun& f, const Wrt<Vars...>& wrt, const At<Args...>& at, U& u, G& g, H& h)
 {
     static_assert(sizeof...(Vars) >= 1);
     static_assert(sizeof...(Args) >= 1);
 
-    size_t n = wrt_total_length(wrt);
-
-    g.resize(n);
-    h.resize(n, n);
-
     ForEachWrtVar(wrt, [&](auto&& i, auto&& xi) constexpr {
         ForEachWrtVar(wrt, [&](auto&& j, auto&& xj) constexpr
         {
-            if(j >= i) { // this take advantage of the fact the Hessian matrix is symmetric
+            if constexpr(j >= i) { // this take advantage of the fact the Hessian matrix is symmetric
                 u = eval(f, at, detail::wrt(xi, xj)); // evaluate u with xi and xj seeded to produce u0, du/dxi, d2u/dxidxj
                 g[i] = derivative<1>(u);              // get du/dxi from u
                 h(i, j) = h(j, i) = derivative<2>(u); // get d2u/dxidxj from u
@@ -187,10 +184,11 @@ __host__ __device__ void hessian(const Fun& f, const Wrt<Vars...>& wrt, const At
 
 /// Return the hessian matrix of scalar function *f* with respect to some or all variables *x*.
 template<typename Fun, typename... Vars, typename... Args, typename U, typename G>
-__host__ __device__ auto hessian(const Fun& f, const Wrt<Vars...>& wrt, const At<Args...>& at, U& u, G& g)
+__host__ __device__ constexpr auto hessian(const Fun& f, const Wrt<Vars...>& wrt, const At<Args...>& at, U& u, G& g)
 {
+    constexpr size_t N = wrt_total_length(wrt);
     using T = NumericType<decltype(u)>; // the underlying numeric floating point type in the autodiff number u
-    using Mat = MatrixX<T>; // the Hessian matrix type with floating point values (not autodiff numbers!)
+    using Mat = MatrixX<T,N,N>; // the Hessian matrix type with floating point values (not autodiff numbers!)
 
     Mat H;
     hessian(f, wrt, at, u, g, H);
@@ -199,11 +197,12 @@ __host__ __device__ auto hessian(const Fun& f, const Wrt<Vars...>& wrt, const At
 
 /// Return the hessian matrix of scalar function *f* with respect to some or all variables *x*.
 template<typename Fun, typename... Vars, typename... Args>
-__host__ __device__ auto hessian(const Fun& f, const Wrt<Vars...>& wrt, const At<Args...>& at)
+__host__ __device__ constexpr auto hessian(const Fun& f, const Wrt<Vars...>& wrt, const At<Args...>& at)
 {
+    constexpr size_t N = wrt_total_length(wrt);
     using U = ReturnType<Fun, Args...>;
     using T = NumericType<U>;
-    using Vec = VectorX<T>;
+    using Vec = VectorX<T,N>;
     U u;
     Vec g;
     return hessian(f, wrt, at, u, g);

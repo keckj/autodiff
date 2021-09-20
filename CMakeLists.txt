@@ -20,16 +20,16 @@ include(GNUInstallDirs)
 include(CondaAware)
 
 # Define build options
-option(AUTODIFF_BUILD_TESTS "Enable the compilation of the test files." OFF)
+option(AUTODIFF_BUILD_TESTS "Enable the compilation of the test files." ON)
 option(AUTODIFF_BUILD_PYTHON "Enable the compilation of the python bindings." OFF)
 option(AUTODIFF_BUILD_EXAMPLES "Enable the compilation of the example files." ON)
 option(AUTODIFF_BUILD_DOCS "Enable the build of the documentation and website." OFF)
 
-# Find eigen library
-find_package(Eigen3 REQUIRED)
+# Find eigen library with CUDA 9+ support
+find_package(Eigen3 3.4 REQUIRED)
 
-# Find CUDA
-find_package(CUDAToolkit REQUIRED VERSION 11)
+# Find CUDA with C++17 support
+find_package(CUDAToolkit 11 REQUIRED)
 
 # autodiff requires a c++17 enabled compiler
 set(CMAKE_CXX_STANDARD 17)          # ensure cmake instructs compiler to use C++17
@@ -39,7 +39,7 @@ set(CMAKE_CXX_EXTENSIONS OFF)       # avoid compile flags of the type -std=gnu++
 set(CMAKE_CUDA_STANDARD 17)
 set(CMAKE_CUDA_STANDARD_REQUIRED ON)
 set(CMAKE_CUDA_ARCHITECTURES 75)
-set(CMAKE_CUDA_FLAGS "${CMAKE_CUDA_FLAGS} --expt-relaxed-constexpr")
+set(CMAKE_CUDA_FLAGS "${CMAKE_CUDA_FLAGS} --expt-relaxed-constexpr -Xcudafe --diag_suppress=esa_on_defaulted_function_ignored")
 
 # Build the library (actually, just provide details about the library target, specify required compile options, etc. because autodiff is header-only)
 add_subdirectory(autodiff)

@@ -950,9 +950,7 @@ struct NumberTraits<Real<N, T>>
 using detail::Real;
 using detail::val;
 using detail::derivative;
-#if 0
 using detail::repr;
-#endif
 
 using real0th = Real<0, double>;
 using real1st = Real<1, double>;

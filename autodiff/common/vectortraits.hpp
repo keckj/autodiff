@@ -51,6 +51,9 @@ struct VectorReplaceValueTypeNotSupportedFor {};
 template<typename V>
 struct VectorTraits
 {
+    /// The size of the vector.
+    static constexpr size_t size = size_t(-1);
+
     /// The value type of each entry in the vector.
     using ValueType = VectorTraitsNotDefinedFor<V>;
 
@@ -75,6 +78,8 @@ constexpr bool isVector = !cuda::std::is_same_v<VectorValueType<PlainType<V>>, V
 template<typename T, size_t N>
 struct VectorTraits<std::array<T, N>>
 {
+    static constexpr size_t size = N;
+
     using ValueType = T;
 
     template<typename NewValueType>

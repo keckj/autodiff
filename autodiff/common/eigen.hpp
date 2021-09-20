@@ -27,7 +27,8 @@
 // OUT OF OR IN CONNECTION WITH THE SOFTWARE OR THE USE OR OTHER DEALINGS IN THE
 // SOFTWARE.
 
-#pragma once
+#ifndef EIGEN_HPP_KU8GYPEF
+#define EIGEN_HPP_KU8GYPEF
 
 // Eigen includes
 #include <Eigen/Core>
@@ -75,6 +76,8 @@ namespace detail {
 template<typename Scalar, int Rows, int Cols, int Options, int MaxRows, int MaxCols>
 struct VectorTraits<Eigen::Matrix<Scalar, Rows, Cols, Options, MaxRows, MaxCols>>
 {
+    static constexpr size_t size = Rows*Cols;
+
     using ValueType = Scalar;
 
     template<typename NewValueType>
@@ -84,6 +87,8 @@ struct VectorTraits<Eigen::Matrix<Scalar, Rows, Cols, Options, MaxRows, MaxCols>
 template<typename Scalar, int Rows, int Cols, int Options, int MaxRows, int MaxCols>
 struct VectorTraits<Eigen::Array<Scalar, Rows, Cols, Options, MaxRows, MaxCols>>
 {
+    static constexpr size_t size = Rows*Cols;
+
     using ValueType = Scalar;
 
     template<typename NewValueType>
@@ -93,37 +98,43 @@ struct VectorTraits<Eigen::Array<Scalar, Rows, Cols, Options, MaxRows, MaxCols>>
 template<typename VectorType, int Size>
 struct VectorTraits<Eigen::VectorBlock<VectorType, Size>>
 {
+    static constexpr size_t size = Size;
+
     using ValueType = typename PlainType<VectorType>::Scalar;
 
     template<typename NewValueType>
     using ReplaceValueType = VectorReplaceValueType<VectorType, NewValueType>;
 };
 
-#if EIGEN_VERSION_AT_LEAST(3, 3, 90)
+#if 0
+template<typename VectorType, typename IndicesType>
+struct VectorTraits<Eigen::IndexedView<VectorType, IndicesType, Eigen::internal::SingleRange>>
+{
+    static constexpr size_t size = typename PlainType<VectorType>::size;
 
-    template<typename VectorType, typename IndicesType>
-    struct VectorTraits<Eigen::IndexedView<VectorType, IndicesType, Eigen::internal::SingleRange>>
-    {
-        using ValueType = typename PlainType<VectorType>::Scalar;
+    using ValueType = typename PlainType<VectorType>::Scalar;
 
-        template<typename NewValueType>
-        using ReplaceValueType = VectorReplaceValueType<VectorType, NewValueType>;
-    };
+    template<typename NewValueType>
+    using ReplaceValueType = VectorReplaceValueType<VectorType, NewValueType>;
+};
 
-    template<typename VectorType, typename IndicesType>
-    struct VectorTraits<Eigen::IndexedView<VectorType, Eigen::internal::SingleRange, IndicesType>>
-    {
-        using ValueType = typename PlainType<VectorType>::Scalar;
+template<typename VectorType, typename IndicesType>
+struct VectorTraits<Eigen::IndexedView<VectorType, Eigen::internal::SingleRange, IndicesType>>
+{
+    static constexpr size_t size = typename PlainType<VectorType>::size;
 
-        template<typename NewValueType>
-        using ReplaceValueType = VectorReplaceValueType<VectorType, NewValueType>;
-    };
+    using ValueType = typename PlainType<VectorType>::Scalar;
 
+    template<typename NewValueType>
+    using ReplaceValueType = VectorReplaceValueType<VectorType, NewValueType>;
+};
 #endif
 
 template<typename MatrixType>
 struct VectorTraits<Eigen::Ref<MatrixType>>
 {
+    static constexpr size_t size = VectorTraits<PlainType<MatrixType>>::size;
+
     using ValueType = VectorValueType<MatrixType>;
 
     template<typename NewValueType>
@@ -136,11 +147,13 @@ struct VectorTraits<Eigen::Ref<MatrixType>>
 //
 //=====================================================================================================================
 
-template<typename Scalar>
-using VectorX = Eigen::Matrix<Scalar, Eigen::Dynamic, 1, 0, Eigen::Dynamic, 1>;
+template<typename Scalar, int Ni>
+using VectorX = Eigen::Matrix<Scalar, Ni, 1, 0, Ni, 1>;
 
-template<typename Scalar>
-using MatrixX = Eigen::Matrix<Scalar, Eigen::Dynamic, Eigen::Dynamic, 0, Eigen::Dynamic, Eigen::Dynamic>;
+template<typename Scalar, int Ni, int Nj>
+using MatrixX = Eigen::Matrix<Scalar, Ni, Nj, 0, Ni, Nj>;
 
 } // namespace detail
 } // namespace autodiff
+
+#endif /* end of include guard: EIGEN_HPP_KU8GYPEF */
