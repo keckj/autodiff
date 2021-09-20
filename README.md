@@ -7,6 +7,9 @@ Cuda-autodiff is a fork of [autodiff](https://github.com/autodiff/autodiff) that
 
 Even though cuda now support heap allocation in \_\_device_\_ code, the autodiff library internals have been completely reworked to handle only statically sized vector and matrix types. This choice has been made for performance but also because of the lack of support of dynamic allocation in cuda dependencies. Eigen3 in cuda kernels does not support dynamically sized types and the [cuda C++ standard library](https://nvidia.github.io/libcudacxx/) does not provide `std::vector`.
 
+## How to get started
+Look at official [autodiff documentation](https://autodiff.github.io/) and compare autodiff examples to cuda-autodiff examples in the examples directory.
+
 ## What is currently supported
  - Forward mode autodiff using real and dual (see [examples/forward](examples/forward)).
  - `std::array` based types.
@@ -44,8 +47,6 @@ The library and all of its dependencies are header only. The following build opt
 Cuda-autodiff is a fork of autodiff and may thus clash with existing autodiff installations on your system.
 See `CMakelists.txt` for an example of cmake integration.
 
-## How to get started
-Look at official [autodiff documentation](https://autodiff.github.io/) and adapted cuda examples in cuda-autodiff examples directory.
 
 # General information about autodiff v0.6.4
 <a href="https://autodiff.github.io" target="_blank">
