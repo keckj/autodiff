@@ -62,7 +62,7 @@ __host__ __device__ constexpr size_t wrt_total_length(const Wrt<Vars...>& wrt)
 // accepts an index i and the variable x[i], where i is the global index of the
 // variable in the list.
 template<typename Function, typename... Vars>
-__host__ __device__ constexpr auto ForEachWrtVar(const Wrt<Vars...>& wrt, Function&& f)
+__host__ __device__ constexpr void ForEachWrtVar(const Wrt<Vars...>& wrt, Function&& f)
 {
     constexpr size_t N = wrt_total_length(wrt); // the sum of lengths of all items in the wrt list
     auto i = 0; // the current index of the variable in the wrt list
@@ -121,7 +121,6 @@ __host__ __device__ constexpr auto gradient(const Fun& f, const Wrt<Vars...>& wr
 template<typename Fun, typename... Vars, typename... Args, typename Y, typename Jac>
 __host__ __device__ constexpr void jacobian(const Fun& f, const Wrt<Vars...>& wrt, const At<Args...>& at, Y& F, Jac& J)
 {
-    static_assert(false);
     static_assert(sizeof...(Vars) >= 1);
     static_assert(sizeof...(Args) >= 1);
 
@@ -130,7 +129,7 @@ __host__ __device__ constexpr void jacobian(const Fun& f, const Wrt<Vars...>& wr
 
     ForEachWrtVar(wrt, [&](auto&& i, auto&& xi) constexpr {
         F = eval(f, at, detail::wrt(xi)); // evaluate F with xi seeded so that dF/dxi is also computed
-        for(size_t row = 0; row < m; ++row)
+        for(size_t row = 0; row < VectorSize<decltype(F)>; ++row)
             J(row, i) = derivative<1>(F[row]);
     });
 }
@@ -139,10 +138,12 @@ __host__ __device__ constexpr void jacobian(const Fun& f, const Wrt<Vars...>& wr
 template<typename Fun, typename... Vars, typename... Args, typename Y>
 __host__ __device__ constexpr auto jacobian(const Fun& f, const Wrt<Vars...>& wrt, const At<Args...>& at, Y& F)
 {
-    static_assert(false);
+    constexpr size_t M = VectorSize<decltype(F)>;
+    constexpr size_t N = wrt_total_length(wrt);
+
     using U = VectorValueType<decltype(F)>; // the type of the autodiff numbers in vector F
     using T = NumericType<U>; // the underlying numeric floating point type in the autodiff number U
-    using Mat = MatrixX<T>; // the jacobian matrix type with floating point values (not autodiff numbers!)
+    using Mat = MatrixX<T,M,N>; // the jacobian matrix type with floating point values (not autodiff numbers!)
 
     Mat J;
     jacobian(f, wrt, at, F, J);

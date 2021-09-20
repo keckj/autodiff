@@ -49,20 +49,11 @@ using Matrix##SizeSuffix##TypeSuffix            = Eigen::Matrix<Type, Size, Size
 using Vector##SizeSuffix##TypeSuffix            = Eigen::Matrix<Type, Size, 1, 0, Size, 1>;       \
 using RowVector##SizeSuffix##TypeSuffix         = Eigen::Matrix<Type, 1, Size, 1, 1, Size>;
 
-#define AUTODIFF_DEFINE_EIGEN_FIXED_TYPEDEFS(Type, TypeSuffix, Size)            \
-using Array##Size##X##TypeSuffix  = Eigen::Array<Type, Size, -1>;               \
-using Array##X##Size##TypeSuffix  = Eigen::Array<Type, -1, Size>;               \
-using Matrix##Size##X##TypeSuffix = Eigen::Matrix<Type, Size, -1, 0, Size, -1>; \
-using Matrix##X##Size##TypeSuffix = Eigen::Matrix<Type, -1, Size, 0, -1, Size>;
-
 #define AUTODIFF_DEFINE_EIGEN_TYPEDEFS_ALL_SIZES(Type, TypeSuffix) \
 AUTODIFF_DEFINE_EIGEN_TYPEDEFS(Type, TypeSuffix, 2, 2)             \
 AUTODIFF_DEFINE_EIGEN_TYPEDEFS(Type, TypeSuffix, 3, 3)             \
 AUTODIFF_DEFINE_EIGEN_TYPEDEFS(Type, TypeSuffix, 4, 4)             \
-AUTODIFF_DEFINE_EIGEN_TYPEDEFS(Type, TypeSuffix, -1, X)            \
-AUTODIFF_DEFINE_EIGEN_FIXED_TYPEDEFS(Type, TypeSuffix, 2)          \
-AUTODIFF_DEFINE_EIGEN_FIXED_TYPEDEFS(Type, TypeSuffix, 3)          \
-AUTODIFF_DEFINE_EIGEN_FIXED_TYPEDEFS(Type, TypeSuffix, 4)
+AUTODIFF_DEFINE_EIGEN_TYPEDEFS(Type, TypeSuffix, 5, 5)
 
 namespace autodiff {
 namespace detail {
@@ -147,13 +138,22 @@ struct VectorTraits<Eigen::Ref<MatrixType>>
 //
 //=====================================================================================================================
 
-template<typename Scalar, int Ni>
-using VectorX = Eigen::Matrix<Scalar, Ni, 1, 0, Ni, 1>;
+template<typename Scalar, int N>
+using VectorX = Eigen::Matrix<Scalar, N, 1, 0, N, 1>;
 
-template<typename Scalar, int Ni, int Nj>
-using MatrixX = Eigen::Matrix<Scalar, Ni, Nj, 0, Ni, Nj>;
+template<typename Scalar, int M, int N=M>
+using MatrixX = Eigen::Matrix<Scalar, M, N, 0, M, N>;
+
+template<typename Scalar, int M, int N=1>
+using ArrayX = Eigen::Array<Scalar, M, N, 0, M, N>;
+
 
 } // namespace detail
+
+using detail::VectorX;
+using detail::ArrayX;
+using detail::MatrixX;
+
 } // namespace autodiff
 
 #endif /* end of include guard: EIGEN_HPP_KU8GYPEF */

@@ -27,7 +27,8 @@
 // OUT OF OR IN CONNECTION WITH THE SOFTWARE OR THE USE OR OTHER DEALINGS IN THE
 // SOFTWARE.
 
-#pragma once
+#ifndef EIGEN_HPP_OCUSY3FK
+#define EIGEN_HPP_OCUSY3FK
 
 // Eigen includes
 #include <Eigen/Core>
@@ -88,3 +89,5 @@ AUTODIFF_DEFINE_EIGEN_TYPEDEFS_ALL_SIZES(real4th, real4th);
 AUTODIFF_DEFINE_EIGEN_TYPEDEFS_ALL_SIZES(real, real)
 
 } // namespace autodiff
+
+#endif /* end of include guard: EIGEN_HPP_OCUSY3FK */
