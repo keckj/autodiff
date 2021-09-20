@@ -2,6 +2,13 @@
 #include <iostream>
 #include <cuda/std/complex>
 
+template<typename T>
+__host__ std::ostream& operator<<(std::ostream& os, const cuda::std::complex<T>& v)
+{
+    os << v.real() << " + " << v.imag() << "i";
+    return os;
+}
+
 // autodiff include
 #include <autodiff/forward/dual.hpp>
 using namespace autodiff;
@@ -14,15 +21,8 @@ struct ArithmeticTraits<cuda::std::complex<T>> : ArithmeticTraits<T> {};
 
 } // autodiff::detail
 
-
-template<typename T>
-__host__ std::ostream& operator<<(std::ostream& os, const cuda::std::complex<T>& v)
-{
-    os << v.real() << " + " << v.imag() << "i";
-    return os;
-}
-
 using cxdual = Dual<cuda::std::complex<double>, cuda::std::complex<double>>;
+
 
 // The single-variable function for which derivatives are needed
 cxdual f(cxdual x)
@@ -37,6 +37,6 @@ int main()
 
     cxdual dudx = derivative(f, wrt(x), at(x));  // evaluate the derivative du/dx
 
-    std::cout << "u = " << u << " (expected 7.20472 + 5.26365i)" << std::endl;         // print the evaluated output u
-    std::cout << "du/dx = " << dudx << " (expected 5.28 + 1.96i)" << std::endl;  // print the evaluated derivative du/dx
+    std::cout << "u = " << u.val << " (expected 7.20472 + 5.26365i)" << std::endl;         // print the evaluated output u
+    std::cout << "du/dx = " << dudx.val << " (expected 5.28 + 1.96i)" << std::endl;  // print the evaluated derivative du/dx
 }

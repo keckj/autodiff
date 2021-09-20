@@ -102,7 +102,6 @@ __host__ __device__ auto seed(const Wrt<Var&, Vars&...>& wrt, T&& seedval)
             seed<i.index + 1>(cuda::std::get<i>(wrt.args), seedval);
         else
             seed<i.index + 1>(cuda::std::get<size - 1>(wrt.args), seedval); // use the last variable in the wrt list as the variable for which the remaining higher-order derivatives are calculated (e.g., derivatives(f, wrt(x), at(x)) will produce [f0, fx, fxx, fxxx, fxxxx] when x is a 4th order dual number).
-        __builtin_unreachable();
     });
 }
 
