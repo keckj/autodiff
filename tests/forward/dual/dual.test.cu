@@ -29,6 +29,7 @@
 
 // Catch includes
 #include <catch2/catch.hpp>
+#include <array>
 
 // autodiff includes
 #include <autodiff/forward/dual.hpp>
@@ -37,7 +38,7 @@ using namespace autodiff;
 template<typename T>
 auto approx(T&& expr) -> Approx
 {
-    return Approx(val(std::forward<T>(expr))).margin(1e-12);
+    return Approx(val(cuda::std::forward<T>(expr))).margin(1e-12);
 }
 
 #define CHECK_DERIVATIVES_FX(expr, u, ux)         \
@@ -451,10 +452,10 @@ TEST_CASE("testing autodiff::dual", "[forward][dual]")
         CHECK_DERIVATIVES_FX(pow(x, 2.0 * x), pow(val(x), 2.0 * val(x)), 2.0 * (log(x) + 1) * pow(x, 2.0 * x));
 
         // Testing abs function (when x > 0)
-        x = 1.0; CHECK_DERIVATIVES_FX(abs(x), std::abs(val(x)), 1.0);
+        x = 1.0; CHECK_DERIVATIVES_FX(abs(x), ::abs(val(x)), 1.0);
 
         // Testing abs function (when x < 0)
-        x = -1.0; CHECK_DERIVATIVES_FX(abs(x), std::abs(val(x)), -1.0);
+        x = -1.0; CHECK_DERIVATIVES_FX(abs(x), ::abs(val(x)), -1.0);
 
         // Testing erf function (when x = 1.0)
         x =  1.0; CHECK_DERIVATIVES_FX(erf(x), erf(val(x)), 0.4151074974);
@@ -493,48 +494,48 @@ TEST_CASE("testing autodiff::dual", "[forward][dual]")
 
         // Testing hypot function on (dual, double, double)
         x = 1.5;
-        CHECK_DERIVATIVES_FX(hypot(x, 2.0, 2.0), std::hypot(val(x), 2.0, 2.0), x/std::hypot(val(x), 2.0, 2.0));
+        CHECK_DERIVATIVES_FX(hypot(x, 2.0, 2.0), ::hypot(val(x), 2.0, 2.0), x/::hypot(val(x), 2.0, 2.0));
 
         // Testing hypot function on (double, dual, double)
         x = 2.5;
-        CHECK_DERIVATIVES_FX(hypot(2.0, x, 2.0), std::hypot(2.0, val(x), 2.0), x/std::hypot(2.0, val(x), 2.0));
+        CHECK_DERIVATIVES_FX(hypot(2.0, x, 2.0), ::hypot(2.0, val(x), 2.0), x/::hypot(2.0, val(x), 2.0));
 
         // Testing hypot function on (double, double, dual)
         x = 3.5;
-        CHECK_DERIVATIVES_FX(hypot(2.0, 2.0, x), std::hypot(2.0, 2.0, val(x)), x/std::hypot(2.0, 2.0, val(x)));
+        CHECK_DERIVATIVES_FX(hypot(2.0, 2.0, x), ::hypot(2.0, 2.0, val(x)), x/::hypot(2.0, 2.0, val(x)));
 
         // Testing hypot function on (dual, dual, double)
         x = 1.4;
         y = 2.4;
-        CHECK_DERIVATIVES_FXY(hypot(x, y, 2.0), std::hypot(val(x), val(y), 2.0), x/std::hypot(val(x), val(y), 2.0), y/std::hypot(val(x), val(y), 2.0));
+        CHECK_DERIVATIVES_FXY(hypot(x, y, 2.0), ::hypot(val(x), val(y), 2.0), x/::hypot(val(x), val(y), 2.0), y/::hypot(val(x), val(y), 2.0));
 
         // Testing hypot function on (double, dual, dual)
         x = 2.4;
         y = 3.4;
-        CHECK_DERIVATIVES_FXY(hypot(2.0, x, y), std::hypot(2.0, val(x), val(y)), x/std::hypot(2.0, val(x), val(y)), y/std::hypot(2.0, val(x), val(y)));
+        CHECK_DERIVATIVES_FXY(hypot(2.0, x, y), ::hypot(2.0, val(x), val(y)), x/::hypot(2.0, val(x), val(y)), y/::hypot(2.0, val(x), val(y)));
 
         // Testing hypot function on (dual, double, dual)
         x = 3.4;
         y = 4.4;
-        CHECK_DERIVATIVES_FXY(hypot(x, 2.0, y), std::hypot(val(x), 2.0, val(y)), x/std::hypot(val(x), 2.0, val(y)), y/std::hypot(val(x), 2.0, val(y)));
+        CHECK_DERIVATIVES_FXY(hypot(x, 2.0, y), ::hypot(val(x), 2.0, val(y)), x/::hypot(val(x), 2.0, val(y)), y/::hypot(val(x), 2.0, val(y)));
 
         // Testing hypot function on (dual, double, dual)
         x = 1.6;
         y = 2.6;
         z = 3.6;
-        CHECK_DERIVATIVES_FXYZ(hypot(x, y, z), std::hypot(val(x), val(y), val(z)),
-            x/std::hypot(val(x), val(y), val(z)),
-            y/std::hypot(val(x), val(y), val(z)),
-            z/std::hypot(val(x), val(y), val(z)));
+        CHECK_DERIVATIVES_FXYZ(hypot(x, y, z), ::hypot(val(x), val(y), val(z)),
+            x/::hypot(val(x), val(y), val(z)),
+            y/::hypot(val(x), val(y), val(z)),
+            z/::hypot(val(x), val(y), val(z)));
 
         // Testing hypot function on (expr, expr, expr)
         x = 2.6;
         y = 3.6;
         z = 4.6;
-        CHECK_DERIVATIVES_FXYZ(hypot(2.0*x, 3.0*y, 4.0*z), std::hypot(2.0*val(x), 3.0*val(y), 4.0*val(z)),
-            4.0*x/std::hypot(2.0*val(x), 3.0*val(y), 4.0*val(z)),
-            9.0*y/std::hypot(2.0*val(x), 3.0*val(y), 4.0*val(z)),
-            16.*z/std::hypot(2.0*val(x), 3.0*val(y), 4.0*val(z)));
+        CHECK_DERIVATIVES_FXYZ(hypot(2.0*x, 3.0*y, 4.0*z), ::hypot(2.0*val(x), 3.0*val(y), 4.0*val(z)),
+            4.0*x/::hypot(2.0*val(x), 3.0*val(y), 4.0*val(z)),
+            9.0*y/::hypot(2.0*val(x), 3.0*val(y), 4.0*val(z)),
+            16.*z/::hypot(2.0*val(x), 3.0*val(y), 4.0*val(z)));
     }
 
     SECTION("testing min and max functions")
@@ -651,7 +652,7 @@ TEST_CASE("testing autodiff::dual", "[forward][dual]")
         CHECK( x4 == approx(derivative<4>(x)) );
     }
 
-    SECTION("testing array-unpacking of derivatives for vector of dual numbers")
+    SECTION("testing array-unpacking of derivatives for array of dual numbers")
     {
         dual4th x;
         detail::seed<0>(x, 2.0);
@@ -674,7 +675,7 @@ TEST_CASE("testing autodiff::dual", "[forward][dual]")
         detail::seed<3>(z, 7.0);
         detail::seed<4>(z, 8.0);
 
-        std::vector<dual4th> u = { x, y, z };
+        std::array<dual4th, 3> u = { x, y, z };
 
         auto [u0, u1, u2, u3, u4] = derivatives(u);
 

@@ -27,12 +27,12 @@
 // OUT OF OR IN CONNECTION WITH THE SOFTWARE OR THE USE OR OTHER DEALINGS IN THE
 // SOFTWARE.
 
-#ifndef DUAL_HPP_MCHSRFDW
-#define DUAL_HPP_MCHSRFDW
+#ifndef DUAL_HPP_CEYVGSTR
+#define DUAL_HPP_CEYVGSTR
 
 // autodiff includes
 #include <autodiff/forward/dual/dual.hpp>
 #include <autodiff/forward/utils/derivative.hpp>
 #include <autodiff/forward/utils/taylorseries.hpp>
 
-#endif /* end of include guard: DUAL_HPP_MCHSRFDW */
+#endif /* end of include guard: DUAL_HPP_CEYVGSTR */

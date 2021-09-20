@@ -72,6 +72,7 @@ using ::tanh;
 using ::erf;
 using ::hypot;
 
+
 //=====================================================================================================================
 //
 // OPERATOR TYPES
@@ -520,7 +521,7 @@ struct Dual
 
     template<typename U, EnableIf<isConvertible<U, T> && !isExpr<U>> = true>
     __host__ __device__ Dual(U&& v)
-    : val(std::forward<U>(v)), grad(0)
+    : val(cuda::std::forward<U>(v)), grad(0)
     {
     }
 
@@ -532,14 +533,14 @@ struct Dual
     template<typename U, EnableIf<isExpr<U> && !isDual<U>> = true>
     __host__ __device__ Dual(U&& other)
     {
-        assign(*this, std::forward<U>(other));
+        assign(*this, cuda::std::forward<U>(other));
     }
 
     template<typename U, EnableIf<isExpr<U> && !isDual<U>> = true>
     __host__ __device__ Dual& operator=(U&& other)
     {
         Dual tmp;
-        assign(tmp, std::forward<U>(other));
+        assign(tmp, cuda::std::forward<U>(other));
         assign(*this, tmp);
         return *this;
     }
@@ -548,7 +549,7 @@ struct Dual
     __host__ __device__ Dual& operator+=(U&& other)
     {
         Dual tmp;
-        assign(tmp, std::forward<U>(other));
+        assign(tmp, cuda::std::forward<U>(other));
         assignAdd(*this, tmp);
         return *this;
     }
@@ -557,7 +558,7 @@ struct Dual
     __host__ __device__ Dual& operator-=(U&& other)
     {
         Dual tmp;
-        assign(tmp, std::forward<U>(other));
+        assign(tmp, cuda::std::forward<U>(other));
         assignSub(*this, tmp);
         return *this;
     }
@@ -566,7 +567,7 @@ struct Dual
     __host__ __device__ Dual& operator*=(U&& other)
     {
         Dual tmp;
-        assign(tmp, std::forward<U>(other));
+        assign(tmp, cuda::std::forward<U>(other));
         assignMul(*this, tmp);
         return *this;
     }
@@ -575,7 +576,7 @@ struct Dual
     __host__ __device__ Dual& operator/=(U&& other)
     {
         Dual tmp;
-        assign(tmp, std::forward<U>(other));
+        assign(tmp, cuda::std::forward<U>(other));
         assignDiv(*this, tmp);
         return *this;
     }
@@ -644,11 +645,11 @@ __host__ __device__ auto eval(T&& expr)
 {
     static_assert(isDual<T> || isExpr<T> || isArithmetic<T>);
     if constexpr (isDual<T>)
-        return std::forward<T>(expr);
+        return cuda::std::forward<T>(expr);
     else if constexpr (isExpr<T>)
-        return DualType<T>(std::forward<T>(expr));
+        return DualType<T>(cuda::std::forward<T>(expr));
     else 
-        return std::forward<T>(expr);
+        return cuda::std::forward<T>(expr);
     __builtin_unreachable();
 }
 
@@ -659,9 +660,9 @@ __host__ __device__ auto val(T&& expr)
     if constexpr (isDual<T>)
         return val(expr.val);
     else if constexpr (isExpr<T>)
-        return val(eval(std::forward<T>(expr)));
+        return val(eval(cuda::std::forward<T>(expr)));
     else 
-        return std::forward<T>(expr);
+        return cuda::std::forward<T>(expr);
     __builtin_unreachable();
 }
 
@@ -774,7 +775,7 @@ __host__ __device__ constexpr auto One() { return static_cast<NumericType<U>>(1)
 template<typename R, EnableIf<isExpr<R>> = true>
 __host__ __device__ constexpr auto operator+(R&& expr)
 {
-    return std::forward<R>(expr); // expression optimization: +(expr) => expr
+    return cuda::std::forward<R>(expr); // expression optimization: +(expr) => expr
 }
 
 //=====================================================================================================================
@@ -812,7 +813,7 @@ __host__ __device__ constexpr auto operator+(L&& l, R&& r)
         return -( inner(l) + inner(r) );
     // ADDITION EXPRESSION CASE: expr + number => number + expr (number always on the left)
     else if constexpr (isExpr<L> && isArithmetic<R>)
-        return std::forward<R>(r) + std::forward<L>(l);
+        return cuda::std::forward<R>(r) + cuda::std::forward<L>(l);
     // DEFAULT ADDITION EXPRESSION
     else
         return AddExpr<PreventExprRef<L>, PreventExprRef<R>>{ l, r };
@@ -836,7 +837,7 @@ __host__ __device__ constexpr auto operator*(L&& l, R&& r)
         return inverse(inner(l) * inner(r));
     // // MULTIPLICATION EXPRESSION CASE: expr * number => number * expr
     else if constexpr (isExpr<L> && isArithmetic<R>)
-        return std::forward<R>(r) * std::forward<L>(l);
+        return cuda::std::forward<R>(r) * cuda::std::forward<L>(l);
     // // MULTIPLICATION EXPRESSION CASE: number * (-expr) => (-number) * expr
     else if constexpr (isArithmetic<L> && isNegExpr<R>)
         return (-l) * inner(r);
@@ -864,7 +865,7 @@ __host__ __device__ constexpr auto operator*(L&& l, R&& r)
 template<typename L, typename R, EnableIf<isOperable<L, R>> = true>
 __host__ __device__ constexpr auto operator-(L&& l, R&& r)
 {
-    return std::forward<L>(l) + ( -std::forward<R>(r) );
+    return cuda::std::forward<L>(l) + ( -cuda::std::forward<R>(r) );
 }
 
 //=====================================================================================================================
@@ -880,9 +881,9 @@ template<typename L, typename R, EnableIf<isOperable<L, R>> = true>
 __host__ __device__ constexpr auto operator/(L&& l, R&& r)
 {
     if constexpr (isArithmetic<R>)
-        return std::forward<L>(l) * (One<L>() / std::forward<R>(r));
+        return cuda::std::forward<L>(l) * (One<L>() / cuda::std::forward<R>(r));
     else
-        return std::forward<L>(l) * inverse(std::forward<R>(r));
+        return cuda::std::forward<L>(l) * inverse(cuda::std::forward<R>(r));
     __builtin_unreachable();
 }
 
@@ -939,9 +940,9 @@ template<typename R, EnableIf<isExpr<R>> = true> __host__ __device__ constexpr a
 //=====================================================================================================================
 
 template<typename R, EnableIf<isExpr<R>> = true> __host__ __device__ constexpr auto abs(R&& r) -> AbsExpr<R> { return { r }; }
-template<typename R, EnableIf<isExpr<R>> = true> __host__ __device__ constexpr auto abs2(R&& r) { return std::forward<R>(r) * std::forward<R>(r); }
-template<typename R, EnableIf<isExpr<R>> = true> __host__ __device__ constexpr auto conj(R&& r) { return std::forward<R>(r); }
-template<typename R, EnableIf<isExpr<R>> = true> __host__ __device__ constexpr auto real(R&& r) { return std::forward<R>(r); }
+template<typename R, EnableIf<isExpr<R>> = true> __host__ __device__ constexpr auto abs2(R&& r) { return cuda::std::forward<R>(r) * cuda::std::forward<R>(r); }
+template<typename R, EnableIf<isExpr<R>> = true> __host__ __device__ constexpr auto conj(R&& r) { return cuda::std::forward<R>(r); }
+template<typename R, EnableIf<isExpr<R>> = true> __host__ __device__ constexpr auto real(R&& r) { return cuda::std::forward<R>(r); }
 template<typename R, EnableIf<isExpr<R>> = true> __host__ __device__ constexpr auto imag(R&&) { return 0.0; }
 template<typename R, EnableIf<isExpr<R>> = true> __host__ __device__ constexpr auto erf(R&& r) -> ErfExpr<R> { return { r }; }
 
@@ -1139,7 +1140,7 @@ __host__ __device__ constexpr void assignAdd(Dual<T, G>& self, U&& other)
     // ASSIGN-ADD ALL OTHER EXPRESSIONS
     else {
         Dual<T, G> tmp;
-        assignAdd(self, std::forward<U>(other), tmp);
+        assignAdd(self, cuda::std::forward<U>(other), tmp);
     }
 }
 
@@ -1201,7 +1202,7 @@ __host__ __device__ constexpr void assignSub(Dual<T, G>& self, U&& other)
     // ASSIGN-SUBTRACT ALL OTHER EXPRESSIONS
     else {
         Dual<T, G> tmp;
-        assignSub(self, std::forward<U>(other), tmp);
+        assignSub(self, cuda::std::forward<U>(other), tmp);
     }
 }
 
@@ -1267,7 +1268,7 @@ __host__ __device__ constexpr void assignMul(Dual<T, G>& self, U&& other)
     // ASSIGN-MULTIPLY ALL OTHER EXPRESSIONS
     else {
         Dual<T, G> tmp;
-        assignMul(self, std::forward<U>(other), tmp);
+        assignMul(self, cuda::std::forward<U>(other), tmp);
     }
 }
 
@@ -1338,7 +1339,7 @@ __host__ __device__ constexpr void assignDiv(Dual<T, G>& self, U&& other)
     // ASSIGN-DIVIDE ALL OTHER EXPRESSIONS
     else {
         Dual<T, G> tmp;
-        assignDiv(self, std::forward<U>(other), tmp);
+        assignDiv(self, cuda::std::forward<U>(other), tmp);
     }
 }
 
@@ -1395,7 +1396,7 @@ __host__ __device__ constexpr void assignPow(Dual<T, G>& self, U&& other)
     // ASSIGN-POW ALL OTHER EXPRESSIONS: self = pow(self, expr)
     else {
         Dual<T, G> tmp;
-        assignPow(self, std::forward<U>(other), tmp);
+        assignPow(self, cuda::std::forward<U>(other), tmp);
     }
 }
 
@@ -1439,15 +1440,15 @@ __host__ __device__ constexpr void assignArcTan2(Dual<T, G>& self, Y&&y, X&&x)
     // self = atan2(expr, .)
     else if constexpr (!isDual<Y> && !isArithmetic<Y>) {
         Dual<T, G> y_tmp;
-        assign(y_tmp, std::forward<Y>(y));
-        assignArcTan2(self, std::move(y_tmp), std::forward<X>(x));
+        assign(y_tmp, cuda::std::forward<Y>(y));
+        assignArcTan2(self, cuda::std::move(y_tmp), cuda::std::forward<X>(x));
     }
 
     // self = atan2(., expr)
     else {
         Dual<T, G> x_tmp;
-        assign(x_tmp, std::forward<X>(x));
-        assignArcTan2(self, std::forward<Y>(y), std::move(x_tmp));
+        assign(x_tmp, cuda::std::forward<X>(x));
+        assignArcTan2(self, cuda::std::forward<Y>(y), cuda::std::move(x_tmp));
     }
 }
 
@@ -1484,15 +1485,15 @@ __host__ __device__ constexpr void assignHypot2(Dual<T, G>& self, X&& x, Y&& y)
     // self = hypot(expr, .)
     else if constexpr (!isDual<X> && !isArithmetic<X>) {
         Dual<T, G> x_tmp;
-        assign(x_tmp, std::forward<X>(x));
-        assignHypot2(self, std::move(x_tmp), std::forward<Y>(y));
+        assign(x_tmp, cuda::std::forward<X>(x));
+        assignHypot2(self, cuda::std::move(x_tmp), cuda::std::forward<Y>(y));
     }
 
     // self = hypot(., expr)
     else {
         Dual<T, G> y_tmp;
-        assign(y_tmp, std::forward<Y>(y));
-        assignHypot2(self, std::forward<X>(x), std::move(y_tmp));
+        assign(y_tmp, cuda::std::forward<Y>(y));
+        assignHypot2(self, cuda::std::forward<X>(x), cuda::std::move(y_tmp));
     }
 }
 
@@ -1505,65 +1506,93 @@ __host__ __device__ constexpr void assignHypot3(Dual<T, G>& self, X&& x, Y&& y, 
 
     // self = hypot(dual, number, number)
     if constexpr (isDual<X> && isArithmetic<Y> && isArithmetic<Z>) {
+#ifdef __CUDA_ARCH__
+        self.val = norm3d(x.val, y, z);
+#else
         self.val = hypot(x.val, y, z);
+#endif
         self.grad = x.val / self.val * x.grad;
     }
 
     // self = hypot(number, dual, number)
     else if constexpr (isArithmetic<X> && isDual<Y> && isArithmetic<Z>) {
+#ifdef __CUDA_ARCH__
+        self.val = norm3d(x, y.val, z);
+#else
         self.val = hypot(x, y.val, z);
+#endif
         self.grad = y.val / self.val * y.grad;
     }
 
     // self = hypot(number, number, dual)
     else if constexpr (isArithmetic<X> && isArithmetic<Y> && isDual<Z>) {
+#ifdef __CUDA_ARCH__
+        self.val = norm3d(x, y, z.val);
+#else
         self.val = hypot(x, y, z.val);
+#endif
         self.grad = z.val / self.val * z.grad;
     }
 
     // self = hypot(dual, dual, number)
     else if constexpr (isDual<X> && isDual<Y> && isArithmetic<Z>) {
+#ifdef __CUDA_ARCH__
+        self.val = norm3d(x.val, y.val, z);
+#else
         self.val = hypot(x.val, y.val, z);
+#endif
         self.grad = (x.grad * x.val + y.grad * y.val ) / self.val;
     }
 
     // self = hypot(number, dual, dual)
     else if constexpr (isArithmetic<X> && isDual<Y> && isDual<Z>) {
+#ifdef __CUDA_ARCH__
+        self.val = norm3d(x, y.val, z.val);
+#else
         self.val = hypot(x, y.val, z.val);
+#endif
         self.grad = (y.grad * y.val + z.grad * z.val) / self.val;
     }
 
     // self = hypot(dual, number, dual)
     else if constexpr (isDual<X> && isArithmetic<Y> && isDual<Z>) {
+#ifdef __CUDA_ARCH__
+        self.val = norm3d(x.val, y, z.val);
+#else
         self.val = hypot(x.val, y, z.val);
+#endif
         self.grad = (x.grad * x.val + z.grad * z.val) / self.val;
     }
 
     // self = hypot(dual, dual, dual)
     else if constexpr (isDual<X> && isDual<Y> && isDual<Z>) {
+#ifdef __CUDA_ARCH__
+        self.val = norm3d(x.val, y.val, z.val);
+#else
         self.val = hypot(x.val, y.val, z.val);
+#endif
         self.grad = (x.grad * x.val + y.grad * y.val + z.grad * z.val) / self.val;
     }
 
     // self = hypot(expr, ., .)
     else if constexpr (!isDual<X> && !isArithmetic<X>) {
         Dual<T, G> tmp;
-        assign(tmp, std::forward<X>(x));
-        assignHypot3(self, std::move(tmp), std::forward<Y>(y), std::forward<Z>(z));
+        assign(tmp, cuda::std::forward<X>(x));
+        assignHypot3(self, cuda::std::move(tmp), cuda::std::forward<Y>(y), cuda::std::forward<Z>(z));
     }
 
     // self = hypot(., expr, .)
     else if constexpr (!isDual<Y> && !isArithmetic<Y>) {
         Dual<T, G> tmp;
-        assign(tmp, std::forward<Y>(y));
-        assignHypot3(self, std::forward<X>(x), std::move(tmp), std::forward<Z>(z));
+        assign(tmp, cuda::std::forward<Y>(y));
+        assignHypot3(self, cuda::std::forward<X>(x), cuda::std::move(tmp), cuda::std::forward<Z>(z));
     }
 
     // self = hypot(., ., expr)
     else {
         Dual<T, G> tmp;
-        assign(tmp, std::forward<Z>(z));
-        assignHypot3(self, std::forward<X>(x), std::forward<Y>(y), std::move(tmp));
+        assign(tmp, cuda::std::forward<Z>(z));
+        assignHypot3(self, cuda::std::forward<X>(x), cuda::std::forward<Y>(y), cuda::std::move(tmp));
     }
 }
 
