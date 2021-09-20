@@ -43,7 +43,7 @@ template<typename Item>
 __host__ __device__ constexpr size_t wrt_item_length(const Item& item)
 {
     if constexpr (isVector<Item>)
-        return VectorTraits<Item>::size; // if item is a vector, return its size
+        return VectorSize<Item>; // if item is a vector, return its size
     else 
         return 1; // if not a vector, say, a number, return 1 for its length
 }
@@ -69,7 +69,7 @@ __host__ __device__ constexpr auto ForEachWrtVar(const Wrt<Vars...>& wrt, Functi
     ForEach(wrt.args, [&](auto& item) constexpr
     {
         if constexpr (isVector<decltype(item)>) {
-            for(auto j = 0; j < VectorTraits<decltype(item)>::size; ++j)
+            for(auto j = 0; j < VectorSize<decltype(item)>; ++j)
                 f(i++, item[j]); // call given f with current index and variable from item (a vector)
         }
         else f(i++, item); // call given f with current index and variable from item (a number, not a vector)
@@ -171,8 +171,7 @@ __host__ __device__ constexpr void hessian(const Fun& f, const Wrt<Vars...>& wrt
     static_assert(sizeof...(Args) >= 1);
 
     ForEachWrtVar(wrt, [&](auto&& i, auto&& xi) constexpr {
-        ForEachWrtVar(wrt, [&](auto&& j, auto&& xj) constexpr
-        {
+        ForEachWrtVar(wrt, [&](auto&& j, auto&& xj) constexpr {
             if constexpr(j >= i) { // this take advantage of the fact the Hessian matrix is symmetric
                 u = eval(f, at, detail::wrt(xi, xj)); // evaluate u with xi and xj seeded to produce u0, du/dxi, d2u/dxidxj
                 g[i] = derivative<1>(u);              // get du/dxi from u

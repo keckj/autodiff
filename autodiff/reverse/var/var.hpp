@@ -35,9 +35,7 @@
 #include <cuda/std/functional>
 #include <array>
 
-#ifndef __CUDA_ARCH__
 #include <ostream>
-#endif
 
 // autodiff includes
 #include <autodiff/common/meta.hpp>

@@ -52,7 +52,7 @@ template<typename V>
 struct VectorTraits
 {
     /// The size of the vector.
-    static constexpr size_t size = size_t(-1);
+    //static constexpr size_t size = size_t(-1);
 
     /// The value type of each entry in the vector.
     using ValueType = VectorTraitsNotDefinedFor<V>;
@@ -72,6 +72,9 @@ using VectorReplaceValueType = typename VectorTraits<PlainType<V>>::template Rep
 /// A compile-time constant that indicates with a type is a vector type.
 template<typename V>
 constexpr bool isVector = !cuda::std::is_same_v<VectorValueType<PlainType<V>>, VectorTraitsNotDefinedFor<PlainType<V>>>;
+
+template<typename V, EnableIf<isVector<V>> = true>
+constexpr size_t VectorSize = VectorTraits<PlainType<V>>::size;
 
 
 /// Implementation of VectorTraits for std::array.

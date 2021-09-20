@@ -30,7 +30,6 @@
 #ifndef REAL_HPP_ASE512KP
 #define REAL_HPP_ASE512KP
 
-
 // C++ includes
 #include <cuda/std/cassert>
 #include <cuda/std/tuple>

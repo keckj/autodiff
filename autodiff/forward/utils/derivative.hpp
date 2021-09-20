@@ -27,6 +27,9 @@
 // OUT OF OR IN CONNECTION WITH THE SOFTWARE OR THE USE OR OTHER DEALINGS IN THE
 // SOFTWARE.
 
+#ifndef DERIVATIVE_HPP_TRKOHDOL
+#define DERIVATIVE_HPP_TRKOHDOL
+
 // C++ includes
 #include <cuda/std/cassert>
 #include <cuda/std/cstddef>
@@ -36,9 +39,6 @@
 #include <autodiff/common/meta.hpp>
 #include <autodiff/common/numbertraits.hpp>
 #include <autodiff/common/vectortraits.hpp>
-
-#ifndef DERIVATIVE_HPP_TRKOHDOL
-#define DERIVATIVE_HPP_TRKOHDOL
 
 namespace autodiff {
 namespace detail {
@@ -125,8 +125,8 @@ __host__ __device__ constexpr void seed(const At<Args...>& at, const Along<Vecs.
     ForEach(at.args, along.args, [&](auto& arg, auto&& dir) constexpr {
         if constexpr (isVector<decltype(arg)>) {
             static_assert(isVector<decltype(dir)>);
-            static_assert(VectorTraits<decltype(arg)>::size == VectorTraits<decltype(dir)>::size);
-            constexpr auto N = VectorTraits<decltype(arg)>::size;
+            static_assert(VectorSize<decltype(arg)> == VectorSize<decltype(dir)>);
+            constexpr auto N = VectorSize<decltype(arg)>;
             For<N>([&](auto i) constexpr {
                 seed<1>(arg[i], dir[i]);
             });
@@ -140,7 +140,7 @@ __host__ __device__ constexpr void unseed(const At<Args...>& at)
 {
     ForEach(at.args, [&](auto& arg) constexpr {
         if constexpr (isVector<decltype(arg)>) {
-            constexpr auto N = VectorTraits<decltype(arg)>::size;
+            constexpr auto N = VectorSize<decltype(arg)>;
             For<N>([&](auto i) constexpr {
                 seed<1>(arg[i], 0.0);
             });
@@ -183,7 +183,7 @@ __host__ __device__ constexpr auto eval(const Fun& f, const At<Args...>& at, con
 template<size_t order = 1, typename Vec, EnableIf<isVector<Vec>> = true>
 __host__ __device__ constexpr auto derivative(const Vec& u)
 {
-    constexpr size_t len = VectorTraits<Vec>::size; // the length of the vector containing dual/real numbers
+    constexpr size_t len = VectorSize<Vec>; // the length of the vector containing dual/real numbers
     using NumType = decltype(u[0]); // get the type of the dual/real number
     using T = NumericType<NumType>; // get the numeric/floating point type of the dual/real number
     using Res = VectorReplaceValueType<Vec, T>; // get the type of the vector containing numeric values instead of dual/real numbers (e.g., vector<real> becomes vector<double>, VectorXdual becomes VectorXd, etc.)
@@ -207,16 +207,17 @@ __host__ __device__ constexpr auto derivatives(const Result& result)
 {
     if constexpr (isVector<Result>) // check if the argument is a vector container of dual/real numbers
     {
-        constexpr size_t len = VectorTraits<Result>::size; // the length of the vector containing dual/real numbers
+        constexpr size_t len = VectorSize<Result>; // the length of the vector containing dual/real numbers
         using NumType = decltype(result[0]); // get the type of the dual/real number
         using T = NumericType<NumType>; // get the numeric/floating point type of the dual/real number
         using Vec = VectorReplaceValueType<Result, T>; // get the type of the vector containing numeric values instead of dual/real numbers (e.g., vector<real> becomes vector<double>, VectorXdual becomes VectorXd, etc.)
         constexpr auto N = Order<NumType>; // the order of the dual/real number
         std::array<Vec, N + 1> values; // create an array to store the derivatives stored inside the dual/real number
         For<N + 1>([&](auto i) constexpr {
-            For<len>([&](auto j) constexpr {
+            //For<len>([&](auto j) constexpr { });  /* does not work */
+            for(auto j = 0; j < len; ++j) {
                 values[i][j] = derivative<i>(result[j]); // get the ith derivative of the jth dual/real number
-            });
+            }
         });
         return values;
     }
