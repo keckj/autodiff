@@ -89,6 +89,7 @@ struct VectorTraits<Eigen::Array<Scalar, Rows, Cols, Options, MaxRows, MaxCols>>
 template<typename VectorType, int Size>
 struct VectorTraits<Eigen::VectorBlock<VectorType, Size>>
 {
+    static_assert(Size >= 0, "Cannot use a dynamic vector block as a fixed size vector.");
     static constexpr size_t size = Size;
 
     using ValueType = typename PlainType<VectorType>::Scalar;

@@ -36,17 +36,13 @@ using namespace autodiff;
 
 TEST_CASE("testing autodiff::real (with eigen)", "[forward][real][eigen]")
 {
-    using Eigen::MatrixXd;
-    using Eigen::VectorXd;
-
     SECTION("testing array-unpacking of derivatives for eigen vector of real numbers")
     {
         real4th x = {{ 2.0, 3.0, 4.0, 5.0, 6.0 }};
         real4th y = {{ 3.0, 4.0, 5.0, 6.0, 7.0 }};
         real4th z = {{ 4.0, 5.0, 6.0, 7.0, 8.0 }};
 
-        VectorXreal4th u(3);
-        u << x, y, z;
+        VectorX<real4th,3> u(x, y, z);
 
         auto [u0, u1, u2, u3, u4] = derivatives(u);
 
@@ -125,10 +121,9 @@ TEST_CASE("testing autodiff::real (with eigen)", "[forward][real][eigen]")
 
     SECTION("testing casting to VectorXd")
     {
-        VectorXreal x(3);
-        x << 0.5, 0.2, 0.3;
+        VectorX<real,3> x(0.5, 0.2, 0.3);
 
-        VectorXd y = x.cast<double>();
+        VectorX<double,3> y = x.cast<double>();
 
         for(auto i = 0; i < 3; ++i)
             CHECK( x[i] == approx(y(i)) );
@@ -136,10 +131,10 @@ TEST_CASE("testing autodiff::real (with eigen)", "[forward][real][eigen]")
 
     SECTION("testing casting to MatriXd")
     {
-        MatrixXreal x(2, 2);
+        MatrixX<real,2,2> x;
         x << 0.5, 0.2, 0.3, 0.7;
 
-        MatrixXd y = x.cast<double>();
+        MatrixX<real,2,2> y = x.cast<double>();
 
         for(auto i = 0; i < 2; ++i)
             for(auto j = 0; j < 2; ++j)
@@ -148,14 +143,14 @@ TEST_CASE("testing autodiff::real (with eigen)", "[forward][real][eigen]")
 
     SECTION("testing multiplication of VectorXreal by MatrixXd")
     {
-        MatrixXd A(2, 2);
+        MatrixX<double,2,2> A;
         A << 1.0, 3.0, 5.0, 7.0;
 
-        VectorXreal x(2);
+        VectorX<real,2> x;
         x[0] = { 1.0, 3.0 };
         x[1] = { 2.0, 5.0 };
 
-        VectorXreal b = A * x;
+        VectorX<real,2> b = A * x;
 
         CHECK( derivative<0>(b[0]) == approx(7.0) );
         CHECK( derivative<0>(b[1]) == approx(19.0) );
