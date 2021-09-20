@@ -1,15 +1,58 @@
 <a href="https://autodiff.github.io" target="_blank">
+    <img src='art/cuda-autodiff-logo.svg' width='100%'>
+</a>
+
+# Overview of cuda autodiff
+Cuda-autodiff is a fork of [autodiff](https://github.com/autodiff/autodiff) thats has been ported to CUDA 11.2+. It is currently based against **autodiff version 0.6.4+** (commit 9cd6af0) and supports a subset of the autodiff library with some limitations due to the fact that it has to run in device code. The library and its dependencies are header only and can be included directly in kernel code. Most of the routines are implemented as \_\_host\_\_ \_\_device\_\_ when possible, see the current limitations subsection.
+
+Even though cuda now support heap allocation in \_\_device_\_ code, the autodiff library internals have been completely reworked to handle only statically sized vector and matrix types. This choice has been made for performance but also because of the lack of support of dynamic allocation in cuda dependencies. Eigen3 in cuda kernels does not support dynamically sized types and the [cuda C++ standard library](https://nvidia.github.io/libcudacxx/) does not provide `std::vector`.
+
+## What is currently supported
+ - Forward mode autodiff using real and dual (see [examples/forward](examples/forward)).
+ - `std::array` based types.
+ - Eigen3 statically sized types (`Array` and `Matrix`).
+ - Custom user-provided scalar and vector types (statically allocated with compile-time known size).
+
+## What will never be supported
+ - `std::vector` based types (dynamic allocation).
+ - Eigen3 dynamically resizable types (Array and Matrix with dynamic sizes).
+ - Custom user-provided scalar and vector types that perform heap allocations.
+
+
+## Current limitations
+- No reverse autodiff.
+- `std::stream` (ostream, stringstream) based functions are only defined as \_\_host\_\_ functions.
+- Build option `--expt-relaxed-constexpr` is required to build code that depends on `std::array` because is has not yet been implemented in the standard c++ cuda library (libcu++), see this [issue](https://github.com/NVIDIA/libcudacxx/issues/51).
+- Some spurious warnings may appear when using eigen. They can be removed by providing the following compiler option: `--diag_suppress=esa_on_defaulted_function_ignored`.
+
+## Dependencies
+ - CUDA 11.2+
+ - libcu++ 1.3.0+ (shipped with cuda 11.2, header only), lib
+ - Eigen 3.4+  (header only)
+ - A C++17 capable host compiler compatible with your version of cuda
+
+ Note that `std::complex` support can be added by using libcu++ 1.4.1 or later (shipped with cuda 11.3+.)
+
+## How to Build
+The library and all of its dependencies are header only. The following build options may be required:
+1. `-I/usr/local/cuda/include` path to your local cuda 11.2+ installation (or to libcu++ headers).
+2. `-I/usr/local/eigen` path to your eigen3.4+ installation (or to libcu++ headers).
+3. `-I/path/to/autodiff` path to cuda autodiff headers.
+4. `--expt-relaxed-constexpr` to enable eigen and std::array support.
+5. `--diag_suppress=esa_on_defaulted_function_ignored` to hide some spurious warnings.
+
+Cuda-autodiff is a fork of autodiff and may thus clash with existing autodiff installations on your system.
+See `CMakelists.txt` for an example of cmake integration.
+
+## How to get started
+Look at official [autodiff documentation](https://autodiff.github.io/) and adapted cuda examples in cuda-autodiff examples directory.
+
+# General information about autodiff v0.6.4
+<a href="https://autodiff.github.io" target="_blank">
     <img src='art/autodiff-logo.svg' width='100%'>
 </a>
 
-[![Gitter chat](https://badges.gitter.im/autodiff/gitter.png)](https://gitter.im/autodiff/community)
-![Linux build status](https://github.com/autodiff/autodiff/workflows/linux/badge.svg?branch=master)
-![macOS build status](https://github.com/autodiff/autodiff/workflows/osx/badge.svg?branch=master)
-![Windows build status](https://github.com/autodiff/autodiff/workflows/windows/badge.svg?branch=master)
-
-# Overview
-
-**autodiff** is a C++17 library that uses modern and advanced programming
+[Autodiff](https://github.com/autodiff/autodiff) is a C++17 library that uses modern and advanced programming
 techniques to enable automatic computation of derivatives in an efficient, easy,
 and intuitive way.
 
@@ -163,7 +206,35 @@ Check the documentation website for more details:
 
 # License
 
-MIT License
+Autodiff and cuda-autodiff are licensed under the MIT license.
+
+## Cuda-autodiff license
+MIT Licence
+
+Copyright (c) 2021 Jean-Baptiste Keck
+
+Permission is hereby granted, free of charge, to any person obtaining a copy
+of this software and associated documentation files (the "Software"), to deal
+in the Software without restriction, including without limitation the rights
+to use, copy, modify, merge, publish, distribute, sublicense, and/or sell
+copies of the Software, and to permit persons to whom the Software is
+furnished to do so, subject to the following conditions:
+
+The above copyright notice and this permission notice shall be included in all
+copies or substantial portions of the Software.
+
+THE SOFTWARE IS PROVIDED "AS IS", WITHOUT WARRANTY OF ANY KIND, EXPRESS OR
+IMPLIED, INCLUDING BUT NOT LIMITED TO THE WARRANTIES OF MERCHANTABILITY,
+FITNESS FOR A PARTICULAR PURPOSE AND NONINFRINGEMENT. IN NO EVENT SHALL THE
+AUTHORS OR COPYRIGHT HOLDERS BE LIABLE FOR ANY CLAIM, DAMAGES OR OTHER
+LIABILITY, WHETHER IN AN ACTION OF CONTRACT, TORT OR OTHERWISE, ARISING FROM,
+OUT OF OR IN CONNECTION WITH THE SOFTWARE OR THE USE OR OTHER DEALINGS IN THE
+SOFTWARE.
+
+
+## Autodiff license
+
+MIT Licence
 
 Copyright (c) 2018–2021 Allan Leal
 
