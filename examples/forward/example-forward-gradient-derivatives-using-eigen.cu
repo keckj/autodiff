@@ -29,7 +29,7 @@ int main()
         
     Vector<double,5> d_g;
     {
-        using T = decltype(d_g);
+        using T = Vector<double,5>;
         T* output;
         cudaMalloc(&output, sizeof(T));
         kernel<<<1,1>>>(x, output);

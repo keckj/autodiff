@@ -33,10 +33,11 @@ int main()
     
     Array<double,5> d_utaylor;
     {
-        Array<double,5>* output;
-        cudaMalloc(&output, sizeof(Array<double,5>));
+        using T = Array<double,5>;
+        T* output;
+        cudaMalloc(&output, sizeof(T));
         kernel<<<1,1>>>(x,v,t,output);
-        cudaMemcpy(&d_utaylor, output, sizeof(Array<double,5>), cudaMemcpyDeviceToHost);
+        cudaMemcpy(&d_utaylor, output, sizeof(T), cudaMemcpyDeviceToHost);
         cudaFree(output);
     }
 
