@@ -33,9 +33,11 @@
 // C++ includes
 #include <cuda/std/cstddef>
 #include <cuda/std/functional>
-#include <array>
+#include <autodiff/std/array>
 
+#ifndef __CUDACC_RTC__
 #include <ostream>
+#endif
 
 // autodiff includes
 #include <autodiff/common/meta.hpp>
@@ -1539,6 +1541,7 @@ auto derivativesx(const Variable<T>& y, const Wrt<Vars...>& wrt)
     return values;
 }
 
+#ifndef __CUDACC_RTC__
 /// Output a Variable object to the output stream.
 template<typename T>
 __host__ std::ostream& operator<<(std::ostream& out, const Variable<T>& x)
@@ -1554,6 +1557,7 @@ __host__ std::ostream& operator<<(std::ostream& out, const ExprPtr<T>& x)
     out << val(x);
     return out;
 }
+#endif /* end of ifndef __CUDACC_RTC__ */
 
 //=====================================================================================================================
 //

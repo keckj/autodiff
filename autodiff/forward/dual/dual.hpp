@@ -37,8 +37,10 @@
 #include <cuda/std/type_traits>
 #include <cuda/std/utility>
 
+#ifndef __CUDACC_RTC__
 #include <ostream>
 #include <sstream>
+#endif
 
 // autodiff includes
 #include <autodiff/common/numbertraits.hpp>
@@ -1736,6 +1738,7 @@ __host__ __device__ constexpr void apply(Dual<T, G>& self)
     apply(self, Op{});
 }
 
+#ifndef __CUDACC_RTC__
 template<typename T, typename G>
 __host__ std::ostream& operator<<(std::ostream& out, const Dual<T, G>& x)
 {
@@ -1761,6 +1764,7 @@ __host__ auto repr(const Dual<T, G>& x)
 {
     return "autodiff.dual" + reprAux(x);
 }
+#endif /* endif ifndef __CUDACC_RTC__ */
 
 //=====================================================================================================================
 //
@@ -1848,7 +1852,7 @@ using HigherOrderDual = typename AuxHigherOrderDual<N, T>::type;
 
 using detail::val;
 using detail::eval;
-#if 0
+#ifndef __CUDACC_RTC__
 using detail::repr;
 #endif
 using detail::Dual;

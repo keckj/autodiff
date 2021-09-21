@@ -31,7 +31,7 @@
 #define VECTORTRAITS_HPP_YR1Y0AVW
 
 // C++ includes
-#include <array>
+#include <autodiff/std/array>
 
 // autodiff includes
 #include <autodiff/common/meta.hpp>
@@ -77,16 +77,16 @@ template<typename V, EnableIf<isVector<V>> = true>
 constexpr size_t VectorSize = VectorTraits<PlainType<V>>::size;
 
 
-/// Implementation of VectorTraits for std::array.
+/// Implementation of VectorTraits for cuda::std::array.
 template<typename T, size_t N>
-struct VectorTraits<std::array<T, N>>
+struct VectorTraits<cuda::std::array<T, N>>
 {
     static constexpr size_t size = N;
 
     using ValueType = T;
 
     template<typename NewValueType>
-    using ReplaceValueType = std::array<NewValueType, N>;
+    using ReplaceValueType = cuda::std::array<NewValueType, N>;
 };
 
 } // namespace detail

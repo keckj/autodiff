@@ -39,51 +39,51 @@
 #include <autodiff/forward/real/eigen.hpp>
 
 #define PYBIND11_MAKE_OPAQUE_EIGEN_TYPES(scalar) \
-    PYBIND11_MAKE_OPAQUE(autodiff::VectorX##scalar##0th); \
-    PYBIND11_MAKE_OPAQUE(autodiff::VectorX##scalar##1st); \
-    PYBIND11_MAKE_OPAQUE(autodiff::VectorX##scalar##2nd); \
-    PYBIND11_MAKE_OPAQUE(autodiff::VectorX##scalar##3rd); \
-    PYBIND11_MAKE_OPAQUE(autodiff::VectorX##scalar##4th); \
-    PYBIND11_MAKE_OPAQUE(autodiff::MatrixX##scalar##0th); \
-    PYBIND11_MAKE_OPAQUE(autodiff::MatrixX##scalar##1st); \
-    PYBIND11_MAKE_OPAQUE(autodiff::MatrixX##scalar##2nd); \
-    PYBIND11_MAKE_OPAQUE(autodiff::MatrixX##scalar##3rd); \
-    PYBIND11_MAKE_OPAQUE(autodiff::MatrixX##scalar##4th); \
-    PYBIND11_MAKE_OPAQUE(autodiff::ArrayX##scalar##0th);  \
-    PYBIND11_MAKE_OPAQUE(autodiff::ArrayX##scalar##1st);  \
-    PYBIND11_MAKE_OPAQUE(autodiff::ArrayX##scalar##2nd);  \
-    PYBIND11_MAKE_OPAQUE(autodiff::ArrayX##scalar##3rd);  \
-    PYBIND11_MAKE_OPAQUE(autodiff::ArrayX##scalar##4th);  \
-    PYBIND11_MAKE_OPAQUE(Eigen::Ref<autodiff::VectorX##scalar##0th>); \
-    PYBIND11_MAKE_OPAQUE(Eigen::Ref<autodiff::VectorX##scalar##1st>); \
-    PYBIND11_MAKE_OPAQUE(Eigen::Ref<autodiff::VectorX##scalar##2nd>); \
-    PYBIND11_MAKE_OPAQUE(Eigen::Ref<autodiff::VectorX##scalar##3rd>); \
-    PYBIND11_MAKE_OPAQUE(Eigen::Ref<autodiff::VectorX##scalar##4th>); \
-    PYBIND11_MAKE_OPAQUE(Eigen::Ref<autodiff::MatrixX##scalar##0th>); \
-    PYBIND11_MAKE_OPAQUE(Eigen::Ref<autodiff::MatrixX##scalar##1st>); \
-    PYBIND11_MAKE_OPAQUE(Eigen::Ref<autodiff::MatrixX##scalar##2nd>); \
-    PYBIND11_MAKE_OPAQUE(Eigen::Ref<autodiff::MatrixX##scalar##3rd>); \
-    PYBIND11_MAKE_OPAQUE(Eigen::Ref<autodiff::MatrixX##scalar##4th>); \
-    PYBIND11_MAKE_OPAQUE(Eigen::Ref<autodiff::ArrayX##scalar##0th>); \
-    PYBIND11_MAKE_OPAQUE(Eigen::Ref<autodiff::ArrayX##scalar##1st>); \
-    PYBIND11_MAKE_OPAQUE(Eigen::Ref<autodiff::ArrayX##scalar##2nd>); \
-    PYBIND11_MAKE_OPAQUE(Eigen::Ref<autodiff::ArrayX##scalar##3rd>); \
-    PYBIND11_MAKE_OPAQUE(Eigen::Ref<autodiff::ArrayX##scalar##4th>); \
-    PYBIND11_MAKE_OPAQUE(Eigen::Ref<const autodiff::VectorX##scalar##0th>); \
-    PYBIND11_MAKE_OPAQUE(Eigen::Ref<const autodiff::VectorX##scalar##1st>); \
-    PYBIND11_MAKE_OPAQUE(Eigen::Ref<const autodiff::VectorX##scalar##2nd>); \
-    PYBIND11_MAKE_OPAQUE(Eigen::Ref<const autodiff::VectorX##scalar##3rd>); \
-    PYBIND11_MAKE_OPAQUE(Eigen::Ref<const autodiff::VectorX##scalar##4th>); \
-    PYBIND11_MAKE_OPAQUE(Eigen::Ref<const autodiff::MatrixX##scalar##0th>); \
-    PYBIND11_MAKE_OPAQUE(Eigen::Ref<const autodiff::MatrixX##scalar##1st>); \
-    PYBIND11_MAKE_OPAQUE(Eigen::Ref<const autodiff::MatrixX##scalar##2nd>); \
-    PYBIND11_MAKE_OPAQUE(Eigen::Ref<const autodiff::MatrixX##scalar##3rd>); \
-    PYBIND11_MAKE_OPAQUE(Eigen::Ref<const autodiff::MatrixX##scalar##4th>); \
-    PYBIND11_MAKE_OPAQUE(Eigen::Ref<const autodiff::ArrayX##scalar##0th>); \
-    PYBIND11_MAKE_OPAQUE(Eigen::Ref<const autodiff::ArrayX##scalar##1st>); \
-    PYBIND11_MAKE_OPAQUE(Eigen::Ref<const autodiff::ArrayX##scalar##2nd>); \
-    PYBIND11_MAKE_OPAQUE(Eigen::Ref<const autodiff::ArrayX##scalar##3rd>); \
-    PYBIND11_MAKE_OPAQUE(Eigen::Ref<const autodiff::ArrayX##scalar##4th>);
+    PYBIND11_MAKE_OPAQUE(autodiff::Vector##scalar##0th); \
+    PYBIND11_MAKE_OPAQUE(autodiff::Vector##scalar##1st); \
+    PYBIND11_MAKE_OPAQUE(autodiff::Vector##scalar##2nd); \
+    PYBIND11_MAKE_OPAQUE(autodiff::Vector##scalar##3rd); \
+    PYBIND11_MAKE_OPAQUE(autodiff::Vector##scalar##4th); \
+    PYBIND11_MAKE_OPAQUE(autodiff::Matrix##scalar##0th); \
+    PYBIND11_MAKE_OPAQUE(autodiff::Matrix##scalar##1st); \
+    PYBIND11_MAKE_OPAQUE(autodiff::Matrix##scalar##2nd); \
+    PYBIND11_MAKE_OPAQUE(autodiff::Matrix##scalar##3rd); \
+    PYBIND11_MAKE_OPAQUE(autodiff::Matrix##scalar##4th); \
+    PYBIND11_MAKE_OPAQUE(autodiff::Array##scalar##0th);  \
+    PYBIND11_MAKE_OPAQUE(autodiff::Array##scalar##1st);  \
+    PYBIND11_MAKE_OPAQUE(autodiff::Array##scalar##2nd);  \
+    PYBIND11_MAKE_OPAQUE(autodiff::Array##scalar##3rd);  \
+    PYBIND11_MAKE_OPAQUE(autodiff::Array##scalar##4th);  \
+    PYBIND11_MAKE_OPAQUE(Eigen::Ref<autodiff::Vector##scalar##0th>); \
+    PYBIND11_MAKE_OPAQUE(Eigen::Ref<autodiff::Vector##scalar##1st>); \
+    PYBIND11_MAKE_OPAQUE(Eigen::Ref<autodiff::Vector##scalar##2nd>); \
+    PYBIND11_MAKE_OPAQUE(Eigen::Ref<autodiff::Vector##scalar##3rd>); \
+    PYBIND11_MAKE_OPAQUE(Eigen::Ref<autodiff::Vector##scalar##4th>); \
+    PYBIND11_MAKE_OPAQUE(Eigen::Ref<autodiff::Matrix##scalar##0th>); \
+    PYBIND11_MAKE_OPAQUE(Eigen::Ref<autodiff::Matrix##scalar##1st>); \
+    PYBIND11_MAKE_OPAQUE(Eigen::Ref<autodiff::Matrix##scalar##2nd>); \
+    PYBIND11_MAKE_OPAQUE(Eigen::Ref<autodiff::Matrix##scalar##3rd>); \
+    PYBIND11_MAKE_OPAQUE(Eigen::Ref<autodiff::Matrix##scalar##4th>); \
+    PYBIND11_MAKE_OPAQUE(Eigen::Ref<autodiff::Array##scalar##0th>); \
+    PYBIND11_MAKE_OPAQUE(Eigen::Ref<autodiff::Array##scalar##1st>); \
+    PYBIND11_MAKE_OPAQUE(Eigen::Ref<autodiff::Array##scalar##2nd>); \
+    PYBIND11_MAKE_OPAQUE(Eigen::Ref<autodiff::Array##scalar##3rd>); \
+    PYBIND11_MAKE_OPAQUE(Eigen::Ref<autodiff::Array##scalar##4th>); \
+    PYBIND11_MAKE_OPAQUE(Eigen::Ref<const autodiff::Vector##scalar##0th>); \
+    PYBIND11_MAKE_OPAQUE(Eigen::Ref<const autodiff::Vector##scalar##1st>); \
+    PYBIND11_MAKE_OPAQUE(Eigen::Ref<const autodiff::Vector##scalar##2nd>); \
+    PYBIND11_MAKE_OPAQUE(Eigen::Ref<const autodiff::Vector##scalar##3rd>); \
+    PYBIND11_MAKE_OPAQUE(Eigen::Ref<const autodiff::Vector##scalar##4th>); \
+    PYBIND11_MAKE_OPAQUE(Eigen::Ref<const autodiff::Matrix##scalar##0th>); \
+    PYBIND11_MAKE_OPAQUE(Eigen::Ref<const autodiff::Matrix##scalar##1st>); \
+    PYBIND11_MAKE_OPAQUE(Eigen::Ref<const autodiff::Matrix##scalar##2nd>); \
+    PYBIND11_MAKE_OPAQUE(Eigen::Ref<const autodiff::Matrix##scalar##3rd>); \
+    PYBIND11_MAKE_OPAQUE(Eigen::Ref<const autodiff::Matrix##scalar##4th>); \
+    PYBIND11_MAKE_OPAQUE(Eigen::Ref<const autodiff::Array##scalar##0th>); \
+    PYBIND11_MAKE_OPAQUE(Eigen::Ref<const autodiff::Array##scalar##1st>); \
+    PYBIND11_MAKE_OPAQUE(Eigen::Ref<const autodiff::Array##scalar##2nd>); \
+    PYBIND11_MAKE_OPAQUE(Eigen::Ref<const autodiff::Array##scalar##3rd>); \
+    PYBIND11_MAKE_OPAQUE(Eigen::Ref<const autodiff::Array##scalar##4th>);
 
 PYBIND11_MAKE_OPAQUE_EIGEN_TYPES(real);
 PYBIND11_MAKE_OPAQUE_EIGEN_TYPES(dual);

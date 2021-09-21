@@ -31,7 +31,7 @@
 #define TAYLORSERIES_HPP_YYO0SIG9
 
 // C++ includes
-#include <array>
+#include <autodiff/std/array>
 
 // autodiff includes
 #include <autodiff/common/meta.hpp>
@@ -48,13 +48,13 @@ class TaylorSeries
 {
 public:
     /// The numeric floating point type of the derivatives, which can be a vector of values or just one.
-    using T = std::conditional_t<isVector<V>, VectorValueType<V>, V>;
+    using T = cuda::std::conditional_t<isVector<V>, VectorValueType<V>, V>;
 
     /// Construct a default TaylorSeries object.
     TaylorSeries() = default;
 
     /// Construct a TaylorSeries object with given directional derivatives.
-    __host__ __device__ explicit TaylorSeries(const std::array<V, N + 1>& derivatives)
+    __host__ __device__ explicit TaylorSeries(const cuda::std::array<V, N + 1>& derivatives)
     : _derivatives(derivatives)
     {}
 
@@ -78,7 +78,7 @@ public:
 
 private:
     /// The directional derivatives of the function up to Nth order.
-    std::array<V, N + 1> _derivatives;
+    cuda::std::array<V, N + 1> _derivatives;
 };
 
 /// Return a TaylorSeries of a scalar or vector function *f* along a direction *v* at *x*.

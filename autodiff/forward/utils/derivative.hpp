@@ -33,12 +33,12 @@
 // C++ includes
 #include <cuda/std/cassert>
 #include <cuda/std/cstddef>
-#include <array>
 
 // autodiff includes
 #include <autodiff/common/meta.hpp>
 #include <autodiff/common/numbertraits.hpp>
 #include <autodiff/common/vectortraits.hpp>
+#include <autodiff/std/array>
 
 namespace autodiff {
 namespace detail {
@@ -212,7 +212,7 @@ __host__ __device__ constexpr auto derivatives(const Result& result)
         using T = NumericType<NumType>; // get the numeric/floating point type of the dual/real number
         using Vec = VectorReplaceValueType<Result, T>; // get the type of the vector containing numeric values instead of dual/real numbers (e.g., vector<real> becomes vector<double>, VectorXdual becomes VectorXd, etc.)
         constexpr auto N = Order<NumType>; // the order of the dual/real number
-        std::array<Vec, N + 1> values; // create an array to store the derivatives stored inside the dual/real number
+        cuda::std::array<Vec, N + 1> values; // create an array to store the derivatives stored inside the dual/real number
         For<N + 1>([&](auto i) constexpr {
             //For<len>([&](auto j) constexpr { });  /* does not work */
             for(auto j = 0; j < len; ++j) {
@@ -225,7 +225,7 @@ __host__ __device__ constexpr auto derivatives(const Result& result)
     {
         using T = NumericType<Result>; // get the numeric/floating point type of the dual/real result number
         constexpr auto N = Order<Result>; // the order of the dual/real result number
-        std::array<T, N + 1> values; // create an array to store the derivatives stored inside the dual/real number
+        cuda::std::array<T, N + 1> values; // create an array to store the derivatives stored inside the dual/real number
         For<N + 1>([&](auto i) constexpr {
             values[i] = derivative<i>(result);
         });

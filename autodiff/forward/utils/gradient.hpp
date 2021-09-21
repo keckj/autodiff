@@ -100,7 +100,7 @@ __host__ __device__ constexpr auto gradient(const Fun& f, const Wrt<Vars...>& wr
 {
     constexpr size_t N = wrt_total_length<Vars...>();
     using T = NumericType<decltype(u)>; // the underlying numeric floating point type in the autodiff number u
-    using Vec = VectorX<T,N>; // the gradient vector type with floating point values (not autodiff numbers!)
+    using Vec = Vector<T,N>; // the gradient vector type with floating point values (not autodiff numbers!)
 
     Vec g;
     gradient(f, wrt, at, u, g);
@@ -138,7 +138,7 @@ __host__ __device__ constexpr auto jacobian(const Fun& f, const Wrt<Vars...>& wr
 
     using U = VectorValueType<decltype(F)>; // the type of the autodiff numbers in vector F
     using T = NumericType<U>; // the underlying numeric floating point type in the autodiff number U
-    using Mat = MatrixX<T,M,N>; // the jacobian matrix type with floating point values (not autodiff numbers!)
+    using Mat = Matrix<T,M,N>; // the jacobian matrix type with floating point values (not autodiff numbers!)
 
     Mat J;
     jacobian(f, wrt, at, F, J);
@@ -183,7 +183,7 @@ __host__ __device__ constexpr auto hessian(const Fun& f, const Wrt<Vars...>& wrt
 {
     constexpr size_t N = wrt_total_length<Vars...>();
     using T = NumericType<decltype(u)>; // the underlying numeric floating point type in the autodiff number u
-    using Mat = MatrixX<T,N,N>; // the Hessian matrix type with floating point values (not autodiff numbers!)
+    using Mat = Matrix<T,N,N>; // the Hessian matrix type with floating point values (not autodiff numbers!)
 
     Mat H;
     hessian(f, wrt, at, u, g, H);
@@ -197,7 +197,7 @@ __host__ __device__ constexpr auto hessian(const Fun& f, const Wrt<Vars...>& wrt
     constexpr size_t N = wrt_total_length<Vars...>();
     using U = ReturnType<Fun, Args...>;
     using T = NumericType<U>;
-    using Vec = VectorX<T,N>;
+    using Vec = Vector<T,N>;
     U u;
     Vec g;
     return hessian(f, wrt, at, u, g);

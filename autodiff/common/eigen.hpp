@@ -140,20 +140,20 @@ struct VectorTraits<Eigen::Ref<MatrixType>>
 //=====================================================================================================================
 
 template<typename Scalar, int N>
-using VectorX = Eigen::Matrix<Scalar, N, 1, 0, N, 1>;
+using Vector = Eigen::Matrix<Scalar, N, 1, 0, N, 1>;
 
 template<typename Scalar, int M, int N=M>
-using MatrixX = Eigen::Matrix<Scalar, M, N, 0, M, N>;
+using Matrix = Eigen::Matrix<Scalar, M, N, 0, M, N>;
 
 template<typename Scalar, int M, int N=1>
-using ArrayX = Eigen::Array<Scalar, M, N, 0, M, N>;
+using Array = Eigen::Array<Scalar, M, N, 0, M, N>;
 
 
 } // namespace detail
 
-using detail::VectorX;
-using detail::ArrayX;
-using detail::MatrixX;
+using detail::Vector;
+using detail::Array;
+using detail::Matrix;
 
 } // namespace autodiff
 

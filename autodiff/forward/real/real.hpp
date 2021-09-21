@@ -34,10 +34,12 @@
 #include <cuda/std/cassert>
 #include <cuda/std/tuple>
 #include <cuda/std/utility>
-#include <array>
+#include <autodiff/std/array>
 
+#ifndef __CUDACC_RTC__
 #include <ostream>
 #include <sstream>
+#endif
 
 // autodiff includes
 #include <autodiff/common/binomialcoefficient.hpp>
@@ -56,7 +58,7 @@ private:
     static_assert(isArithmetic<T>);
 
     /// The value and derivatives of the number up to order *N*.
-    std::array<T, N + 1> m_data = {};
+    cuda::std::array<T, N + 1> m_data = {};
 
 public:
     /// Construct a default Real number of order *N* and type *T*.
@@ -70,7 +72,7 @@ public:
     }
 
     /// Construct a Real number with given data.
-    __host__ __device__ constexpr Real(const std::array<T, N + 1>& data)
+    __host__ __device__ constexpr Real(const cuda::std::array<T, N + 1>& data)
     : m_data(data)
     {}
 
@@ -114,7 +116,7 @@ public:
         return *this;
     }
 
-    __host__ __device__ constexpr auto operator=(const std::array<T, N + 1>& data)
+    __host__ __device__ constexpr auto operator=(const cuda::std::array<T, N + 1>& data)
     {
         m_data = data;
         return *this;
@@ -825,11 +827,13 @@ __host__ __device__ constexpr auto max(const U& x, const Real<N, T>& y)
     return (x > y[0]) ? x : y;
 }
 
+
 //=====================================================================================================================
 //
 // PRINTING FUNCTIONS
 //
 //=====================================================================================================================
+#ifndef __CUDACC_RTC__
 
 template<size_t N, typename T>
 __host__ std::ostream& operator<<(std::ostream& out, const Real<N, T>& x)
@@ -848,6 +852,7 @@ __host__ auto repr(const Real<N, T>& x)
     ss << ")";
     return ss.str();
 };
+#endif /* end of ifndef __CUDACC_RTC__ */
 
 //=====================================================================================================================
 //
@@ -949,7 +954,10 @@ struct NumberTraits<Real<N, T>>
 using detail::Real;
 using detail::val;
 using detail::derivative;
+
+#ifndef __CUDACC_RTC__
 using detail::repr;
+#endif
 
 using real0th = Real<0, double>;
 using real1st = Real<1, double>;
