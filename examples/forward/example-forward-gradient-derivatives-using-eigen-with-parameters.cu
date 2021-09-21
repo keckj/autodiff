@@ -39,19 +39,18 @@ int main()
     using Eigen::VectorXd;
 
     Array<real,5> x(1, 2, 3, 4, 5); // x = [1, 2, 3, 4, 5]
-
     Array<real,3> p(1, 2, 3);       // p = [1, 2, 3]
-
     real q = -2;                    // the input parameter q as a single variable
-
-    real u;                         // the output scalar u = f(x, p, q) evaluated together with gradient below
     
     T h_results;
-    h_results.gx = gradient(f, wrt(x), at(x, p, q), u);       // evaluate the function value u and its gradient vector gx = du/dx
-    h_results.gp = gradient(f, wrt(p), at(x, p, q), u);       // evaluate the function value u and its gradient vector gp = du/dp
-    h_results.gq = gradient(f, wrt(q), at(x, p, q), u);       // evaluate the function value u and its gradient vector gq = du/dq
-    h_results.gg = gradient(f, wrt(q, p, x), at(x, p, q), u); // evaluate the function value u and its gradient vector gqpx = [du/dq, du/dp, du/dx]
-    h_results.u = u.val();
+    {
+        real u;                                                   // the output scalar u = f(x, p, q) evaluated together with gradient below
+        h_results.gx = gradient(f, wrt(x), at(x, p, q), u);       // evaluate the function value u and its gradient vector gx = du/dx
+        h_results.gp = gradient(f, wrt(p), at(x, p, q), u);       // evaluate the function value u and its gradient vector gp = du/dp
+        h_results.gq = gradient(f, wrt(q), at(x, p, q), u);       // evaluate the function value u and its gradient vector gq = du/dq
+        h_results.gg = gradient(f, wrt(q, p, x), at(x, p, q), u); // evaluate the function value u and its gradient vector gqpx = [du/dq, du/dp, du/dx]
+        h_results.u = u.val();
+    }
     
     T d_results;
     {

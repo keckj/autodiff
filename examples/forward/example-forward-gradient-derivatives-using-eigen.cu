@@ -24,7 +24,6 @@ int main()
     Array<real,5> x(1, 2, 3, 4, 5);
 
     real u;                                               // the output scalar u = f(x) evaluated together with gradient below
-
     Vector<double,5> h_g = gradient(f, wrt(x), at(x), u); // evaluate the function value u and its gradient vector g = du/dx
         
     Vector<double,5> d_g;

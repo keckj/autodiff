@@ -52,4 +52,14 @@ __host__ bool allclose(const Matrix<Scalar,M,N>& x, const Matrix<Scalar,M,N>& y,
     return true;
 }
 
+template<typename T, size_t N>
+__host__ bool allclose(const cuda::std::array<T,N>& x, const cuda::std::array<T,N>& y, size_t n=1) {
+    for (size_t j = 0; j < N; j++) {
+        if (!allclose(x[j], y[j], n)) {
+            return false;
+        }
+    }
+    return true;
+}
+
 } /* end of namespace autodiff */
