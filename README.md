@@ -12,11 +12,11 @@ Look at official [autodiff documentation](https://autodiff.github.io/) and compa
 
 ## What is currently supported
  - Forward mode autodiff using real and dual (see [examples/forward](examples/forward)).
- - `std::array` based types.
+ - Support for `std::array` like types based on a distinct `cuda::std::array` type.
  - Eigen3 statically sized types (`Array` and `Matrix`).
  - Custom user-provided scalar and vector types (statically allocated with compile-time known size).
 
-## What will never be supported
+## What will never be included
  - `std::vector` based types (dynamic allocation).
  - Eigen3 dynamically resizable types (Array and Matrix with dynamic sizes).
  - Custom user-provided scalar and vector types that perform heap allocations.
@@ -24,28 +24,29 @@ Look at official [autodiff documentation](https://autodiff.github.io/) and compa
 
 ## Current limitations
 - No reverse autodiff.
-- `std::stream` (ostream, stringstream) based functions are only defined as \_\_host\_\_ functions.
-- Build option `--expt-relaxed-constexpr` is required to build code that depends on `std::array` because is has not yet been implemented in the standard c++ cuda library (libcu++), see this [issue](https://github.com/NVIDIA/libcudacxx/issues/51).
+- As `cuda::std::array` has not yet been implemented in the standard c++ cuda library (libcu++, see this [issue](https://github.com/NVIDIA/libcudacxx/issues/51)), a basic implementation is provided by the cuda-autodiff library. Everything is supported as long as array iterators are not involved. Please note that `std::array` and `cuda::std::array` represent distinct types, cuda-autodiff internally works with `cuda::std::array` which is available in the `<autodiff/std/array>` header but lives in the `cuda::std` namespace.
+- `std::stream` (ostream, stringstream) based functions are only defined as \_\_host\_\_ functions when using nvcc and are disabled when using nvrtc.
+
 - Some spurious warnings may appear when using eigen. They can be removed by providing the following compiler option: `--diag_suppress=esa_on_defaulted_function_ignored`.
 
 ## Dependencies
- - CUDA 11 or later (11.2+ recommended)
- - libcu++ 1.3.0+ (shipped with cuda 11.2, header only), lib
- - Eigen 3.4+ (header only)
+Bellow are the minimul required version supported by cuda-autodiff:
+ - CUDA 11, both nvcc and nvrtc are supported
+ - libcu++ 1.3.0 (shipped with cuda 11.2, header only)
+ - Eigen 3.4 (header only, available in the ext/ directory)
 
 Note that `std::complex` support can be added by using libcu++ 1.4.1 or later (shipped with cuda 11.3+.)
+The library is currently developped and tested under CUDA 11.4
 
 ## How to Build
 The library and all of its dependencies are header only. The following build options may be required:
 1. `-I/path/to/autodiff` path to cuda-autodiff headers.
-3. `-I/usr/local/eigen` or equivalent path to eigen3 headers.
+3. `-I/path/to/eigen` path to eigen3 headers.
 2. `-I/usr/local/cuda/include` or equivalent path to your libcu++ headers.
-4. `--expt-relaxed-constexpr` to enable eigen and std::array support required by cuda-autodiff.
-5. `--diag_suppress=esa_on_defaulted_function_ignored` to hide some spurious warnings.
+3. `--diag_suppress=esa_on_defaulted_function_ignored` if you want to hide some spurious eigen warnings.
 
-Cuda-autodiff is a fork of autodiff. It currently use the same namespace and may thus clash 
-with existing autodiff installations on your system.
-See `CMakelists.txt` for an example of cmake integration.
+Cuda-autodiff is a fork of autodiff. It currently use the same namespace and may thus clash
+with existing autodiff installations on your system. See `CMakelists.txt` for an example of cmake integration.
 
 
 # General information about autodiff v0.6.4
@@ -56,11 +57,6 @@ See `CMakelists.txt` for an example of cmake integration.
 [Autodiff](https://github.com/autodiff/autodiff) is a C++17 library that uses modern and advanced programming
 techniques to enable automatic computation of derivatives in an efficient, easy,
 and intuitive way.
-
-We welcome you to use **autodiff** and recommend us any improvements you think
-it is necessary. You may want to do so by chatting with us on our [Gitter
-Community Channel][gitter] and/or by making proposals by creating a [GitHub
-issue][issues].
 
 ## Demonstration
 
@@ -205,9 +201,14 @@ Check the documentation website for more details:
     <img src='art/autodiff.github.io.svg' width='100%'>
 </a>
 
-# License
+# Licenses
 
-Autodiff and cuda-autodiff are licensed under the MIT license.
+This repository is licensed as the following:
+1. This repository contains a substancial portion of the original autodiff library that is licensed under the MIT license.
+
+2. The header that provides array implementation (autodiff/std/array) is part of the LLVM Project, and is licensed under the Apache License v2.0 with LLVM Exceptions (https://llvm.org/LICENSE.txt).
+
+3. Apart from this header, all other modifications and additions to the original autodiff codebase constitute the cuda-autodiff library and is licensed under the MIT license.
 
 ## Cuda-autodiff license
 MIT Licence
@@ -232,7 +233,6 @@ LIABILITY, WHETHER IN AN ACTION OF CONTRACT, TORT OR OTHERWISE, ARISING FROM,
 OUT OF OR IN CONNECTION WITH THE SOFTWARE OR THE USE OR OTHER DEALINGS IN THE
 SOFTWARE.
 
-
 ## Autodiff license
 
 MIT Licence
@@ -256,6 +256,3 @@ AUTHORS OR COPYRIGHT HOLDERS BE LIABLE FOR ANY CLAIM, DAMAGES OR OTHER
 LIABILITY, WHETHER IN AN ACTION OF CONTRACT, TORT OR OTHERWISE, ARISING FROM,
 OUT OF OR IN CONNECTION WITH THE SOFTWARE OR THE USE OR OTHER DEALINGS IN THE
 SOFTWARE.
-
-[gitter]: https://gitter.im/autodiff/community
-[issues]: https://github.com/autodiff/autodiff/issues/new

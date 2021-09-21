@@ -1,7 +1,13 @@
 
-This repository contains a substancial portion of the original autodiff library licensed
-under the MIT license. All modifications and additions to the original autodiff codebase 
-constitute the cuda-autodiff library and is also licensed under the MIT license.
+This repository contains a substancial portion of the original autodiff library 
+that is licensed under the MIT license.
+
+The header that provides array implementation (autodiff/std/array) is part of the LLVM Project, 
+and is licensed under the Apache License v2.0 with LLVM Exceptions (https://llvm.org/LICENSE.txt).
+
+Apart from this header, all other modifications and additions to the original autodiff
+codebase constitute the cuda-autodiff library and is licensed under the MIT license.
+
 
 ============================================================================
 Cuda-autodiff is licensed as the following
