@@ -42,7 +42,7 @@ TEST_CASE("testing autodiff::real (with eigen)", "[forward][real][eigen]")
         real4th y = {{ 3.0, 4.0, 5.0, 6.0, 7.0 }};
         real4th z = {{ 4.0, 5.0, 6.0, 7.0, 8.0 }};
 
-        VectorX<real4th,3> u(x, y, z);
+        Vector<real4th,3> u(x, y, z);
 
         auto [u0, u1, u2, u3, u4] = derivatives(u);
 
@@ -121,9 +121,9 @@ TEST_CASE("testing autodiff::real (with eigen)", "[forward][real][eigen]")
 
     SECTION("testing casting to VectorXd")
     {
-        VectorX<real,3> x(0.5, 0.2, 0.3);
+        Vector<real,3> x(0.5, 0.2, 0.3);
 
-        VectorX<double,3> y = x.cast<double>();
+        Vector<double,3> y = x.cast<double>();
 
         for(auto i = 0; i < 3; ++i)
             CHECK( x[i] == approx(y(i)) );
@@ -131,10 +131,10 @@ TEST_CASE("testing autodiff::real (with eigen)", "[forward][real][eigen]")
 
     SECTION("testing casting to MatriXd")
     {
-        MatrixX<real,2,2> x;
+        Matrix<real,2,2> x;
         x << 0.5, 0.2, 0.3, 0.7;
 
-        MatrixX<real,2,2> y = x.cast<double>();
+        Matrix<real,2,2> y = x.cast<double>();
 
         for(auto i = 0; i < 2; ++i)
             for(auto j = 0; j < 2; ++j)
@@ -143,14 +143,14 @@ TEST_CASE("testing autodiff::real (with eigen)", "[forward][real][eigen]")
 
     SECTION("testing multiplication of VectorXreal by MatrixXd")
     {
-        MatrixX<double,2,2> A;
+        Matrix<double,2,2> A;
         A << 1.0, 3.0, 5.0, 7.0;
 
-        VectorX<real,2> x;
+        Vector<real,2> x;
         x[0] = { 1.0, 3.0 };
         x[1] = { 2.0, 5.0 };
 
-        VectorX<real,2> b = A * x;
+        Vector<real,2> b = A * x;
 
         CHECK( derivative<0>(b[0]) == approx(7.0) );
         CHECK( derivative<0>(b[1]) == approx(19.0) );

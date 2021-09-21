@@ -30,7 +30,7 @@
 // autodiff includes
 #include <autodiff/forward/real.hpp>
 #include <tests/utils/catch.hpp>
-#include <array>
+#include <cuda/std/array>
 using namespace autodiff;
 
 
@@ -450,7 +450,7 @@ TEST_CASE("testing autodiff::real", "[forward][real]")
         real4th y = {{3.0, 4.0, 5.0, 6.0, 7.0}};
         real4th z = {{4.0, 5.0, 6.0, 7.0, 8.0}};
 
-        std::array<autodiff::detail::Real<4,double>,3> u = { x, y, z };
+        cuda::std::array<autodiff::detail::Real<4,double>,3> u = { x, y, z };
 
         auto [u0, u1, u2, u3, u4] = derivatives(u);
 

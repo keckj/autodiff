@@ -7,19 +7,19 @@
 using namespace autodiff;
 
 // The scalar function for which the gradient is needed
-dual2nd f(const VectorX<dual2nd,3>& x)
+dual2nd f(const Vector<dual2nd,3>& x)
 {
     return x.cwiseProduct(x).sum(); // sum([x(i) * x(i) for i = 1:5])
 }
 
 int main()
 {
-    VectorX<dual2nd,3> x(1, 2, 3); // x = [1, 2, 3]
+    Vector<dual2nd,3> x(1, 2, 3); // x = [1, 2, 3]
 
     dual2nd u; // the output scalar u = f(x) evaluated together with Hessian below
-    VectorX<dual,3> g;
+    Vector<dual,3> g;
 
-    MatrixX<double,3,3> H = hessian(f, wrt(x), at(x), u, g); // evaluate the function value u and its Hessian matrix H
+    Matrix<double,3,3> H = hessian(f, wrt(x), at(x), u, g); // evaluate the function value u and its Hessian matrix H
 
     std::cout << "u = "   << u << std::endl; // print the evaluated output u
     std::cout << "g = \n" << g << std::endl; // print the evaluated gradient vector g = du/dx

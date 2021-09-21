@@ -7,24 +7,24 @@
 using namespace autodiff;
 
 // The scalar function for which the Hessian is needed
-dual2nd f(const ArrayX<dual2nd,3>& x, const ArrayX<dual2nd,2>& p, const dual2nd& q)
+dual2nd f(const Array<dual2nd,3>& x, const Array<dual2nd,2>& p, const dual2nd& q)
 {
     return (x * x).sum() + (p * p).sum() * q; // sum(x*x) + sum(p*p) + q
 }
 
 int main()
 {
-    ArrayX<dual2nd,3> x(1, 2, 3);
+    Array<dual2nd,3> x(1, 2, 3);
 
-    ArrayX<dual2nd,2> p(4, 5);
+    Array<dual2nd,2> p(4, 5);
 
     dual2nd q = -2;
 
     dual2nd u; // the output scalar u = f(x) evaluated together with Hessian below
 
-    VectorX<dual,6> g; // gradient of f(x) evaluated together with Hessian below
+    Vector<dual,6> g; // gradient of f(x) evaluated together with Hessian below
 
-    MatrixX<double,6,6> H = hessian(f, wrt(x, p, q), at(x, p, q), u, g); // evaluate the function value u, its gradient vector g, and its Hessian matrix H with respect to (x, p, q)
+    Matrix<double,6,6> H = hessian(f, wrt(x, p, q), at(x, p, q), u, g); // evaluate the function value u, its gradient vector g, and its Hessian matrix H with respect to (x, p, q)
 
     std::cout << "u = " << u << std::endl; // print the evaluated output u
     std::cout << "g =\n" << g << std::endl; // print the evaluated gradient vector g = [du/dx, du/dp, du/dq]

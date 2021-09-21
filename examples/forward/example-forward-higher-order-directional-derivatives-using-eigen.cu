@@ -7,18 +7,18 @@
 using namespace autodiff;
 
 // The vector function for which higher-order directional derivatives are needed (up to 4th order).
-ArrayX<real4th,5> f(const ArrayX<real4th,5>& x, real4th p)
+Array<real4th,5> f(const Array<real4th,5>& x, real4th p)
 {
     return p * x.log();
 }
 
 int main()
 {
-    ArrayX<real4th,5> x(1.0, 2.0, 3.0, 4.0, 5.0);
+    Array<real4th,5> x(1.0, 2.0, 3.0, 4.0, 5.0);
 
     real4th p = 7.0; // the input parameter p = 1
 
-    ArrayX<double,5> vx(1.0, 1.0, 1.0, 1.0, 1.0);
+    Array<double,5> vx(1.0, 1.0, 1.0, 1.0, 1.0);
 
     double vp = 1.0; // the direction vp in the direction vector v = (vx, vp)
 
@@ -35,9 +35,9 @@ int main()
 
     double t = 0.1; // the step length along direction v = (vx, vp) used to compute 4th order Taylor estimate of f
 
-    ArrayX<real4th,5> u = f(x + t * vx, p + t * vp); // start from (x, p), walk a step length t = 0.1 along direction v = (vx, vp) and evaluate f at this current point
+    Array<real4th,5> u = f(x + t * vx, p + t * vp); // start from (x, p), walk a step length t = 0.1 along direction v = (vx, vp) and evaluate f at this current point
 
-    ArrayX<double,5> utaylor = dfdv[0] + t*dfdv[1] + (t*t/2.0)*dfdv[2] + (t*t*t/6.0)*dfdv[3] + (t*t*t*t/24.0)*dfdv[4]; // evaluate the 4th order Taylor estimate of f along direction v = (vx, vp) at a step length of t = 0.1
+    Array<double,5> utaylor = dfdv[0] + t*dfdv[1] + (t*t/2.0)*dfdv[2] + (t*t*t/6.0)*dfdv[3] + (t*t*t*t/24.0)*dfdv[4]; // evaluate the 4th order Taylor estimate of f along direction v = (vx, vp) at a step length of t = 0.1
 
     std::cout << "Comparison between exact evaluation and 4th order Taylor estimate:" << std::endl;
     std::cout << "u(exact)  = " << u.transpose() << std::endl;

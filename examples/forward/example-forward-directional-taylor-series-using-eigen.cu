@@ -13,9 +13,9 @@ Array5real4th f(const Array5real4th& x)
 
 int main()
 {
-    ArrayX<real4th,5> x(1.0, 2.0, 3.0, 4.0, 5.0);
+    Array<real4th,5> x(1.0, 2.0, 3.0, 4.0, 5.0);
 
-    ArrayX<double,5> v(1.0, 1.0, 1.0, 1.0, 1.0);
+    Array<double,5> v(1.0, 1.0, 1.0, 1.0, 1.0);
 
     auto g = taylorseries(f, along(v), at(x)); // the function g(t) as a 4th order Taylor approximation of f(x + t·v)
 

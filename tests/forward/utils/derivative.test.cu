@@ -28,7 +28,7 @@
 // SOFTWARE.
 
 // C++ includes
-#include <array>
+#include <cuda/std/array>
 
 // autodiff includes
 #include <autodiff/forward/dual.hpp>
@@ -72,13 +72,13 @@ TEST_CASE("testing forward derivative module", "[forward][utils][derivative]")
         CHECK( derivative<1>(y) == 3.0 );
     }
 
-    SECTION("testing seed operations for higher-order directional derivatives using std::array...")
+    SECTION("testing seed operations for higher-order directional derivatives using cuda::std::array...")
     {
-        std::array<real4th,4> x;
+        cuda::std::array<real4th,4> x;
 
         real4th y;
 
-        std::array<double,4> v = {2.0, 3.0, 4.0, 5.0};
+        cuda::std::array<double,4> v = {2.0, 3.0, 4.0, 5.0};
 
         seed(at(x, y), along(v, 7.0));
 

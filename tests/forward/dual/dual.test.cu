@@ -29,7 +29,6 @@
 
 // Catch includes
 #include <catch2/catch.hpp>
-#include <array>
 
 // autodiff includes
 #include <autodiff/forward/dual.hpp>
@@ -675,7 +674,7 @@ TEST_CASE("testing autodiff::dual", "[forward][dual]")
         detail::seed<3>(z, 7.0);
         detail::seed<4>(z, 8.0);
 
-        std::array<dual4th, 3> u = { x, y, z };
+        cuda::std::array<dual4th, 3> u = { x, y, z };
 
         auto [u0, u1, u2, u3, u4] = derivatives(u);
 

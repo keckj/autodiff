@@ -7,7 +7,7 @@
 using namespace autodiff;
 
 // The vector function for which the Jacobian is needed
-VectorX<real,5> f(const VectorX<real,5>& x)
+Vector<real,5> f(const Vector<real,5>& x)
 {
     return x * x.sum();
 }
@@ -15,11 +15,11 @@ VectorX<real,5> f(const VectorX<real,5>& x)
 int main()
 {
 
-    VectorX<real,5> x(1, 2, 3, 4, 5);           // x = [1, 2, 3, 4, 5]
+    Vector<real,5> x(1, 2, 3, 4, 5);           // x = [1, 2, 3, 4, 5]
     double y[25];                               // the output Jacobian as a flat array
 
-    VectorX<real,5> F;                          // the output vector F = f(x) evaluated together with Jacobian matrix below
-    Eigen::Map<MatrixX<double,5,5>> J(y);       // the output Jacobian dF/dx mapped onto the flat array
+    Vector<real,5> F;                          // the output vector F = f(x) evaluated together with Jacobian matrix below
+    Eigen::Map<Matrix<double,5,5>> J(y);       // the output Jacobian dF/dx mapped onto the flat array
 
     jacobian(f, wrt(x), at(x), F, J);           // evaluate the output vector F and the Jacobian matrix dF/dx
 
