@@ -29,22 +29,22 @@ Look at official [autodiff documentation](https://autodiff.github.io/) and compa
 - Some spurious warnings may appear when using eigen. They can be removed by providing the following compiler option: `--diag_suppress=esa_on_defaulted_function_ignored`.
 
 ## Dependencies
- - CUDA 11.2+
+ - CUDA 11 or later (11.2+ recommended)
  - libcu++ 1.3.0+ (shipped with cuda 11.2, header only), lib
- - Eigen 3.4+  (header only)
- - A C++17 capable host compiler compatible with your version of cuda
+ - Eigen 3.4+ (header only)
 
- Note that `std::complex` support can be added by using libcu++ 1.4.1 or later (shipped with cuda 11.3+.)
+Note that `std::complex` support can be added by using libcu++ 1.4.1 or later (shipped with cuda 11.3+.)
 
 ## How to Build
 The library and all of its dependencies are header only. The following build options may be required:
-1. `-I/usr/local/cuda/include` path to your local cuda 11.2+ installation (or to libcu++ headers).
-2. `-I/usr/local/eigen` path to your eigen3.4+ installation (or to libcu++ headers).
-3. `-I/path/to/autodiff` path to cuda autodiff headers.
-4. `--expt-relaxed-constexpr` to enable eigen and std::array support.
+1. `-I/path/to/autodiff` path to cuda-autodiff headers.
+3. `-I/usr/local/eigen` or equivalent path to eigen3 headers.
+2. `-I/usr/local/cuda/include` or equivalent path to your libcu++ headers.
+4. `--expt-relaxed-constexpr` to enable eigen and std::array support required by cuda-autodiff.
 5. `--diag_suppress=esa_on_defaulted_function_ignored` to hide some spurious warnings.
 
-Cuda-autodiff is a fork of autodiff and may thus clash with existing autodiff installations on your system.
+Cuda-autodiff is a fork of autodiff. It currently use the same namespace and may thus clash 
+with existing autodiff installations on your system.
 See `CMakelists.txt` for an example of cmake integration.
 
 
