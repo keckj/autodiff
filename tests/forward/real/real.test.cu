@@ -28,9 +28,8 @@
 // SOFTWARE.
 
 // autodiff includes
-#include <autodiff/forward/real.hpp>
 #include <tests/utils/catch.hpp>
-#include <cuda/std/array>
+#include <autodiff/forward/real.hpp>
 using namespace autodiff;
 
 

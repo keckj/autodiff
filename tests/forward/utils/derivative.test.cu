@@ -27,13 +27,10 @@
 // OUT OF OR IN CONNECTION WITH THE SOFTWARE OR THE USE OR OTHER DEALINGS IN THE
 // SOFTWARE.
 
-// C++ includes
-#include <cuda/std/array>
-
 // autodiff includes
+#include <tests/utils/catch.hpp>
 #include <autodiff/forward/dual.hpp>
 #include <autodiff/forward/real.hpp>
-#include <tests/utils/catch.hpp>
 using namespace autodiff;
 
 

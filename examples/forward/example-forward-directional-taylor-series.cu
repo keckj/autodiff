@@ -1,7 +1,9 @@
 // C++ includes
 #include <iostream>
+#include <cstdlib>
 
 // autodiff include
+#include <examples/common.hpp>
 #include <autodiff/forward/real.hpp>
 using namespace autodiff;
 
@@ -9,6 +11,11 @@ using namespace autodiff;
 __host__ __device__ real4th f(const real4th& x, const real4th& y, const real4th& z)
 {
     return sin(x * y) * cos(x * z) * exp(z);
+}
+
+__global__ void kernel(real4th x, real4th y, real4th z, double t, double* output) {
+    auto g = taylorseries(f, along(1, 1, 2), at(x, y, z));
+    output[0] = g(t);
 }
 
 int main()
@@ -23,12 +30,24 @@ int main()
 
     real4th u = f(x + t, y + t, z + 2*t);                  // the exact value of f(x + t, y + t, z + 2t)
 
-    double utaylor = g(t);                                 // the 4th order Taylor estimate of f(x + t, y + t, z + 2t)
+    double h_utaylor = g(t);                               // the 4th order Taylor estimate of f(x + t, y + t, z + 2t)
+    
+    double d_utaylor;
+    {
+        double* output;
+        cudaMalloc(&output, sizeof(double));
+        kernel<<<1,1>>>(x,y,z,t,output);
+        cudaMemcpy(&d_utaylor, output, sizeof(double), cudaMemcpyDeviceToHost);
+        cudaFree(output);
+    }
 
     std::cout << std::fixed;
     std::cout << "Comparison between exact evaluation and 4th order Taylor estimate of f(x + t, y + t, z + 2t):" << std::endl;
     std::cout << "u(exact)  = " << u << " (expected value: -16.847071)" << std::endl;
-    std::cout << "u(taylor) = " << utaylor << " (expected value: -16.793986)" << std::endl;
+    std::cout << "u(taylor) = " << h_utaylor << " on __host__   (expected value: -16.793986)" << std::endl;
+    std::cout << "u(taylor) = " << d_utaylor << " on __device__ (expected value: -16.793986)" << std::endl;
+
+    return allclose(h_utaylor, d_utaylor) ? EXIT_SUCCESS : EXIT_FAILURE;
 }
 
 /*-------------------------------------------------------------------------------------------------

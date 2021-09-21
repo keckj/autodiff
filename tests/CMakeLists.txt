@@ -1,4 +1,3 @@
-find_package(Eigen3 REQUIRED)
 find_package(Catch2 REQUIRED)
 
 file(GLOB_RECURSE TEST_FILES "*.test.cu")

@@ -2,13 +2,19 @@
 #include <iostream>
 
 // autodiff include
+#include <examples/common.hpp>
 #include <autodiff/forward/real.hpp>
 #include <autodiff/forward/real/eigen.hpp>
 using namespace autodiff;
 
-Array5real4th f(const Array5real4th& x)
+__host__ __device__ Array<real4th,5> f(const Array<real4th,5>& x)
 {
     return x.sin() / x;
+}
+
+__global__ void kernel(Array<real4th,5> x, Array<double,5> v, double t, Array<double,5>* output) {
+    auto g = taylorseries(f, along(v), at(x));
+    output[0] = g(t);
 }
 
 int main()
@@ -21,14 +27,26 @@ int main()
 
     double t = 0.1;                            // the step length used to evaluate g(t), the Taylor approximation of f(x + t·v)
 
-    Array5real4th u = f(x + t * v);            // the exact value of f(x + t·v)
+    Array<real4th,5> u = f(x + t * v);         // the exact value of f(x + t·v)
 
-    Array5real utaylor = g(t);                 // the 4th order Taylor estimate of f(x + t·v)
+    Array<double,5> h_utaylor = g(t);          // the 4th order Taylor estimate of f(x + t·v)
+    
+    Array<double,5> d_utaylor;
+    {
+        Array<double,5>* output;
+        cudaMalloc(&output, sizeof(Array<double,5>));
+        kernel<<<1,1>>>(x,v,t,output);
+        cudaMemcpy(&d_utaylor, output, sizeof(Array<double,5>), cudaMemcpyDeviceToHost);
+        cudaFree(output);
+    }
 
     std::cout << std::fixed;
     std::cout << "Comparison between exact evaluation and 4th order Taylor estimate of f(x + t·v):" << std::endl;
     std::cout << "u(exact)  = " << u.transpose() << std::endl;
-    std::cout << "u(taylor) = " << utaylor.transpose() << std::endl;
+    std::cout << "u(taylor) = " << h_utaylor.transpose() << " (on host)" << std::endl;
+    std::cout << "u(taylor) = " << d_utaylor.transpose() << " (on device)" << std::endl;
+
+    return allclose(h_utaylor, d_utaylor) ? EXIT_SUCCESS : EXIT_FAILURE;
 }
 
 /*-------------------------------------------------------------------------------------------------
