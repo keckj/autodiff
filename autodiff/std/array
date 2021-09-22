@@ -19,6 +19,10 @@
 #include "cuda/std/detail/__config"
 #include "cuda/std/detail/__pragma_push"
 
+#if defined(_LIBCUDACXX_USE_PRAGMA_GCC_SYSTEM_HEADER)
+#pragma GCC system_header
+#endif
+
 #ifndef _LIBCUDACXX_ASSERT
 #if _LIBCUDACXX_DEBUG_LEVEL >= 1
 #define _LIBCUDACXX_ASSERT(x, m) assert(x)

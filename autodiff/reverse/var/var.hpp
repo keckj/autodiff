@@ -30,7 +30,17 @@
 #ifndef VAR_HPP_6EYUBRAG
 #define VAR_HPP_6EYUBRAG
 
+#ifndef __NVRTC__
+#include <ostream>
+#endif
+
+#include <cmath>
+
+#include <cuda/std/cassert>
+#include <autodiff/std/array>
+
 // autodiff includes
+#include <autodiff/common/memory.hpp>
 #include <autodiff/common/meta.hpp>
 #include <autodiff/common/numbertraits.hpp>
 
@@ -40,28 +50,24 @@ namespace autodiff {}
 namespace autodiff {
 namespace detail {
 
-using detail::EnableIf;
-using detail::For;
-using detail::isArithmetic;
-
-using ::abs;
-using ::acos;
-using ::asin;
-using ::atan;
-using ::atan2;
-using ::cos;
-using ::cosh;
-using ::erf;
-using ::exp;
-using ::hypot;
-using ::log;
-using ::log10;
-using ::pow;
-using ::sin;
-using ::sinh;
-using ::sqrt;
-using ::tan;
-using ::tanh;
+using std::abs;
+using std::acos;
+using std::asin;
+using std::atan;
+using std::atan2;
+using std::cos;
+using std::cosh;
+using std::erf;
+using std::exp;
+using std::hypot;
+using std::log;
+using std::log10;
+using std::pow;
+using std::sin;
+using std::sinh;
+using std::sqrt;
+using std::tan;
+using std::tanh;
 
 template<typename T> struct Expr;
 template<typename T> struct VariableExpr;
@@ -155,15 +161,15 @@ template<typename T> __host__ __device__ ExprPtr<T> operator-(const ExprPtr<T>& 
 template<typename T> __host__ __device__ ExprPtr<T> operator*(const ExprPtr<T>& l, const ExprPtr<T>& r);
 template<typename T> __host__ __device__ ExprPtr<T> operator/(const ExprPtr<T>& l, const ExprPtr<T>& r);
 
-template<typename T, typename U, EnableIf<isArithmetic<U>> = true> __host__ __device__ ExprPtr<T> operator+(const U& l, const ExprPtr<T>& r);
-template<typename T, typename U, EnableIf<isArithmetic<U>> = true> __host__ __device__ ExprPtr<T> operator-(const U& l, const ExprPtr<T>& r);
-template<typename T, typename U, EnableIf<isArithmetic<U>> = true> __host__ __device__ ExprPtr<T> operator*(const U& l, const ExprPtr<T>& r);
-template<typename T, typename U, EnableIf<isArithmetic<U>> = true> __host__ __device__ ExprPtr<T> operator/(const U& l, const ExprPtr<T>& r);
+template<typename T, typename U, EnableIf<isArithmetic<U>>> __host__ __device__ ExprPtr<T> operator+(const U& l, const ExprPtr<T>& r);
+template<typename T, typename U, EnableIf<isArithmetic<U>>> __host__ __device__ ExprPtr<T> operator-(const U& l, const ExprPtr<T>& r);
+template<typename T, typename U, EnableIf<isArithmetic<U>>> __host__ __device__ ExprPtr<T> operator*(const U& l, const ExprPtr<T>& r);
+template<typename T, typename U, EnableIf<isArithmetic<U>>> __host__ __device__ ExprPtr<T> operator/(const U& l, const ExprPtr<T>& r);
 
-template<typename T, typename U, EnableIf<isArithmetic<U>> = true> __host__ __device__ ExprPtr<T> operator+(const ExprPtr<T>& l, const U& r);
-template<typename T, typename U, EnableIf<isArithmetic<U>> = true> __host__ __device__ ExprPtr<T> operator-(const ExprPtr<T>& l, const U& r);
-template<typename T, typename U, EnableIf<isArithmetic<U>> = true> __host__ __device__ ExprPtr<T> operator*(const ExprPtr<T>& l, const U& r);
-template<typename T, typename U, EnableIf<isArithmetic<U>> = true> __host__ __device__ ExprPtr<T> operator/(const ExprPtr<T>& l, const U& r);
+template<typename T, typename U, EnableIf<isArithmetic<U>>> __host__ __device__ ExprPtr<T> operator+(const ExprPtr<T>& l, const U& r);
+template<typename T, typename U, EnableIf<isArithmetic<U>>> __host__ __device__ ExprPtr<T> operator-(const ExprPtr<T>& l, const U& r);
+template<typename T, typename U, EnableIf<isArithmetic<U>>> __host__ __device__ ExprPtr<T> operator*(const ExprPtr<T>& l, const U& r);
+template<typename T, typename U, EnableIf<isArithmetic<U>>> __host__ __device__ ExprPtr<T> operator/(const ExprPtr<T>& l, const U& r);
 
 //------------------------------------------------------------------------------
 // TRIGONOMETRIC FUNCTIONS (DECLARATION ONLY)
@@ -175,8 +181,8 @@ template<typename T> __host__ __device__ ExprPtr<T> asin(const ExprPtr<T>& x);
 template<typename T> __host__ __device__ ExprPtr<T> acos(const ExprPtr<T>& x);
 template<typename T> __host__ __device__ ExprPtr<T> atan(const ExprPtr<T>& x);
 template<typename T> __host__ __device__ ExprPtr<T> atan2(const ExprPtr<T>& l, const ExprPtr<T>& r);
-template<typename T, typename U, EnableIf<isArithmetic<U>> = true> __host__ __device__ ExprPtr<T> atan2(const U& l, const ExprPtr<T>& r);
-template<typename T, typename U, EnableIf<isArithmetic<U>> = true> __host__ __device__ ExprPtr<T> atan2(const ExprPtr<T>& l, const U& r);
+template<typename T, typename U, EnableIf<isArithmetic<U>>> __host__ __device__ ExprPtr<T> atan2(const U& l, const ExprPtr<T>& r);
+template<typename T, typename U, EnableIf<isArithmetic<U>>> __host__ __device__ ExprPtr<T> atan2(const ExprPtr<T>& l, const U& r);
 
 //------------------------------------------------------------------------------
 // HYPERBOLIC FUNCTIONS (DECLARATION ONLY)
@@ -197,8 +203,8 @@ template<typename T> __host__ __device__ ExprPtr<T> log10(const ExprPtr<T>& x);
 //------------------------------------------------------------------------------
 template<typename T> __host__ __device__ ExprPtr<T> sqrt(const ExprPtr<T>& x);
 template<typename T> __host__ __device__ ExprPtr<T> pow(const ExprPtr<T>& l, const ExprPtr<T>& r);
-template<typename T, typename U, EnableIf<isArithmetic<U>> = true> __host__ __device__ ExprPtr<T> pow(const U& l, const ExprPtr<T>& r);
-template<typename T, typename U, EnableIf<isArithmetic<U>> = true> __host__ __device__ ExprPtr<T> pow(const ExprPtr<T>& l, const U& r);
+template<typename T, typename U, EnableIf<isArithmetic<U>>> __host__ __device__ ExprPtr<T> pow(const U& l, const ExprPtr<T>& r);
+template<typename T, typename U, EnableIf<isArithmetic<U>>> __host__ __device__ ExprPtr<T> pow(const ExprPtr<T>& l, const U& r);
 
 //------------------------------------------------------------------------------
 // OTHER FUNCTIONS (DECLARATION ONLY)
@@ -1074,12 +1080,13 @@ struct Hypot3Expr : TernaryExpr<T>
 };
 
 // Any expression yielding a boolean depending on arithmetic subexpressions
+template <typename Functor>
 struct BooleanExpr
 {
-    cuda::std::function<bool()> expr;
+    Functor expr;
     bool val = {};
 
-    __host__ __device__ explicit BooleanExpr(cuda::std::function<bool()> expression) : expr(cuda::std::move(expression)) { update(); }
+    __host__ __device__ explicit BooleanExpr(Functor&& expression) : expr(cuda::std::forward<BooleanExpr>(expression)) { update(); }
     __host__ __device__ operator bool() const { return val; }
 
     __host__ __device__ void update() { val = expr(); }
@@ -1097,7 +1104,7 @@ __host__ __device__ auto expr_comparison(const ExprPtr<T>& l, const ExprPtr<T>& 
     });
 }
 
-template<typename Op> __host__ __device__ auto bool_expr_op(BooleanExpr& l, BooleanExpr& r, Op op) {
+template<typename Op, typename B0, typename B1> __host__ __device__ auto bool_expr_op(BooleanExpr<B0>& l, BooleanExpr<B1>& r, Op op) {
     return BooleanExpr([=]() mutable -> bool {
         l.update();
         r.update();
@@ -1105,19 +1112,22 @@ template<typename Op> __host__ __device__ auto bool_expr_op(BooleanExpr& l, Bool
     });
 }
 
- __host__ __device__ inline auto operator && (BooleanExpr&& l, BooleanExpr&& r) { return bool_expr_op(l, r, cuda::std::logical_and<> {}); }
- __host__ __device__ inline auto operator || (BooleanExpr&& l, BooleanExpr&& r) { return bool_expr_op(l, r, cuda::std::logical_or<> {}); }
+template <typename B0, typename B1>
+ __host__ __device__ inline auto operator && (BooleanExpr<B0>&& l, BooleanExpr<B1>&& r) { return bool_expr_op(l, r, cuda::std::logical_and<> {}); }
+
+ template <typename B0, typename B1>
+ __host__ __device__ inline auto operator || (BooleanExpr<B0>&& l, BooleanExpr<B1>&& r) { return bool_expr_op(l, r, cuda::std::logical_or<> {}); }
 
 /// Select between expression branches depending on a boolean expression
-template<typename T>
+template<typename T, typename B>
 struct ConditionalExpr : Expr<T>
 {
     // Using declarations for data members of base class
-    BooleanExpr predicate;
+    BooleanExpr<B> predicate;
     using Expr<T>::val;
     ExprPtr<T> l, r;
 
-    __host__ __device__ ConditionalExpr(const BooleanExpr& wrappedPred, const ExprPtr<T>& ll, const ExprPtr<T>& rr) : Expr<T>(wrappedPred ? ll->val : rr->val), predicate(wrappedPred), l(ll), r(rr) {}
+    __host__ __device__ ConditionalExpr(const BooleanExpr<B>& wrappedPred, const ExprPtr<T>& ll, const ExprPtr<T>& rr) : Expr<T>(wrappedPred ? ll->val : rr->val), predicate(wrappedPred), l(ll), r(rr) {}
 
     __host__ __device__ void propagate(const T& wprime) override
     {
@@ -1265,11 +1275,12 @@ struct Variable
     __host__ __device__ void update() { expr->update(); }
 
     __host__ __device__ void update(T value) {
-      if(auto independentExpr = cuda::std::dynamic_pointer_cast<IndependentVariableExpr<T>>(expr)) {
+      if(auto independentExpr = dynamic_pointer_cast<IndependentVariableExpr<T>>(expr)) {
         independentExpr->val = value;
         independentExpr->update();
       } else {
-        throw cuda::std::logic_error("Cannot update the value of a dependent expression stored in a variable");
+        /* Cannot update the value of a dependent expression stored in a variable */
+        assert(false);
       }
     }
 
@@ -1351,10 +1362,10 @@ __host__ __device__ auto operator > (const T& t, const U& u) { return comparison
 // CONDITION AND RELATED FUNCTIONS
 //------------------------------------------------------------------------------
 
-template<typename T, typename U, EnableIf<is_expr_v<T> && is_expr_v<U>> = true>
-__host__ __device__ auto condition(BooleanExpr&& p, const T& t, const U& u) {
+template<typename B, typename T, typename U, EnableIf<is_expr_v<T> && is_expr_v<U>> = true>
+__host__ __device__ auto condition(BooleanExpr<B>&& p, const T& t, const U& u) {
   using C = expr_common_t<T, U>;
-  ExprPtr<C> expr = make_shared<ConditionalExpr<C>>(cuda::std::forward<BooleanExpr>(p), coerce_expr<C>(t), coerce_expr<C>(u));
+  ExprPtr<C> expr = make_shared<ConditionalExpr<C,B>>(cuda::std::forward<BooleanExpr<B>>(p), coerce_expr<C>(t), coerce_expr<C>(u));
   return expr;
 }
 
@@ -1531,8 +1542,9 @@ __host__ __device__ auto derivativesx(const Variable<T>& y, const Wrt<Vars...>& 
 }
 
 /// Output a Variable object to the output stream.
+#ifndef __NVRTC__
 template<typename T>
-cuda::std::ostream& operator<<(cuda::std::ostream& out, const Variable<T>& x)
+__host__ std::ostream& operator<<(std::ostream& out, const Variable<T>& x)
 {
     out << val(x);
     return out;
@@ -1540,11 +1552,12 @@ cuda::std::ostream& operator<<(cuda::std::ostream& out, const Variable<T>& x)
 
 /// Output an ExprPrt object to the output stream.
 template<typename T>
-cuda::std::ostream& operator<<(cuda::std::ostream& out, const ExprPtr<T>& x)
+__host__ std::ostream& operator<<(std::ostream& out, const ExprPtr<T>& x)
 {
     out << val(x);
     return out;
 }
+#endif
 
 //=====================================================================================================================
 //
@@ -1579,7 +1592,8 @@ using detail::val;
 
 using var = Variable<double>;
 
-__host__ __device__ inline detail::BooleanExpr boolref(const bool& v) { return detail::BooleanExpr([&]() { return v; }); }
+template <typename B>
+__host__ __device__ inline detail::BooleanExpr<B> boolref(const bool& v) { return detail::BooleanExpr<B>([&]() { return v; }); }
 
 } // namespace autodiff
 

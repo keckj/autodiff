@@ -1,6 +1,5 @@
 // C++ includes
 #include <iostream>
-using namespace std;
 
 // autodiff include
 #include <autodiff/reverse/var.hpp>
@@ -9,7 +8,7 @@ using namespace autodiff;
 // The single-variable function for which derivatives are needed
 __host__ __device__ var f(var x)
 {
-    return 1 + x + x*x + 1/x + log(x);
+    return 1.0 + x + x*x + 1.0/x + log(x);
 }
 
 int main()
@@ -19,6 +18,6 @@ int main()
 
     auto [ux] = derivatives(u, wrt(x)); // evaluate the derivative of u with respect to x
 
-    cout << "u = " << u << endl;  // print the evaluated output variable u
-    cout << "ux = " << ux << endl;  // print the evaluated derivative ux
+    std::cout << "u = " << u << std::endl;  // print the evaluated output variable u
+    std::cout << "ux = " << ux << std::endl;  // print the evaluated derivative ux
 }
