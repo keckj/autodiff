@@ -27,7 +27,10 @@
 // OUT OF OR IN CONNECTION WITH THE SOFTWARE OR THE USE OR OTHER DEALINGS IN THE
 // SOFTWARE.
 
-#pragma once
+#ifndef VAR_HPP_SKFTPNVY
+#define VAR_HPP_SKFTPNVY
 
 // autodiff includes
 #include <autodiff/reverse/var/var.hpp>
+
+#endif /* end of include guard: VAR_HPP_SKFTPNVY */

@@ -7,7 +7,7 @@ using namespace std;
 using namespace autodiff;
 
 // The single-variable function for which derivatives are needed
-var f(var x)
+__host__ __device__ var f(var x)
 {
     return 1 + x + x*x + 1/x + log(x);
 }
