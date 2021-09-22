@@ -67,6 +67,7 @@ __host__ __device__ constexpr void ForEachWrtVar(const Wrt<Vars...>& wrt, Functi
     ForEach(wrt.args, [&](auto& item) constexpr
     {
         if constexpr (isVector<decltype(item)>) {
+            #pragma unroll
             for(auto j = 0; j < VectorSize<decltype(item)>; ++j)
                 f(i++, item[j]); // call given f with current index and variable from item (a vector)
         }
@@ -124,6 +125,7 @@ __host__ __device__ constexpr void jacobian(const Fun& f, const Wrt<Vars...>& wr
 
     ForEachWrtVar(wrt, [&](auto&& i, auto&& xi) constexpr {
         F = eval(f, at, detail::wrt(xi)); // evaluate F with xi seeded so that dF/dxi is also computed
+        #pragma unroll
         for(size_t row = 0; row < VectorSize<decltype(F)>; ++row)
             J(row, i) = derivative<1>(F[row]);
     });

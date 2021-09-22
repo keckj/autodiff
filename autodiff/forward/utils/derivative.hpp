@@ -214,7 +214,7 @@ __host__ __device__ constexpr auto derivatives(const Result& result)
         constexpr auto N = Order<NumType>; // the order of the dual/real number
         cuda::std::array<Vec, N + 1> values; // create an array to store the derivatives stored inside the dual/real number
         For<N + 1>([&](auto i) constexpr {
-            //For<len>([&](auto j) constexpr { });  /* does not work */
+            #pragma unroll
             for(auto j = 0; j < len; ++j) {
                 values[i][j] = derivative<i>(result[j]); // get the ith derivative of the jth dual/real number
             }
