@@ -39,6 +39,7 @@
 
 // autodiff includes
 #include <autodiff/common/memory.hpp>
+#include <autodiff/common/math.hpp>
 #include <autodiff/common/meta.hpp>
 #include <autodiff/common/numbertraits.hpp>
 
@@ -810,18 +811,16 @@ struct Log10Expr : UnaryExpr<T>
     // Using declarations for data members of base class
     using UnaryExpr<T>::x;
 
-    constexpr static auto ln10 = static_cast<VariableValueType<T>>(2.3025850929940456840179914546843);
-
     __host__ __device__ Log10Expr(const T& v, const ExprPtr<T>& e) : UnaryExpr<T>(v, e) {}
 
     __host__ __device__ void propagate(const T& wprime) override
     {
-        x->propagate(wprime / (ln10 * x->val));
+        x->propagate(wprime / (ln10<VariableValueType<T>> * x->val));
     }
 
     __host__ __device__ void propagatex(const ExprPtr<T>& wprime) override
     {
-        x->propagatex(wprime / (ln10 * x));
+        x->propagatex(wprime / (ln10<VariableValueType<T>> * x));
     }
 
     __host__ __device__ void update() override
@@ -990,19 +989,17 @@ struct ErfExpr : UnaryExpr<T>
     // Using declarations for data members of base class
     using UnaryExpr<T>::x;
 
-    constexpr static auto sqrt_pi = static_cast<VariableValueType<T>>(1.7724538509055160272981674833411451872554456638435);
-
     __host__ __device__ ErfExpr(const T& v, const ExprPtr<T>& e) : UnaryExpr<T>(v, e) {}
 
     __host__ __device__ void propagate(const T& wprime) override
     {
-        const auto aux = 2.0 / sqrt_pi * exp(-(x->val) * (x->val));
+        const auto aux = 2.0 / sqrt_pi<VariableValueType<T>> * exp(-(x->val) * (x->val));
         x->propagate(wprime * aux);
     }
 
     __host__ __device__ void propagatex(const ExprPtr<T>& wprime) override
     {
-        const auto aux = 2.0 / sqrt_pi * exp(-x * x);
+        const auto aux = 2.0 / sqrt_pi<VariableValueType<T>> * exp(-x * x);
         x->propagatex(wprime * aux);
     }
 
@@ -1073,7 +1070,7 @@ struct Hypot3Expr : TernaryExpr<T>
         l->update();
         c->update();
         r->update();
-        this->val = hypot(l->val, c->val, r->val);
+        this->val = math::hypot(l->val, c->val, r->val);
     }
 };
 
@@ -1088,8 +1085,11 @@ struct BooleanExpr
     __host__ __device__ operator bool() const { return val; }
 
     __host__ __device__ void update() { val = expr(); }
-
-     __host__ __device__ auto operator! () const { return BooleanExpr([=]() { return !(expr()); }); }
+    
+    template <typename F>
+     __host__ __device__ auto operator! () const { 
+         return BooleanExpr<F>([=]() { return !(expr()); });
+     }
 };
 
 /// Capture numeric comparison between two expression trees
@@ -1200,19 +1200,19 @@ template<typename T, typename U, EnableIf<isArithmetic<U>>> __host__ __device__ 
 // HYPOT2 FUNCTIONS
 //------------------------------------------------------------------------------
 template<typename T> __host__ __device__ ExprPtr<T> hypot(const ExprPtr<T>& l, const ExprPtr<T>& r) { return make_shared<Hypot2Expr<T>>(hypot(l->val, r->val), l, r); }
-template<typename T, typename U, EnableIf<isArithmetic<U>>> __host__ __device__ ExprPtr<T> hypot(const U& l, const ExprPtr<T>& r) { return make_shared<Hypot2Expr<T>>(hypot(l, r->val), constant<T>(l), r); }
-template<typename T, typename U, EnableIf<isArithmetic<U>>> __host__ __device__ ExprPtr<T> hypot(const ExprPtr<T>& l, const U& r) { return make_shared<Hypot2Expr<T>>(hypot(l->val, r), l, constant<T>(r)); }
+template<typename T, typename U, EnableIf<isArithmetic<U>> = true> __host__ __device__ ExprPtr<T> hypot(const U& l, const ExprPtr<T>& r) { return make_shared<Hypot2Expr<T>>(hypot(l, r->val), constant<T>(l), r); }
+template<typename T, typename U, EnableIf<isArithmetic<U>> = true> __host__ __device__ ExprPtr<T> hypot(const ExprPtr<T>& l, const U& r) { return make_shared<Hypot2Expr<T>>(hypot(l->val, r), l, constant<T>(r)); }
 
 //------------------------------------------------------------------------------
 // HYPOT3 FUNCTIONS
 //------------------------------------------------------------------------------
-template<typename T> __host__ __device__ ExprPtr<T> hypot(const ExprPtr<T>& l, const ExprPtr<T>& c, const ExprPtr<T>& r) { return make_shared<Hypot3Expr<T>>(hypot(l->val,c->val, r->val), l, c, r); }
-template<typename T, typename U, EnableIf<isArithmetic<U>>> __host__ __device__ ExprPtr<T> hypot(const ExprPtr<T>& l, const ExprPtr<T>& c, const U& r) { return make_shared<Hypot3Expr<T>>(hypot(l->val, c->val, r), l, c, constant<T>(r)); }
-template<typename T, typename U, EnableIf<isArithmetic<U>>> __host__ __device__ ExprPtr<T> hypot(const U& l, const ExprPtr<T>& c, const ExprPtr<T>& r) { return make_shared<Hypot3Expr<T>>(hypot(l, c->val, r->val), constant<T>(l), c, r); }
-template<typename T, typename U, EnableIf<isArithmetic<U>>> __host__ __device__ ExprPtr<T> hypot(const ExprPtr<T>& l,const U& c, const ExprPtr<T>& r) { return make_shared<Hypot3Expr<T>>(hypot(l->val, c, r->val), l, constant<T>(c), r); }
-template<typename T, typename U, typename V, EnableIf<isArithmetic<U> && isArithmetic<V>>> __host__ __device__ ExprPtr<T> hypot(const ExprPtr<T>& l, const U& c, const V& r) { return make_shared<Hypot3Expr<T>>(hypot(l->val, c, r), l, constant<T>(c), constant<T>(r)); }
-template<typename T, typename U, typename V, EnableIf<isArithmetic<U> && isArithmetic<V>>> __host__ __device__ ExprPtr<T> hypot(const U& l, const ExprPtr<T>& c, const V& r) { return make_shared<Hypot3Expr<T>>(hypot(l, c->val, r), constant<T>(l), c, constant<T>(r)); }
-template<typename T, typename U, typename V, EnableIf<isArithmetic<U> && isArithmetic<V>>> __host__ __device__ ExprPtr<T> hypot(const V& l, const U& c, const ExprPtr<T>& r) { return make_shared<Hypot3Expr<T>>(hypot(l, c, r->val), constant<T>(l), constant<T>(c), r); }
+template<typename T> __host__ __device__ ExprPtr<T> hypot(const ExprPtr<T>& l, const ExprPtr<T>& c, const ExprPtr<T>& r) { return make_shared<Hypot3Expr<T>>(math::hypot(l->val,c->val, r->val), l, c, r); }
+template<typename T, typename U, EnableIf<isArithmetic<U>> = true> __host__ __device__ ExprPtr<T> hypot(const ExprPtr<T>& l, const ExprPtr<T>& c, const U& r) { return make_shared<Hypot3Expr<T>>(math::hypot(l->val, c->val, r), l, c, constant<T>(r)); }
+template<typename T, typename U, EnableIf<isArithmetic<U>> = true> __host__ __device__ ExprPtr<T> hypot(const U& l, const ExprPtr<T>& c, const ExprPtr<T>& r) { return make_shared<Hypot3Expr<T>>(math::hypot(l, c->val, r->val), constant<T>(l), c, r); }
+template<typename T, typename U, EnableIf<isArithmetic<U>> = true> __host__ __device__ ExprPtr<T> hypot(const ExprPtr<T>& l,const U& c, const ExprPtr<T>& r) { return make_shared<Hypot3Expr<T>>(math::hypot(l->val, c, r->val), l, constant<T>(c), r); }
+template<typename T, typename U, typename V, EnableIf<isArithmetic<U> && isArithmetic<V>> = true> __host__ __device__ ExprPtr<T> hypot(const ExprPtr<T>& l, const U& c, const V& r) { return make_shared<Hypot3Expr<T>>(math::hypot(l->val, c, r), l, constant<T>(c), constant<T>(r)); }
+template<typename T, typename U, typename V, EnableIf<isArithmetic<U> && isArithmetic<V>> = true> __host__ __device__ ExprPtr<T> hypot(const U& l, const ExprPtr<T>& c, const V& r) { return make_shared<Hypot3Expr<T>>(math::hypot(l, c->val, r), constant<T>(l), c, constant<T>(r)); }
+template<typename T, typename U, typename V, EnableIf<isArithmetic<U> && isArithmetic<V>> = true> __host__ __device__ ExprPtr<T> hypot(const V& l, const U& c, const ExprPtr<T>& r) { return make_shared<Hypot3Expr<T>>(math::hypot(l, c, r->val), constant<T>(l), constant<T>(c), r); }
 
 //------------------------------------------------------------------------------
 // HYPERBOLIC FUNCTIONS
@@ -1592,9 +1592,8 @@ using detail::val;
 
 using var = Variable<double>;
 
-template <typename B>
-__host__ __device__ inline detail::BooleanExpr<B> boolref(const bool& v) {
-    return detail::BooleanExpr<B>([&]() { return v; });
+__host__ __device__ auto boolref(const bool& v) {
+    return detail::BooleanExpr([&]() { return v; });
 }
 
 } // namespace autodiff

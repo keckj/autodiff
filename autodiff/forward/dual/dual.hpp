@@ -43,8 +43,9 @@
 #endif
 
 // autodiff includes
-#include <autodiff/common/numbertraits.hpp>
 #include <autodiff/common/meta.hpp>
+#include <autodiff/common/math.hpp>
+#include <autodiff/common/numbertraits.hpp>
 
 namespace autodiff {
 namespace detail {
@@ -1508,71 +1509,43 @@ __host__ __device__ constexpr void assignHypot3(Dual<T, G>& self, X&& x, Y&& y, 
 
     // self = hypot(dual, number, number)
     if constexpr (isDual<X> && isArithmetic<Y> && isArithmetic<Z>) {
-#ifdef __CUDA_ARCH__
-        self.val = norm3d(x.val, y, z);
-#else
-        self.val = hypot(x.val, y, z);
-#endif
+        self.val = math::hypot(x.val, y, z);
         self.grad = x.val / self.val * x.grad;
     }
 
     // self = hypot(number, dual, number)
     else if constexpr (isArithmetic<X> && isDual<Y> && isArithmetic<Z>) {
-#ifdef __CUDA_ARCH__
-        self.val = norm3d(x, y.val, z);
-#else
-        self.val = hypot(x, y.val, z);
-#endif
+        self.val = math::hypot(x, y.val, z);
         self.grad = y.val / self.val * y.grad;
     }
 
     // self = hypot(number, number, dual)
     else if constexpr (isArithmetic<X> && isArithmetic<Y> && isDual<Z>) {
-#ifdef __CUDA_ARCH__
-        self.val = norm3d(x, y, z.val);
-#else
-        self.val = hypot(x, y, z.val);
-#endif
+        self.val = math::hypot(x, y, z.val);
         self.grad = z.val / self.val * z.grad;
     }
 
     // self = hypot(dual, dual, number)
     else if constexpr (isDual<X> && isDual<Y> && isArithmetic<Z>) {
-#ifdef __CUDA_ARCH__
-        self.val = norm3d(x.val, y.val, z);
-#else
-        self.val = hypot(x.val, y.val, z);
-#endif
+        self.val = math::hypot(x.val, y.val, z);
         self.grad = (x.grad * x.val + y.grad * y.val ) / self.val;
     }
 
     // self = hypot(number, dual, dual)
     else if constexpr (isArithmetic<X> && isDual<Y> && isDual<Z>) {
-#ifdef __CUDA_ARCH__
-        self.val = norm3d(x, y.val, z.val);
-#else
-        self.val = hypot(x, y.val, z.val);
-#endif
+        self.val = math::hypot(x, y.val, z.val);
         self.grad = (y.grad * y.val + z.grad * z.val) / self.val;
     }
 
     // self = hypot(dual, number, dual)
     else if constexpr (isDual<X> && isArithmetic<Y> && isDual<Z>) {
-#ifdef __CUDA_ARCH__
-        self.val = norm3d(x.val, y, z.val);
-#else
-        self.val = hypot(x.val, y, z.val);
-#endif
+        self.val = math::hypot(x.val, y, z.val);
         self.grad = (x.grad * x.val + z.grad * z.val) / self.val;
     }
 
     // self = hypot(dual, dual, dual)
     else if constexpr (isDual<X> && isDual<Y> && isDual<Z>) {
-#ifdef __CUDA_ARCH__
-        self.val = norm3d(x.val, y.val, z.val);
-#else
-        self.val = hypot(x.val, y.val, z.val);
-#endif
+        self.val = math::hypot(x.val, y.val, z.val);
         self.grad = (x.grad * x.val + y.grad * y.val + z.grad * z.val) / self.val;
     }
 
@@ -1703,8 +1676,7 @@ __host__ __device__ constexpr void apply(Dual<T, G>& self, LogOp)
 template<typename T, typename G>
 __host__ __device__ constexpr void apply(Dual<T, G>& self, Log10Op)
 {
-    constexpr NumericType<T> ln10 = 2.3025850929940456840179914546843;
-    const T aux = One<T>() / (ln10 * self.val);
+    const T aux = One<T>() / (ln10<NumericType<T>> * self.val);
     self.val = log10(self.val);
     self.grad *= aux;
 }
@@ -1726,10 +1698,9 @@ __host__ __device__ constexpr void apply(Dual<T, G>& self, AbsOp)
 template<typename T, typename G>
 __host__ __device__ constexpr void apply(Dual<T, G>& self, ErfOp)
 {
-    constexpr NumericType<T> sqrt_pi = 1.7724538509055160272981674833411451872554456638435;
     const T aux = self.val;
     self.val = erf(aux);
-    self.grad *= 2.0 * exp(-aux*aux)/sqrt_pi;
+    self.grad *= 2.0 * exp(-aux*aux)/sqrt_pi<NumericType<T>>;
 }
 
 template<typename Op, typename T, typename G>

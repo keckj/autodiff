@@ -3,7 +3,7 @@
 </a>
 
 # Overview of cuda autodiff
-Cuda-autodiff is a fork of [autodiff](https://github.com/autodiff/autodiff) thats has been ported to CUDA 11. It is currently based against **autodiff version 0.6.4+** (commit 9cd6af0) and supports a subset of the autodiff library with some limitations due to the fact that it has to run in device code. The library and its dependencies are header only and can be included directly in kernel code. Most of the routines are implemented as \_\_host\_\_ \_\_device\_\_ when possible, see the current limitations subsection. All examples adapted from the original library are running on both host and device.
+Cuda-autodiff is a fork of [autodiff](https://github.com/autodiff/autodiff) thats has been ported to CUDA 11. It is currently based against **autodiff version 0.6.4+** (commit 9cd6af0) and supports a subset of the autodiff library with some limitations due to the fact that it has to run in device code. The library and its dependencies are header only and can be included directly in kernel code. Most of the routines are implemented as \_\_host\_\_ \_\_device\_\_ when possible, see the current limitations subsection. All tests and examples adapted from the original library are running on both host and device.
 
 Even though cuda now support heap allocation in \_\_device_\_ code, the autodiff library internals have been completely reworked to handle only statically sized vector and matrix types. This choice has been made for performance but also because of the lack of support of dynamic allocation in cuda dependencies. Eigen3 in cuda kernels does not support dynamically sized types and the [cuda C++ standard library](https://nvidia.github.io/libcudacxx/) does not provide `std::vector`.
 
@@ -26,7 +26,7 @@ Bellow are the minimul required version supported by cuda-autodiff:
  - libcu++ 1.3.0 (shipped with cuda 11.2, header only)
  - Eigen 3.4 (header only, available in the [ext/eigen](ext/eigen) directory)
 
-Note that `std::complex` support can be added by using libcu++ 1.4.1 or later (shipped with cuda 11.3+.)
+Note that `std::complex` support can be added by using libcu++ 1.4.1 or later (shipped with cuda 11.3+).
 The library is currently developped and tested under CUDA 11.4
 
 ## How to use the library
@@ -42,7 +42,7 @@ with existing autodiff installations on your system. See `CMakelists.txt` for an
 ## What is currently supported
  - Forward mode autodiff using  `real` and `dual` (see [examples/forward](examples/forward)).
  - Reverse mode autodiff using `var` as long as variables are not passed as _\_global\_\_ function arguments (see [examples/backward](examples/backward)).
- - All examples and tests from the original autodiff library have been adapted to work with cuda.
+ - All tests and examples and tests from the original autodiff library have been adapted to work with cuda.
  - Support for `std::array` like types based on a distinct `cuda::std::array` type.
  - Eigen3 statically sized types (`Array` and `Matrix`).
  - Custom user-provided scalar and vector types (statically allocated with compile-time known size).

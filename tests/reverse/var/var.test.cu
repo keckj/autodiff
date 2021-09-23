@@ -266,61 +266,61 @@ TEST_CASE("testing autodiff::var", "[reverse][var]")
     //--------------------------------------------------------------------------
     x = 0.5;
 
-    REQUIRE( val(sin(x)) == approx(std::sin(val(x))) );
-    REQUIRE( grad(sin(x), x) == approx(std::cos(val(x))) );
+    REQUIRE( val(sin(x)) == approx(::sin(val(x))) );
+    REQUIRE( grad(sin(x), x) == approx(::cos(val(x))) );
 
-    REQUIRE( val(cos(x)) == approx(std::cos(val(x))) );
-    REQUIRE( grad(cos(x), x) == approx(-std::sin(val(x))) );
+    REQUIRE( val(cos(x)) == approx(::cos(val(x))) );
+    REQUIRE( grad(cos(x), x) == approx(-::sin(val(x))) );
 
-    REQUIRE( val(tan(x)) == approx(std::tan(val(x))) );
-    REQUIRE( grad(tan(x), x) == approx(1.0 / (std::cos(val(x)) * std::cos(val(x)))) );
+    REQUIRE( val(tan(x)) == approx(::tan(val(x))) );
+    REQUIRE( grad(tan(x), x) == approx(1.0 / (::cos(val(x)) * ::cos(val(x)))) );
 
-    REQUIRE( val(asin(x)) == approx(std::asin(val(x))) );
-    REQUIRE( grad(asin(x), x) == approx(1.0 / std::sqrt(1 - val(x) * val(x))) );
+    REQUIRE( val(asin(x)) == approx(::asin(val(x))) );
+    REQUIRE( grad(asin(x), x) == approx(1.0 / ::sqrt(1 - val(x) * val(x))) );
 
-    REQUIRE( val(acos(x)) == approx(std::acos(val(x))) );
-    REQUIRE( grad(acos(x), x) == approx(-1.0 / std::sqrt(1 - val(x) * val(x))) );
+    REQUIRE( val(acos(x)) == approx(::acos(val(x))) );
+    REQUIRE( grad(acos(x), x) == approx(-1.0 / ::sqrt(1 - val(x) * val(x))) );
 
-    REQUIRE( val(atan(x)) == approx(std::atan(val(x))) );
+    REQUIRE( val(atan(x)) == approx(::atan(val(x))) );
     REQUIRE( grad(atan(x), x) == approx(1.0 / (1 + val(x) * val(x))) );
 
     //--------------------------------------------------------------------------
     // TEST HYPERBOLIC FUNCTIONS
     //--------------------------------------------------------------------------
-    REQUIRE( val(sinh(x)) == approx(std::sinh(val(x))) );
-    REQUIRE( grad(sinh(x), x) == approx(std::cosh(val(x))) );
+    REQUIRE( val(sinh(x)) == approx(::sinh(val(x))) );
+    REQUIRE( grad(sinh(x), x) == approx(::cosh(val(x))) );
 
-    REQUIRE( val(cosh(x)) == approx(std::cosh(val(x))) );
-    REQUIRE( grad(cosh(x), x) == approx(std::sinh(val(x))) );
+    REQUIRE( val(cosh(x)) == approx(::cosh(val(x))) );
+    REQUIRE( grad(cosh(x), x) == approx(::sinh(val(x))) );
 
-    REQUIRE( val(tanh(x)) == approx(std::tanh(val(x))) );
-    REQUIRE( grad(tanh(x), x) == approx(1.0 / (std::cosh(val(x)) * std::cosh(val(x)))) );
+    REQUIRE( val(tanh(x)) == approx(::tanh(val(x))) );
+    REQUIRE( grad(tanh(x), x) == approx(1.0 / (::cosh(val(x)) * ::cosh(val(x)))) );
 
     //--------------------------------------------------------------------------
     // TEST EXPONENTIAL AND LOGARITHMIC FUNCTIONS
     //--------------------------------------------------------------------------
-    REQUIRE( val(log(x)) == approx(std::log(val(x))) );
+    REQUIRE( val(log(x)) == approx(::log(val(x))) );
     REQUIRE( grad(log(x), x) == approx(1.0 / val(x)) );
 
-    REQUIRE( val(log10(x)) == approx(std::log10(val(x))) );
-    REQUIRE( grad(log10(x), x) == approx(1.0 / (std::log(10) * val(x))) );
+    REQUIRE( val(log10(x)) == approx(::log10(val(x))) );
+    REQUIRE( grad(log10(x), x) == approx(1.0 / (::log(10) * val(x))) );
 
-    REQUIRE( val(exp(x)) == approx(std::exp(val(x))) );
-    REQUIRE( grad(exp(x), x) == approx(std::exp(val(x))) );
+    REQUIRE( val(exp(x)) == approx(::exp(val(x))) );
+    REQUIRE( grad(exp(x), x) == approx(::exp(val(x))) );
 
     //--------------------------------------------------------------------------
     // TEST POWER FUNCTIONS
     //--------------------------------------------------------------------------
-    REQUIRE( val(sqrt(x)) == Approx(std::sqrt(val(x))) );
-    REQUIRE( grad(sqrt(x), x) == Approx(0.5 / std::sqrt(val(x))) );
+    REQUIRE( val(sqrt(x)) == Approx(::sqrt(val(x))) );
+    REQUIRE( grad(sqrt(x), x) == Approx(0.5 / ::sqrt(val(x))) );
 
-    REQUIRE( val(pow(x, 2.0)) == Approx(std::pow(val(x), 2.0)) );
+    REQUIRE( val(pow(x, 2.0)) == Approx(::pow(val(x), 2.0)) );
     REQUIRE( grad(pow(x, 2.0), x) == Approx(2.0 * val(x)) );
 
-    REQUIRE( val(pow(2.0, x)) == Approx(std::pow(2.0, val(x))) );
-    REQUIRE( grad(pow(2.0, x), x) == Approx(std::log(2.0) * std::pow(2.0, val(x))) );
+    REQUIRE( val(pow(2.0, x)) == Approx(::pow(2.0, val(x))) );
+    REQUIRE( grad(pow(2.0, x), x) == Approx(::log(2.0) * ::pow(2.0, val(x))) );
 
-    REQUIRE( val(pow(x, x)) == Approx(std::pow(val(x), val(x))) );
+    REQUIRE( val(pow(x, x)) == Approx(::pow(val(x), val(x))) );
     REQUIRE( grad(pow(x, x), x) == Approx(val((log(x) + 1) * pow(x, x))) );
 
     y = 2 * a;
@@ -328,10 +328,10 @@ TEST_CASE("testing autodiff::var", "[reverse][var]")
     REQUIRE( y == Approx( 2 * val(a) ) );
     REQUIRE( grad(y, a) == Approx( 2.0 ) );
 
-    REQUIRE( val(pow(x, y)) == Approx(std::pow(val(x), val(y))) );
-    REQUIRE( grad(pow(x, y), x) == Approx( val(y)/val(x) * std::pow(val(x), val(y)) ) );
-    REQUIRE( grad(pow(x, y), a) == Approx( std::pow(val(x), val(y)) * (val(y)/val(x) * grad(x, a) + std::log(val(x)) * grad(y, a)) ) );
-    REQUIRE( grad(pow(x, y), y) == Approx( std::log(val(x)) * std::pow(val(x), val(y)) ) );
+    REQUIRE( val(pow(x, y)) == Approx(::pow(val(x), val(y))) );
+    REQUIRE( grad(pow(x, y), x) == Approx( val(y)/val(x) * ::pow(val(x), val(y)) ) );
+    REQUIRE( grad(pow(x, y), a) == Approx( ::pow(val(x), val(y)) * (val(y)/val(x) * grad(x, a) + ::log(val(x)) * grad(y, a)) ) );
+    REQUIRE( grad(pow(x, y), y) == Approx( ::log(val(x)) * ::pow(val(x), val(y)) ) );
 
 
     //--------------------------------------------------------------------------
@@ -339,13 +339,13 @@ TEST_CASE("testing autodiff::var", "[reverse][var]")
     //--------------------------------------------------------------------------
 
     x = 1.0;
-    REQUIRE( val(abs(x)) == std::abs(val(x)) );
+    REQUIRE( val(abs(x)) == ::abs(val(x)) );
     REQUIRE( grad(abs(x), x) == approx(1.0) );
     x = -1.0;
-    REQUIRE( val(abs(x)) == std::abs(val(x)) );
+    REQUIRE( val(abs(x)) == ::abs(val(x)) );
     REQUIRE( grad(abs(x), x) == approx(-1.0) );
     x = 0.0;
-    REQUIRE( val(abs(x)) == std::abs(val(x)) );
+    REQUIRE( val(abs(x)) == ::abs(val(x)) );
     REQUIRE( grad(abs(x), x) == approx(0.0) );
 
 
@@ -355,23 +355,23 @@ TEST_CASE("testing autodiff::var", "[reverse][var]")
 
     // Testing atan2 function on (double, var)
     x = 1.0;
-    REQUIRE( atan2(2.0, x) == std::atan2(2.0, val(x)) );
+    REQUIRE( atan2(2.0, x) == ::atan2(2.0, val(x)) );
     REQUIRE( grad(atan2(2.0, x), x) == approx(-2.0 / (2*2 + x*x)) );
 
     // Testing atan2 function on (var, double)
     x = 1.0;
-    REQUIRE( atan2(x, 2.0) == std::atan2(val(x), 2.0) );
+    REQUIRE( atan2(x, 2.0) == ::atan2(val(x), 2.0) );
     REQUIRE( grad(atan2(x, 2.0), x) == approx(2.0 / (2*2 + x*x)) );
 
     // Testing atan2 function on (var, var)
     x = 1.1;
     y = 0.9;
-    REQUIRE( atan2(y, x) == std::atan2(val(y), val(x)) );
+    REQUIRE( atan2(y, x) == ::atan2(val(y), val(x)) );
     REQUIRE( grad(atan2(y, x), y) == approx(x / (x*x + y*y)) );
     REQUIRE( grad(atan2(y, x), x) == approx(-y / (x*x + y*y)) );
 
     // Testing atan2 function on (expr, expr)
-    REQUIRE( 3*atan2(sin(y), 2 * x + 1) == 3 * std::atan2(sin(val(y)), 2*val(x)+1) );
+    REQUIRE( 3*atan2(sin(y), 2 * x + 1) == 3 * ::atan2(sin(val(y)), 2*val(x)+1) );
     REQUIRE( grad(3*atan2(sin(y), 2 * x + 1), y) == approx(3*(2*x+1)*cos(y) / ((2*x+1)*(2*x+1) + sin(y)*sin(y))) );
     REQUIRE( grad(3*atan2(sin(y), 2 * x + 1), x) == approx(3*-2*sin(y) / ((2*x+1)*(2*x+1) + sin(y)*sin(y))) );
 
@@ -382,27 +382,27 @@ TEST_CASE("testing autodiff::var", "[reverse][var]")
 
     // Testing hypot function on (var, double)
     x = 1.8;
-    REQUIRE( hypot(x, 2.0) == std::hypot(val(x), 2.0) );
-    REQUIRE( grad(hypot(x, 2.0), x) == approx(x / std::hypot(val(x), 2.0)) );
+    REQUIRE( hypot(x, 2.0) == ::hypot(val(x), 2.0) );
+    REQUIRE( grad(hypot(x, 2.0), x) == approx(x / ::hypot(val(x), 2.0)) );
 
     // Testing hypot function on (double, var)
     y = 1.5;
-    REQUIRE( hypot(2.0, y) == std::hypot(2.0, val(y)) );
-    REQUIRE( grad(hypot(2.0, y), y) == approx(y / std::hypot(2.0, val(y))) );
+    REQUIRE( hypot(2.0, y) == ::hypot(2.0, val(y)) );
+    REQUIRE( grad(hypot(2.0, y), y) == approx(y / ::hypot(2.0, val(y))) );
 
     // Testing hypot function on (var, var)
     x = 1.3;
     y = 2.3;
-    REQUIRE( hypot(x, y) == std::hypot(val(x), val(y)) );
-    REQUIRE( grad(hypot(x, y), x) == approx(x / std::hypot(val(x), val(y))) );
-    REQUIRE( grad(hypot(x, y), y) == approx(y / std::hypot(val(x), val(y))) );
+    REQUIRE( hypot(x, y) == ::hypot(val(x), val(y)) );
+    REQUIRE( grad(hypot(x, y), x) == approx(x / ::hypot(val(x), val(y))) );
+    REQUIRE( grad(hypot(x, y), y) == approx(y / ::hypot(val(x), val(y))) );
 
     // Testing hypot function on (expr, expr)
     x = 1.3;
     y = 2.3;
-    REQUIRE( hypot(2.0*x, 3.0*y) == std::hypot(2.0*val(x), 3.0*val(y)) );
-    REQUIRE( grad(hypot(2.0*x, 3.0*y), x) == approx(4.0*x / std::hypot(2.0*val(x), 3.0*val(y))) );
-    REQUIRE( grad(hypot(2.0*x, 3.0*y), y) == approx(9.0*y / std::hypot(2.0*val(x), 3.0*val(y))) );
+    REQUIRE( hypot(2.0*x, 3.0*y) == ::hypot(2.0*val(x), 3.0*val(y)) );
+    REQUIRE( grad(hypot(2.0*x, 3.0*y), x) == approx(4.0*x / ::hypot(2.0*val(x), 3.0*val(y))) );
+    REQUIRE( grad(hypot(2.0*x, 3.0*y), y) == approx(9.0*y / ::hypot(2.0*val(x), 3.0*val(y))) );
 
 
     //--------------------------------------------------------------------------
@@ -411,54 +411,54 @@ TEST_CASE("testing autodiff::var", "[reverse][var]")
 
     // Testing hypot function on (var, double, double)
     x = 1.5;
-    REQUIRE( hypot(x, 2.0, 3.0) == std::hypot(val(x), 2.0, 3.0) );
-    REQUIRE( grad(hypot(x, 2.0, 3.0), x) == approx(x / std::hypot(val(x), 2.0, 3.0)) );
+    REQUIRE( hypot(x, 2.0, 3.0) == ::hypot(val(x), 2.0, 3.0) );
+    REQUIRE( grad(hypot(x, 2.0, 3.0), x) == approx(x / ::hypot(val(x), 2.0, 3.0)) );
 
     // Testing hypot function on (double, var, double)
     y = 1.8;
-    REQUIRE( hypot(2.0, y, 3.0) == std::hypot(2.0, val(y), 3.0) );
-    REQUIRE( grad(hypot(2.0, y, 3.0), y) == approx(y / std::hypot(2.0, val(y), 3.0)) );
+    REQUIRE( hypot(2.0, y, 3.0) == ::hypot(2.0, val(y), 3.0) );
+    REQUIRE( grad(hypot(2.0, y, 3.0), y) == approx(y / ::hypot(2.0, val(y), 3.0)) );
 
     // Testing hypot function on (double, var, double)
     var z = 1.9;
-    REQUIRE( hypot(2.0, 3.0, z) == std::hypot(2.0, 3.0, val(z)) );
-    REQUIRE( grad(hypot(2.0, 3.0, z), z) == approx(z / std::hypot(2.0, 3.0, val(z))) );
+    REQUIRE( hypot(2.0, 3.0, z) == ::hypot(2.0, 3.0, val(z)) );
+    REQUIRE( grad(hypot(2.0, 3.0, z), z) == approx(z / ::hypot(2.0, 3.0, val(z))) );
 
     // Testing hypot function on (var, var, double)
     x = 1.3;
     y = 2.3;
-    REQUIRE( hypot(x, y, 2.0) == std::hypot(val(x), val(y), 2.0) );
-    REQUIRE( grad(hypot(x, y, 2.0), x) == approx(x / std::hypot(val(x), val(y), 2.0)) );
-    REQUIRE( grad(hypot(x, y, 2.0), y) == approx(y / std::hypot(val(x), val(y), 2.0)) );
+    REQUIRE( hypot(x, y, 2.0) == ::hypot(val(x), val(y), 2.0) );
+    REQUIRE( grad(hypot(x, y, 2.0), x) == approx(x / ::hypot(val(x), val(y), 2.0)) );
+    REQUIRE( grad(hypot(x, y, 2.0), y) == approx(y / ::hypot(val(x), val(y), 2.0)) );
 
     // Testing hypot function on (double, var, var)
     y = 2.3;
     z = 3.3;
-    REQUIRE( hypot(2.0, y, z) == std::hypot(2.0, val(y), val(z)) );
-    REQUIRE( grad(hypot(2.0, y, z), y) == approx(y / std::hypot(2.0, val(y), val(z))) );
-    REQUIRE( grad(hypot(2.0, y, z), z) == approx(z / std::hypot(2.0, val(y), val(z))) );
+    REQUIRE( hypot(2.0, y, z) == ::hypot(2.0, val(y), val(z)) );
+    REQUIRE( grad(hypot(2.0, y, z), y) == approx(y / ::hypot(2.0, val(y), val(z))) );
+    REQUIRE( grad(hypot(2.0, y, z), z) == approx(z / ::hypot(2.0, val(y), val(z))) );
 
     // Testing hypot function on (double, var, var)
     x = 3.3;
     z = 4.3;
-    REQUIRE( hypot(x, 2.0, z) == std::hypot(val(x), 2.0, val(z)) );
-    REQUIRE( grad(hypot(x, 2.0, z), x) == approx(x / std::hypot(val(x), 2.0, val(z))) );
-    REQUIRE( grad(hypot(x, 2.0, z), z) == approx(z / std::hypot(val(x), 2.0, val(z))) );
+    REQUIRE( hypot(x, 2.0, z) == ::hypot(val(x), 2.0, val(z)) );
+    REQUIRE( grad(hypot(x, 2.0, z), x) == approx(x / ::hypot(val(x), 2.0, val(z))) );
+    REQUIRE( grad(hypot(x, 2.0, z), z) == approx(z / ::hypot(val(x), 2.0, val(z))) );
 
     // Testing hypot function on (var, var, var)
     x = 4.3;
     y = 5.3;
     z = 6.3;
-    REQUIRE( hypot(x, y, z) == std::hypot(val(x), val(y), val(z)) );
-    REQUIRE( grad(hypot(x, y, z), x) == approx(x / std::hypot(val(x), val(y), val(z))) );
-    REQUIRE( grad(hypot(x, y, z), y) == approx(y / std::hypot(val(x), val(y), val(z))) );
-    REQUIRE( grad(hypot(x, y, z), z) == approx(z / std::hypot(val(x), val(y), val(z))) );
+    REQUIRE( hypot(x, y, z) == ::hypot(val(x), val(y), val(z)) );
+    REQUIRE( grad(hypot(x, y, z), x) == approx(x / ::hypot(val(x), val(y), val(z))) );
+    REQUIRE( grad(hypot(x, y, z), y) == approx(y / ::hypot(val(x), val(y), val(z))) );
+    REQUIRE( grad(hypot(x, y, z), z) == approx(z / ::hypot(val(x), val(y), val(z))) );
 
     // Testing hypot function on (expr, expr, expr)
-    REQUIRE( hypot(2.0*x, 3.0*y, 4.0*z) == std::hypot(2.0*val(x), 3.0*val(y), 4.0*val(z)) );
-    REQUIRE( grad(hypot(2.0*x, 3.0*y, 4.0*z), x) == approx(4.0*x / std::hypot(2.0*val(x), 3.0*val(y), 4.0*val(z))) );
-    REQUIRE( grad(hypot(2.0*x, 3.0*y, 4.0*z), y) == approx(9.0*y / std::hypot(2.0*val(x), 3.0*val(y), 4.0*val(z))) );
-    REQUIRE( grad(hypot(2.0*x, 3.0*y, 4.0*z), z) == approx(16.*z / std::hypot(2.0*val(x), 3.0*val(y), 4.0*val(z))) );
+    REQUIRE( hypot(2.0*x, 3.0*y, 4.0*z) == ::hypot(2.0*val(x), 3.0*val(y), 4.0*val(z)) );
+    REQUIRE( grad(hypot(2.0*x, 3.0*y, 4.0*z), x) == approx(4.0*x / ::hypot(2.0*val(x), 3.0*val(y), 4.0*val(z))) );
+    REQUIRE( grad(hypot(2.0*x, 3.0*y, 4.0*z), y) == approx(9.0*y / ::hypot(2.0*val(x), 3.0*val(y), 4.0*val(z))) );
+    REQUIRE( grad(hypot(2.0*x, 3.0*y, 4.0*z), z) == approx(16.*z / ::hypot(2.0*val(x), 3.0*val(y), 4.0*val(z))) );
 
 
     //--------------------------------------------------------------------------
@@ -534,13 +534,13 @@ TEST_CASE("testing autodiff::var", "[reverse][var]")
     x = 3.0;
     y = x;
 
-    REQUIRE( val(abs(x)) == Approx(std::abs(val(x))) );
+    REQUIRE( val(abs(x)) == Approx(::abs(val(x))) );
     REQUIRE( grad(x, x) == Approx(1.0) );
 
     x = 0.5;
     constexpr double pi = 3.141592653589793238462643383279502884197169399375105820974;
-    REQUIRE( val(erf(x)) == approx(std::erf(val(x))) );
-    REQUIRE( grad(erf(x), x) == approx(2/sqrt(pi) * std::exp(-val(x)*val(x))) );
+    REQUIRE( val(erf(x)) == approx(::erf(val(x))) );
+    REQUIRE( grad(erf(x), x) == approx(2/sqrt(pi) * ::exp(-val(x)*val(x))) );
 
     //--------------------------------------------------------------------------
     // TEST HIGHER ORDER DERIVATIVES (2nd order)
@@ -552,7 +552,7 @@ TEST_CASE("testing autodiff::var", "[reverse][var]")
     REQUIRE( val(gradx(gradx(log(x), x), x)) == Approx(val(-1.0/(x * x))) );
     REQUIRE( val(gradx(gradx(exp(x), x), x)) == Approx(val(exp(x))) );
     REQUIRE( val(gradx(gradx(pow(x, 2.0), x), x)) == Approx(2.0) );
-    REQUIRE( val(gradx(gradx(pow(2.0, x), x), x)) == Approx(val(std::log(2.0) * std::log(2.0) * pow(2.0, x))) );
+    REQUIRE( val(gradx(gradx(pow(2.0, x), x), x)) == Approx(val(::log(2.0) * ::log(2.0) * pow(2.0, x))) );
     REQUIRE( val(gradx(gradx(pow(x, x), x), x)) == Approx(val(((log(x) + 1) * (log(x) + 1) + 1.0/x) * pow(x, x))) );
     REQUIRE( val(gradx(gradx(sqrt(x), x), x)) == Approx(val(-0.25 / (x * sqrt(x)))) );
 
