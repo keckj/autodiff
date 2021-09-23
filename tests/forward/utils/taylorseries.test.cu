@@ -51,13 +51,9 @@ auto taylor_projection_at(const Array& dfdv, double t)
 
 #define CHECK_TAYLOR_SERIES_SCALAR_FUN(type, expr)                                                                                          \
 {                                                                                                                                           \
-    auto f = [](const ArrayX##type& x) -> type { return expr; };                                                                            \
-                                                                                                                                            \
-    ArrayX##type x(3);                                                                                                                      \
-    x << 1.0, 2.0, 3.0;                                                                                                                     \
-                                                                                                                                            \
-    ArrayXd v(3);                                                                                                                           \
-    v << 3.0, 5.0, 7.0;                                                                                                                     \
+    auto f = [](const Array<type,3>& x) -> type { return expr; };                                                                           \
+    Array<type,3> x(1.0, 2.0, 3.0);                                                                                                         \
+    Array<double,3> v(3.0, 5.0, 7.0);                                                                                                       \
                                                                                                                                             \
     auto g = taylorseries(f, along(v), at(x));                                                                                              \
                                                                                                                                             \
@@ -76,13 +72,9 @@ auto taylor_projection_at(const Array& dfdv, double t)
 
 #define CHECK_TAYLOR_SERIES_VECTOR_FUN(type, expr)                                                                                          \
 {                                                                                                                                           \
-    auto f = [](const ArrayX##type& x) -> ArrayX##type { return expr; };                                                                    \
-                                                                                                                                            \
-    ArrayX##type x(3);                                                                                                                      \
-    x << 1.0, 2.0, 3.0;                                                                                                                     \
-                                                                                                                                            \
-    ArrayXd v(3);                                                                                                                           \
-    v << 3.0, 5.0, 7.0;                                                                                                                     \
+    auto f = [](const Array<type,3>& x) -> Array<type,3> { return expr; };                                                                  \
+    Array<type,3> x(1.0, 2.0, 3.0);                                                                                                         \
+    Array<double,3> v(3.0, 5.0, 7.0);                                                                                                       \
                                                                                                                                             \
     auto g = taylorseries(f, along(v), at(x));                                                                                              \
                                                                                                                                             \
@@ -101,10 +93,6 @@ auto taylor_projection_at(const Array& dfdv, double t)
 
 TEST_CASE("testing forward taylorseries module", "[forward][utils][taylorseries]")
 {
-    using Eigen::ArrayXd;
-    using Eigen::MatrixXd;
-    using Eigen::VectorXd;
-
     CHECK_TAYLOR_SERIES_SCALAR_FUN( real1st, (x.sin() * x.exp()).sum() );
     CHECK_TAYLOR_SERIES_SCALAR_FUN( real2nd, (x.sin() * x.exp()).sum() );
     CHECK_TAYLOR_SERIES_SCALAR_FUN( real3rd, (x.sin() * x.exp()).sum() );
