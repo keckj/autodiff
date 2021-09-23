@@ -86,16 +86,11 @@ class shared_ptr {
         __host__ __device__ shared_ptr(const shared_ptr &other) : ptr(other.ptr), cnt(other.cnt) {
             this->initialize(true);
         }
-
-        template <typename U>
-        __host__ __device__ shared_ptr(const shared_ptr<U> &other) : ptr(reinterpret_cast<T*>(other.ptr)), cnt(other.cnt) {
-            this->initialize(true);
-        }
         
         __host__ __device__ shared_ptr(const shared_ptr &other, T* p) : ptr(p), cnt(other.cnt) {
             this->initialize(true);
         }
-
+        
         __host__ __device__ shared_ptr(shared_ptr&& other) : ptr(other.ptr), cnt(other.cnt) {
             other.ptr = nullptr;
             other.cnt = nullptr;
@@ -106,6 +101,21 @@ class shared_ptr {
             other.ptr = nullptr;
             other.cnt = nullptr;
             this->initialize(false);
+        }
+        
+        template <typename U>
+        __host__ __device__ explicit shared_ptr(const shared_ptr<U> &other, T* p) : ptr(p), cnt(other.cnt) {
+            this->initialize(true);
+        }
+
+        template <typename U, EnableIf<cuda::std::is_convertible<U*,T*>::value> = true>
+        __host__ __device__ shared_ptr(const shared_ptr<U> &other) : ptr(other.ptr), cnt(other.cnt) {
+            this->initialize(true);
+        }
+        
+        template <typename U, EnableIf<!cuda::std::is_convertible<U*,T*>::value> = true>
+        __host__ __device__ explicit shared_ptr(const shared_ptr<U> &other) : ptr(reinterpret_cast<T*>(other.ptr)), cnt(other.cnt) {
+            this->initialize(true);
         }
         
         __host__ __device__ ~shared_ptr() {
@@ -181,7 +191,7 @@ __host__ __device__ shared_ptr<T> static_pointer_cast(const shared_ptr<U>& r) {
 }
 
 template< class T, class U > 
-__host__ __device__ shared_ptr<T> dynamic_pointer_cast(const shared_ptr<U>& r) noexcept
+__host__ shared_ptr<T> dynamic_pointer_cast(const shared_ptr<U>& r) noexcept
 {
     if (auto p = dynamic_cast<typename shared_ptr<T>::element_type*>(r.get())) {
         return shared_ptr<T>(r, p);
