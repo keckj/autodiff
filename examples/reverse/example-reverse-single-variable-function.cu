@@ -22,22 +22,22 @@ __host__ __device__ var f(var x)
 }
 
 __global__ void kernel(T* output) {
-    var x = 2.0;   // the input variable x
-    var u = f(x);  // the output variable u
+    var x = 2.0;                        // the input variable x
+    var u = f(x);                       // the output variable u
     auto [ux] = derivatives(u, wrt(x)); // evaluate the derivative of u with respect to x
-    output[0].u = double(u);
-    output[0].ux = double(ux);
+    output[0].u = double(u);            // extract value from variable
+    output[0].ux = ux;
 }
 
 int main()
 {
     T h_results;
     {
-        var x = 2.0;   // the input variable x
-        var u = f(x);  // the output variable u
+        var x = 2.0;                        // the input variable x
+        var u = f(x);                       // the output variable u
         auto [ux] = derivatives(u, wrt(x)); // evaluate the derivative of u with respect to x
-        h_results.u = double(u);
-        h_results.ux = double(ux);
+        h_results.u = double(u);            // extract value from variable
+        h_results.ux = ux;
     }
 
     T d_results;

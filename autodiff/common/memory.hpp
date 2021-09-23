@@ -68,11 +68,12 @@ class shared_ptr {
         }
         
         __host__ __device__ void incref() {
+            assert(cnt != nullptr);
             ++(*cnt);
         }
 
         __host__ __device__ bool decref() {
-            return --(*cnt) <= 0;
+            return (cnt==nullptr) || --(*cnt) <= 0;
         }
 
     public:
@@ -87,7 +88,7 @@ class shared_ptr {
         }
 
         template <typename U>
-        __host__ __device__ shared_ptr(const shared_ptr<U> &other) : ptr(other.ptr), cnt(other.cnt) {
+        __host__ __device__ shared_ptr(const shared_ptr<U> &other) : ptr(reinterpret_cast<T*>(other.ptr)), cnt(other.cnt) {
             this->initialize(true);
         }
         
@@ -101,7 +102,11 @@ class shared_ptr {
             this->initialize(false);
         }
         
-        __host__ __device__ shared_ptr(shared_ptr &&other, T* p) = delete;
+        __host__ __device__ shared_ptr(shared_ptr &&other, T* p) : ptr(p), cnt(other.cnt) {
+            other.ptr = nullptr;
+            other.cnt = nullptr;
+            this->initialize(false);
+        }
         
         __host__ __device__ ~shared_ptr() {
             this->finalize();

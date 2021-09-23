@@ -1084,7 +1084,7 @@ struct BooleanExpr
     Functor expr;
     bool val = {};
 
-    __host__ __device__ explicit BooleanExpr(Functor&& expression) : expr(cuda::std::forward<BooleanExpr>(expression)) { update(); }
+    __host__ __device__ explicit BooleanExpr(Functor&& expression) : expr(cuda::std::forward<Functor>(expression)) { update(); }
     __host__ __device__ operator bool() const { return val; }
 
     __host__ __device__ void update() { val = expr(); }
@@ -1252,6 +1252,7 @@ struct Variable
 {
     /// The pointer to the expression tree of variable operations
     ExprPtr<T> expr;
+    bool is_independent;
 
     /// Construct a default Variable object
     __host__ __device__ Variable() : Variable(0.0) {}
@@ -1261,10 +1262,10 @@ struct Variable
 
     /// Construct a Variable object with given arithmetic value
     template<typename U, EnableIf<isArithmetic<U>> = true>
-    __host__ __device__ Variable(const U& val) : expr(make_shared<IndependentVariableExpr<T>>(val)) {}
+    __host__ __device__ Variable(const U& val) : expr(make_shared<IndependentVariableExpr<T>>(val)), is_independent(true) {}
 
     /// Construct a Variable object with given expression
-    __host__ __device__ Variable(const ExprPtr<T>& e) : expr(make_shared<DependentVariableExpr<T>>(e)) {}
+    __host__ __device__ Variable(const ExprPtr<T>& e) : expr(make_shared<DependentVariableExpr<T>>(e)), is_independent(false) {}
 
     /// Default copy assignment
     Variable& operator=(const Variable&) = default;
@@ -1273,9 +1274,10 @@ struct Variable
     __host__ __device__ void update() { expr->update(); }
 
     __host__ __device__ void update(T value) {
-      if(auto independentExpr = dynamic_pointer_cast<IndependentVariableExpr<T>>(expr)) {
+      if(is_independent) {
+        auto independentExpr = reinterpret_pointer_cast<IndependentVariableExpr<T>>(expr);
         independentExpr->val = value;
-        independentExpr->update();
+        expr->update();
       } else {
         /* Cannot update the value of a dependent expression stored in a variable */
         assert(false);
