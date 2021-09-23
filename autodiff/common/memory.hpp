@@ -33,6 +33,8 @@
 
 #include <cuda/std/type_traits>
 
+#include "autodiff/common/meta.hpp"
+
 namespace autodiff {
 namespace detail {
 
@@ -121,13 +123,29 @@ class shared_ptr {
         __host__ __device__ ~shared_ptr() {
             this->finalize();
         }
-
-        template <typename U>
-        __host__ __device__ shared_ptr& operator=(const shared_ptr<U>& other) {
+        
+        __host__ __device__ shared_ptr& operator=(const shared_ptr& other) {
             if (&other == this) { return *this; }
             this->ptr = other.ptr;
             this->cnt = other.cnt;
             this->initialize(true);
+            return *this;
+        }
+
+        template <typename U>
+        __host__ __device__ shared_ptr& operator=(const shared_ptr<U>& other) {
+            this->ptr = other.ptr;
+            this->cnt = other.cnt;
+            this->initialize(true);
+            return *this;
+        }
+        
+        __host__ __device__ shared_ptr& operator=(shared_ptr&& other) {
+            this->ptr = other.ptr;
+            this->cnt = other.cnt;
+            other.ptr = nullptr;
+            other.cnt = nullptr;
+            this->initialize(false);
             return *this;
         }
         

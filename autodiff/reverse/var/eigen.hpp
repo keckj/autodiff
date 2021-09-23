@@ -27,7 +27,8 @@
 // OUT OF OR IN CONNECTION WITH THE SOFTWARE OR THE USE OR OTHER DEALINGS IN THE
 // SOFTWARE.
 
-#pragma once
+#ifndef EIGEN_HPP_F2QYZCPW
+#define EIGEN_HPP_F2QYZCPW
 
 // Eigen includes
 #include <Eigen/Core>
@@ -89,7 +90,7 @@ using Mat = Eigen::Matrix<T, Rows, Cols, 0, MaxRows, MaxCols>;
 
 /// Return the gradient vector of variable y with respect to variables x.
 template<typename T, typename X>
-auto gradient(const Variable<T>& y, Eigen::DenseBase<X>& x)
+__host__ __device__ auto gradient(const Variable<T>& y, Eigen::DenseBase<X>& x)
 {
     using U = VariableValueType<T>;
 
@@ -105,12 +106,14 @@ auto gradient(const Variable<T>& y, Eigen::DenseBase<X>& x)
     const auto n = x.size();
     using Gradient = Vec<U, Rows, MaxRows>;
     Gradient g = Gradient::Zero(n);
-
+    
+    #pragma unroll
     for(auto i = 0; i < n; ++i)
         x[i].expr->bind_value(&g[i]);
 
     y.expr->propagate(1.0);
 
+    #pragma unroll
     for(auto i = 0; i < n; ++i)
         x[i].expr->bind_value(nullptr);
 
@@ -119,7 +122,7 @@ auto gradient(const Variable<T>& y, Eigen::DenseBase<X>& x)
 
 /// Return the Hessian matrix of variable y with respect to variables x.
 template<typename T, typename X, typename GradientVec>
-auto hessian(const Variable<T>& y, Eigen::DenseBase<X>& x, GradientVec& g)
+__host__ __device__ auto hessian(const Variable<T>& y, Eigen::DenseBase<X>& x, GradientVec& g)
 {
     using U = VariableValueType<T>;
 
@@ -138,6 +141,7 @@ auto hessian(const Variable<T>& y, Eigen::DenseBase<X>& x, GradientVec& g)
     using ExpressionGradient = Vec<ScalarX, Rows, MaxRows>;
     ExpressionGradient G(n);
 
+    #pragma unroll
     for(auto k = 0; k < n; ++k)
         x[k].expr->bind_expr(&G(k).expr);
 
@@ -146,26 +150,32 @@ auto hessian(const Variable<T>& y, Eigen::DenseBase<X>& x, GradientVec& g)
      */
     y.expr->propagatex(constant<T>(1.0));
 
+    #pragma unroll
     for(auto k = 0; k < n; ++k) {
       x[k].expr->bind_expr(nullptr);
     }
 
     // Read the gradient value from gradient expressions' cached values
     g.resize(n);
+    #pragma unroll
     for(auto i = 0; i < n; ++i)
         g[i] = val(G[i]);
 
     // Form a numeric hessian using the gradient expressions
     using Hessian = Mat<U, Rows, Rows, MaxRows, MaxRows>;
     Hessian H = Hessian::Zero(n, n);
+    
+    #pragma unroll
     for(auto i = 0; i < n; ++i)
     {
+        #pragma unroll
         for(auto k = 0; k < n; ++k)
             x[k].expr->bind_value(&H(i, k));
 
         // Propagate a second derivative value calculation down the gradient expression tree for variable i
         G[i].expr->propagate(1.0);
 
+        #pragma unroll
         for(auto k = 0; k < n; ++k)
             x[k].expr->bind_value(nullptr);
     }
@@ -175,7 +185,7 @@ auto hessian(const Variable<T>& y, Eigen::DenseBase<X>& x, GradientVec& g)
 
 /// Return the Hessian matrix of variable y with respect to variables x.
 template<typename T, typename X>
-auto hessian(const Variable<T>& y, Eigen::DenseBase<X>& x)
+__host__ __device__ auto hessian(const Variable<T>& y, Eigen::DenseBase<X>& x)
 {
     using U = VariableValueType<T>;
     constexpr auto Rows = X::RowsAtCompileTime;
@@ -192,3 +202,5 @@ using detail::gradient;
 using detail::hessian;
 
 } // namespace autodiff
+
+#endif /* end of include guard: EIGEN_HPP_F2QYZCPW */
