@@ -85,6 +85,9 @@ struct bfloat16 : public bfloat16_impl::bfloat16_base {
 };
 } // namespace Eigen
 
+#ifdef __CUDACC_RTC__
+namespace cuda {
+#endif
 namespace std {
 template<>
 struct numeric_limits<Eigen::bfloat16> {
@@ -134,6 +137,9 @@ struct numeric_limits<volatile Eigen::bfloat16> : numeric_limits<Eigen::bfloat16
 template<>
 struct numeric_limits<const volatile Eigen::bfloat16> : numeric_limits<Eigen::bfloat16> {};
 } // namespace std
+#ifdef __CUDACC_RTC__
+} // namespace cuda
+#endif
 
 namespace Eigen {
 
@@ -606,7 +612,11 @@ struct random_default_impl<bfloat16, false, false>
 {
   static inline bfloat16 run(const bfloat16& x, const bfloat16& y)
   {
+#ifdef __CUDACC_RTC__
+    __trap();
+#else
     return x + (y-x) * bfloat16(float(std::rand()) / float(RAND_MAX));
+#endif
   }
   static inline bfloat16 run()
   {

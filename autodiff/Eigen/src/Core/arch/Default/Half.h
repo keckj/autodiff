@@ -36,9 +36,11 @@
 #ifndef EIGEN_HALF_H
 #define EIGEN_HALF_H
 
+#if EIGEN_INCLUDE_SYSTEM_HEADERS
 #include <sstream>
+#endif
 
-#if defined(EIGEN_HAS_GPU_FP16) || defined(EIGEN_HAS_ARM64_FP16_SCALAR_ARITHMETIC)
+#if (defined(EIGEN_HAS_GPU_FP16) || defined(EIGEN_HAS_ARM64_FP16_SCALAR_ARITHMETIC)) && !defined(__CUDACC_RTC__)
 // When compiling with GPU support, the "__half_raw" base class as well as
 // some other routines are defined in the GPU compiler header files
 // (cuda_fp16.h, hip_fp16.h), and they are not tagged constexpr
@@ -204,6 +206,9 @@ struct half : public half_impl::half_base {
 
 } // end namespace Eigen
 
+#ifdef __CUDACC_RTC__
+namespace cuda {
+#endif
 namespace std {
 template<>
 struct numeric_limits<Eigen::half> {
@@ -253,6 +258,9 @@ struct numeric_limits<volatile Eigen::half> : numeric_limits<Eigen::half> {};
 template<>
 struct numeric_limits<const volatile Eigen::half> : numeric_limits<Eigen::half> {};
 } // end namespace std
+#ifdef __CUDACC_RTC__
+} // end of namespace cuda
+#endif
 
 namespace Eigen {
 
@@ -454,7 +462,7 @@ EIGEN_STRONG_INLINE EIGEN_DEVICE_FUNC bool operator >= (const half& a, const hal
   return float(a) >= float(b);
 }
 
-#if defined(__clang__) && defined(__CUDA__)
+#if defined(__clang__) && defined(__CUDA__) && !defined(__CUDACC_RTC__)
 #pragma pop_macro("EIGEN_DEVICE_FUNC")
 #endif
 #endif  // Emulate support for half floats
@@ -776,7 +784,11 @@ struct random_default_impl<half, false, false>
 {
   static inline half run(const half& x, const half& y)
   {
+#ifdef __CUDACC_RTC__
+    __trap();
+#else
     return x + (y-x) * half(float(std::rand()) / float(RAND_MAX));
+#endif
   }
   static inline half run()
   {
@@ -820,7 +832,7 @@ template<> struct NumTraits<Eigen::half>
 
 } // end namespace Eigen
 
-#if defined(EIGEN_HAS_GPU_FP16) || defined(EIGEN_HAS_ARM64_FP16_SCALAR_ARITHMETIC)
+#if (defined(EIGEN_HAS_GPU_FP16) || defined(EIGEN_HAS_ARM64_FP16_SCALAR_ARITHMETIC)) && !defined(__CUDACC_RTC__)
   #pragma pop_macro("EIGEN_CONSTEXPR")
 #endif
 

@@ -28,6 +28,7 @@
 // SOFTWARE.
 
 // Eigen includes
+#define EIGEN_MPL2_ONLY
 #include <Eigen/Core>
 
 // pybind11 includes

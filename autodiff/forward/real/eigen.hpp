@@ -31,7 +31,8 @@
 #define EIGEN_HPP_OCUSY3FK
 
 // Eigen includes
-#include <Eigen/Core>
+#define EIGEN_MPL2_ONLY
+#include <autodiff/Eigen/Core>
 
 // autodiff includes
 #include <autodiff/forward/real.hpp>

@@ -897,8 +897,11 @@ struct random_default_impl<Scalar, false, true>
     // The following difference doesn't overflow, provided our integer types are two's
     // complement and have the same number of padding bits in signed and unsigned variants.
     // This is the case in most modern implementations of C++.
-    ScalarX range = ScalarX(y) - ScalarX(x);
     ScalarX offset = 0;
+#ifdef __CUDACC_RTC__
+    __trap();
+#else
+    ScalarX range = ScalarX(y) - ScalarX(x);
     ScalarX divisor = 1;
     ScalarX multiplier = 1;
     const unsigned rand_max = RAND_MAX;
@@ -908,6 +911,7 @@ struct random_default_impl<Scalar, false, true>
     do {
       offset = (unsigned(std::rand()) * multiplier) / divisor;
     } while (offset > range);
+#endif
     return Scalar(ScalarX(x) + offset);
   }
 
@@ -1116,7 +1120,7 @@ template<>
 EIGEN_DEVICE_FUNC
 EIGEN_ALWAYS_INLINE long double mini(const long double& x, const long double& y)
 {
-#if defined(EIGEN_HIPCC)
+#if defined(EIGEN_HIPCC) || defined(__CUDACC_RTC__)
   // no "fminl" on HIP yet
   return (x < y) ? x : y;
 #else
@@ -1146,7 +1150,7 @@ template<>
 EIGEN_DEVICE_FUNC
 EIGEN_ALWAYS_INLINE long double maxi(const long double& x, const long double& y)
 {
-#if defined(EIGEN_HIPCC)
+#if defined(EIGEN_HIPCC) || defined(__CUDACC_RTC__)
   // no "fmaxl" on HIP yet
   return (x > y) ? x : y;
 #else

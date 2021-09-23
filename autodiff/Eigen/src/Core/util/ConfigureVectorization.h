@@ -197,7 +197,6 @@
 #endif
 
 
-// The following (except #include <malloc.h> and _M_IX86_FP ??) can likely be
 // removed as gcc 4.1 and msvc 2008 are not supported anyways.
 #if EIGEN_COMP_MSVC
   #include <malloc.h> // for _aligned_malloc -- need it regardless of whether vectorization is enabled
@@ -474,7 +473,7 @@
 /** \brief Namespace containing all symbols from the %Eigen library. */
 namespace Eigen {
 
-inline static const char *SimdInstructionSetsInUse(void) {
+__host__ __device__ inline static const char *SimdInstructionSetsInUse(void) {
 #if defined(EIGEN_VECTORIZE_AVX512)
   return "AVX512, FMA, AVX2, AVX, SSE, SSE2, SSE3, SSSE3, SSE4.1, SSE4.2";
 #elif defined(EIGEN_VECTORIZE_AVX)

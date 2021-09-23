@@ -127,6 +127,9 @@ EIGEN_DEVICE_FUNC inline void handmade_aligned_free(void *ptr)
 inline void* handmade_aligned_realloc(void* ptr, std::size_t size, std::size_t = 0)
 {
   if (ptr == 0) return handmade_aligned_malloc(size);
+#ifdef __CUDACC_RTC__
+  __trap();
+#else
   void *original = *(reinterpret_cast<void**>(ptr) - 1);
   std::ptrdiff_t previous_offset = static_cast<char *>(ptr)-static_cast<char *>(original);
   original = std::realloc(original,size+EIGEN_DEFAULT_ALIGN_BYTES);
@@ -138,6 +141,7 @@ inline void* handmade_aligned_realloc(void* ptr, std::size_t size, std::size_t =
 
   *(reinterpret_cast<void**>(aligned) - 1) = original;
   return aligned;
+#endif
 }
 
 /*****************************************************************************
@@ -272,7 +276,11 @@ template<bool Align> inline void* conditional_aligned_realloc(void* ptr, std::si
 
 template<> inline void* conditional_aligned_realloc<false>(void* ptr, std::size_t new_size, std::size_t)
 {
+#ifdef __CUDACC_RTC__
+  __trap();
+#else
   return std::realloc(ptr, new_size);
+#endif
 }
 
 /*****************************************************************************
@@ -547,7 +555,11 @@ template<typename T> struct smart_memmove_helper<T,true> {
     IntPtr size = IntPtr(end)-IntPtr(start);
     if(size==0) return;
     eigen_internal_assert(start!=0 && end!=0 && target!=0);
+#ifdef __CUDACC_RTC__
+  __trap();
+#else
     std::memmove(target, start, size);
+#endif
   }
 };
 
@@ -793,12 +805,14 @@ template<typename T> void swap(scoped_array<T> &a,scoped_array<T> &b)
 
 // HIP does not support new/delete on device.
 #if EIGEN_MAX_ALIGN_BYTES!=0 && !defined(EIGEN_HIP_DEVICE_COMPILE)
+
   #define EIGEN_MAKE_ALIGNED_OPERATOR_NEW_NOTHROW(NeedsToAlign) \
       EIGEN_DEVICE_FUNC \
       void* operator new(std::size_t size, const std::nothrow_t&) EIGEN_NO_THROW { \
         EIGEN_TRY { return Eigen::internal::conditional_aligned_malloc<NeedsToAlign>(size); } \
         EIGEN_CATCH (...) { return 0; } \
       }
+
   #define EIGEN_MAKE_ALIGNED_OPERATOR_NEW_IF(NeedsToAlign) \
       EIGEN_DEVICE_FUNC \
       void *operator new(std::size_t size) { \

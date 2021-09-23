@@ -31,7 +31,8 @@
 #define EIGEN_HPP_F2QYZCPW
 
 // Eigen includes
-#include <Eigen/Core>
+#define EIGEN_MPL2_ONLY
+#include <autodiff/Eigen/Core>
 
 // autodiff includes
 #include <autodiff/common/eigen.hpp>

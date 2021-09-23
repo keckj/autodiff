@@ -470,8 +470,12 @@
 #endif
 
 #if defined(EIGEN_CUDACC)
-#include <cuda.h>
+#ifndef __CUDACC_RTC__
+  #include <cuda.h>
   #define EIGEN_CUDA_SDK_VER (CUDA_VERSION * 10)
+#else
+  #define EIGEN_CUDA_SDK_VER 110000
+#endif
 #else
   #define EIGEN_CUDA_SDK_VER 0
 #endif
@@ -676,7 +680,10 @@
 
 // Does the compiler support C99?
 // Need to include <cmath> to make sure _GLIBCXX_USE_C99 gets defined
+#if EIGEN_INCLUDE_SYSTEM_HEADERS
 #include <cmath>
+#endif
+
 #ifndef EIGEN_HAS_C99_MATH
 #if EIGEN_MAX_CPP_VER>=11 && \
     ((defined(__STDC_VERSION__) && (__STDC_VERSION__ >= 199901))       \
@@ -1432,10 +1439,10 @@ namespace Eigen {
 namespace Eigen {
 namespace internal {
 
-inline bool all(){ return true; }
+__host__ __device__ inline bool all(){ return true; }
 
 template<typename T, typename ...Ts>
-bool all(T t, Ts ... ts){ return t && all(ts...); }
+__host__ __device__ bool all(T t, Ts ... ts){ return t && all(ts...); }
 
 }
 }

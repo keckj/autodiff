@@ -26,7 +26,7 @@ option(AUTODIFF_BUILD_PYTHON "Enable the compilation of the python bindings." OF
 option(AUTODIFF_BUILD_DOCS "Enable the build of the documentation and website." OFF)
 
 # Find eigen library with CUDA 11 support
-find_package(Eigen3 3.4 REQUIRED)
+# find_package(Eigen3 3.4 REQUIRED)
 
 # Find CUDA with C++17 support
 find_package(CUDAToolkit 11 REQUIRED)

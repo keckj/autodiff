@@ -91,10 +91,14 @@ EIGEN_STRONG_INLINE EIGEN_DEVICE_FUNC Tgt bit_cast(const Src& src) {
 #endif
 
   EIGEN_STATIC_ASSERT(sizeof(Src) == sizeof(Tgt), THIS_TYPE_IS_NOT_SUPPORTED);
+#ifdef __CUDACC_RTC__
+  __trap();
+#else
   Tgt tgt;
   EIGEN_USING_STD(memcpy)
   memcpy(&tgt, &src, sizeof(Tgt));
   return tgt;
+#endif
 }
 }  // namespace numext
 
@@ -245,12 +249,14 @@ template<> struct NumTraits<double> : GenericNumTraits<double>
   static inline double dummy_precision() { return 1e-12; }
 };
 
+#ifndef __CUDACC_RTC__
 template<> struct NumTraits<long double>
   : GenericNumTraits<long double>
 {
   EIGEN_CONSTEXPR
   static inline long double dummy_precision() { return 1e-15l; }
 };
+#endif
 
 template<typename _Real> struct NumTraits<std::complex<_Real> >
   : GenericNumTraits<std::complex<_Real> >
@@ -303,6 +309,7 @@ struct NumTraits<Array<Scalar, Rows, Cols, Options, MaxRows, MaxCols> >
   static inline int digits10() { return NumTraits<Scalar>::digits10(); }
 };
 
+#ifndef __CUDACC_RTC__
 template<> struct NumTraits<std::string>
   : GenericNumTraits<std::string>
 {
@@ -324,6 +331,7 @@ private:
   static inline std::string infinity();
   static inline std::string quiet_NaN();
 };
+#endif
 
 // Empty specialization for void to allow template specialization based on NumTraits<T>::Real with T==void and SFINAE.
 template<> struct NumTraits<void> {};

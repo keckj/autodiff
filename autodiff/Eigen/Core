@@ -11,6 +11,38 @@
 #ifndef EIGEN_CORE_H
 #define EIGEN_CORE_H
 
+#ifdef __CUDACC_RTC__
+#include <cuda/std/chrono>
+#include <cuda/std/complex>
+#include <cuda/std/cfloat>
+#include <cuda/std/climits>
+#include <cuda/std/cstdint>
+#include <cuda/std/cassert>
+#include <cuda/std/cstddef>
+#include <cuda/std/type_traits>
+#include <cuda/std/functional>
+#include <cuda/std/utility>
+#include <cuda/std/version>
+#include <cuda/std/tuple>
+namespace std { 
+    using namespace cuda::std;
+    using ::malloc;
+    using ::free;
+    using ::max;
+
+    template <typename T>
+    struct allocator {};
+
+    struct nothrow_t{};
+    struct random_access_iterator_tag {};
+}
+#define EIGEN_INCLUDE_SYSTEM_HEADERS 0
+#define EIGEN_HAS_CXX11_ATOMIC 0
+#define EIGEN_NO_IO
+#else
+#define EIGEN_INCLUDE_SYSTEM_HEADERS 1
+#endif
+
 // first thing Eigen does: stop the compiler from reporting useless warnings.
 #include "src/Core/util/DisableStupidWarnings.h"
 
@@ -47,7 +79,10 @@
     && !defined(_OVERRIDE_COMPLEX_SPECIALIZATION_)
 #define _OVERRIDE_COMPLEX_SPECIALIZATION_ 1
 #endif
+
+#if EIGEN_INCLUDE_SYSTEM_HEADERS
 #include <complex>
+#endif
 
 // this include file manages BLAS and MKL related macros
 // and inclusion of their respective header files
@@ -75,6 +110,7 @@
 #define EIGEN_HAS_ERRNO
 #endif
 
+#if EIGEN_INCLUDE_SYSTEM_HEADERS
 #ifdef EIGEN_HAS_ERRNO
 #include <cerrno>
 #endif
@@ -130,6 +166,7 @@
   #ifndef EIGEN_SYCL_LOCAL_THREAD_DIM1
   #define EIGEN_SYCL_LOCAL_THREAD_DIM1 16
   #endif
+#endif
 #endif
 
 

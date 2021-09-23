@@ -85,6 +85,9 @@ struct CacheSizes {
 /** \internal */
 inline void manage_caching_sizes(Action action, std::ptrdiff_t* l1, std::ptrdiff_t* l2, std::ptrdiff_t* l3)
 {
+#ifdef __CUDACC_RTC__
+    __trap();
+#else
   static CacheSizes m_cacheSizes;
 
   if(action==SetAction)
@@ -106,6 +109,7 @@ inline void manage_caching_sizes(Action action, std::ptrdiff_t* l1, std::ptrdiff
   {
     eigen_internal_assert(false);
   }
+#endif
 }
 
 /* Helper for computeProductBlockingSizes.

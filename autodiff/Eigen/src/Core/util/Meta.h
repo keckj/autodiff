@@ -13,7 +13,9 @@
 
 #if defined(EIGEN_GPU_COMPILE_PHASE)
 
+ #if EIGEN_INCLUDE_SYSTEM_HEADERS
  #include <cfloat>
+ #endif
 
  #if defined(EIGEN_CUDA_ARCH)
   #include <math_constants.h>
@@ -30,7 +32,9 @@
 
 // Define portable (u)int{32,64} types
 #if EIGEN_HAS_CXX11 || EIGEN_ICC_NEEDS_CSTDINT
+#if EIGEN_INCLUDE_SYSTEM_HEADERS
 #include <cstdint>
+#endif
 namespace Eigen {
 namespace numext {
 typedef std::uint8_t  uint8_t;

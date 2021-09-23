@@ -27,10 +27,12 @@
 // OUT OF OR IN CONNECTION WITH THE SOFTWARE OR THE USE OR OTHER DEALINGS IN THE
 // SOFTWARE.
 
-#pragma once
+#ifndef EIGEN_HPP_CZJQT5NM
+#define EIGEN_HPP_CZJQT5NM
 
 // Eigen includes
-#include <Eigen/Core>
+#define EIGEN_MPL2_ONLY
+#include <autodiff/Eigen/Core>
 
 // autodiff includes
 #include <autodiff/forward/dual.hpp>
@@ -127,3 +129,5 @@ AUTODIFF_DEFINE_EIGEN_TYPEDEFS_ALL_SIZES(dual4th, dual4th);
 AUTODIFF_DEFINE_EIGEN_TYPEDEFS_ALL_SIZES(dual, dual)
 
 } // namespace autodiff
+
+#endif /* end of include guard: EIGEN_HPP_CZJQT5NM */

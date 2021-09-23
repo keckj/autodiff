@@ -525,16 +525,16 @@ struct MatrixXpr {};
 struct ArrayXpr {};
 
 // An evaluator must define its shape. By default, it can be one of the following:
-struct DenseShape             { static std::string debugName() { return "DenseShape"; } };
-struct SolverShape            { static std::string debugName() { return "SolverShape"; } };
-struct HomogeneousShape       { static std::string debugName() { return "HomogeneousShape"; } };
-struct DiagonalShape          { static std::string debugName() { return "DiagonalShape"; } };
-struct BandShape              { static std::string debugName() { return "BandShape"; } };
-struct TriangularShape        { static std::string debugName() { return "TriangularShape"; } };
-struct SelfAdjointShape       { static std::string debugName() { return "SelfAdjointShape"; } };
-struct PermutationShape       { static std::string debugName() { return "PermutationShape"; } };
-struct TranspositionsShape    { static std::string debugName() { return "TranspositionsShape"; } };
-struct SparseShape            { static std::string debugName() { return "SparseShape"; } };
+struct DenseShape             { __host__ __device__ static auto debugName() { return "DenseShape"; } };
+struct SolverShape            { __host__ __device__ static auto debugName() { return "SolverShape"; } };
+struct HomogeneousShape       { __host__ __device__ static auto debugName() { return "HomogeneousShape"; } };
+struct DiagonalShape          { __host__ __device__ static auto debugName() { return "DiagonalShape"; } };
+struct BandShape              { __host__ __device__ static auto debugName() { return "BandShape"; } };
+struct TriangularShape        { __host__ __device__ static auto debugName() { return "TriangularShape"; } };
+struct SelfAdjointShape       { __host__ __device__ static auto debugName() { return "SelfAdjointShape"; } };
+struct PermutationShape       { __host__ __device__ static auto debugName() { return "PermutationShape"; } };
+struct TranspositionsShape    { __host__ __device__ static auto debugName() { return "TranspositionsShape"; } };
+struct SparseShape            { __host__ __device__ static auto debugName() { return "SparseShape"; } };
 
 namespace internal {
 
