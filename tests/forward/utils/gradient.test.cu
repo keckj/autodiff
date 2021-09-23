@@ -29,27 +29,26 @@
 
 #include <exception>
 
+#include <tests/utils/catch.hpp>
+
 // autodiff includes
 #include <autodiff/forward/dual.hpp>
 #include <autodiff/forward/dual/eigen.hpp>
 #include <autodiff/forward/real.hpp>
 #include <autodiff/forward/real/eigen.hpp>
-#include <tests/utils/catch.hpp>
 using namespace autodiff;
 
 #define CHECK_GRADIENT(type, expr) \
 { \
     /* Define vector x and y */ \
     double y[5]; \
-    ArrayX##type x(5); \
-    x << 2.0, 3.0, 5.0, 7.0, 9.0; \
+    Array<type,5> x(2.0, 3.0, 5.0, 7.0, 9.0); \
     /* Define functions f(x) = expr/expr - 1 == 0 and g(x) = expr */ \
-    std::function<type(const ArrayX##type&)> f, g; \
-    f = [](const ArrayX##type& x) -> type { return expr/expr - 1.0; }; \
-    g = [](const ArrayX##type& x) -> type { return expr; }; \
+    auto f = [](const Array<type,5>& x) -> type { return expr/expr - 1.0; }; \
+    auto g = [](const Array<type,5>& x) -> type { return expr; }; \
     /* Auxiliary vectors dfdx, dgdx, dgdw where w is a vector with a combination of x entries */ \
-    Eigen::VectorXd dfdx, dgdx, dgdw; \
-    Eigen::Map<Eigen::VectorXd> map_5(y, 5); \
+    Vector<double,5> dfdx, dgdx; \
+    Eigen::Map<Vector<double,5>> map_5(y, 5); \
     /* Compute dfdx which is identical to zero by construction */ \
     dfdx = gradient(f, wrt(x), at(x)); \
     CHECK( dfdx.size() == 5 ); \
@@ -65,51 +64,57 @@ using namespace autodiff;
     CHECK( y[3] == approx(dgdx[3]) ); \
     CHECK( y[4] == approx(dgdx[4]) ); \
     /* Compute dgdw where w = (x1, x2, x3, x4, x0) */ \
-    dgdw = gradient(g, wrt(x.tail(4), x[0]), at(x)); \
-    CHECK( dgdw.size() == 5 ); \
-    CHECK( dgdw[0] == approx(dgdx[1]) ); \
-    CHECK( dgdw[1] == approx(dgdx[2]) ); \
-    CHECK( dgdw[2] == approx(dgdx[3]) ); \
-    CHECK( dgdw[3] == approx(dgdx[4]) ); \
-    CHECK( dgdw[4] == approx(dgdx[0]) ); \
+    { \
+        Vector<double,5> dgdw = gradient(g, wrt(x.tail<4>(), x[0]), at(x)); \
+        CHECK( dgdw.size() == 5 ); \
+        CHECK( dgdw[0] == approx(dgdx[1]) ); \
+        CHECK( dgdw[1] == approx(dgdx[2]) ); \
+        CHECK( dgdw[2] == approx(dgdx[3]) ); \
+        CHECK( dgdw[3] == approx(dgdx[4]) ); \
+        CHECK( dgdw[4] == approx(dgdx[0]) ); \
+    } \
     /* Compute dgdw where w = (x3, x0, x4) */ \
-    dgdw = gradient(g, wrt(x[3], x[0], x[4]), at(x)); \
-    CHECK( dgdw.size() == 3 ); \
-    CHECK( dgdw[0] == approx(dgdx[3]) ); \
-    CHECK( dgdw[1] == approx(dgdx[0]) ); \
-    CHECK( dgdw[2] == approx(dgdx[4]) ); \
+    { \
+        Vector<double,3> dgdw = gradient(g, wrt(x[3], x[0], x[4]), at(x)); \
+        CHECK( dgdw.size() == 3 ); \
+        CHECK( dgdw[0] == approx(dgdx[3]) ); \
+        CHECK( dgdw[1] == approx(dgdx[0]) ); \
+        CHECK( dgdw[2] == approx(dgdx[4]) ); \
+    } \
     /* Compute dgdw where w = (x3) */ \
-    dgdw = gradient(g, wrt(x[3]), at(x)); \
-    CHECK( dgdw.size() == 1 ); \
-    CHECK( dgdw[0] == approx(dgdx[3]) ); \
+    { \
+        Vector<double,1> dgdw = gradient(g, wrt(x[3]), at(x)); \
+        CHECK( dgdw.size() == 1 ); \
+        CHECK( dgdw[0] == approx(dgdx[3]) ); \
+    } \
     /* Compute dgdw where w = (x0, x1, x2, x3, x4, x0, x1, x2, x3, x4) */ \
-    dgdw = gradient(g, wrt(x, x), at(x)); \
-    CHECK( dgdw.size() == 10 ); \
-    CHECK( dgdw[0] == approx(dgdx[0]) ); \
-    CHECK( dgdw[1] == approx(dgdx[1]) ); \
-    CHECK( dgdw[2] == approx(dgdx[2]) ); \
-    CHECK( dgdw[3] == approx(dgdx[3]) ); \
-    CHECK( dgdw[4] == approx(dgdx[4]) ); \
-    CHECK( dgdw[5] == approx(dgdx[0]) ); \
-    CHECK( dgdw[6] == approx(dgdx[1]) ); \
-    CHECK( dgdw[7] == approx(dgdx[2]) ); \
-    CHECK( dgdw[8] == approx(dgdx[3]) ); \
-    CHECK( dgdw[9] == approx(dgdx[4]) ); \
+    { \
+        Vector<double,10> dgdw = gradient(g, wrt(x, x), at(x)); \
+        CHECK( dgdw.size() == 10 ); \
+        CHECK( dgdw[0] == approx(dgdx[0]) ); \
+        CHECK( dgdw[1] == approx(dgdx[1]) ); \
+        CHECK( dgdw[2] == approx(dgdx[2]) ); \
+        CHECK( dgdw[3] == approx(dgdx[3]) ); \
+        CHECK( dgdw[4] == approx(dgdx[4]) ); \
+        CHECK( dgdw[5] == approx(dgdx[0]) ); \
+        CHECK( dgdw[6] == approx(dgdx[1]) ); \
+        CHECK( dgdw[7] == approx(dgdx[2]) ); \
+        CHECK( dgdw[8] == approx(dgdx[3]) ); \
+        CHECK( dgdw[9] == approx(dgdx[4]) ); \
+    } \
 }
 
 #define CHECK_HESSIAN(type, expr) \
 { \
     /* Define vector x and matrix y */ \
     double y[25]; \
-    ArrayX##type x(5); \
-    x << 2.0, 3.0, 5.0, 7.0, 9.0; \
+    Array<type,5> x(2.0, 3.0, 5.0, 7.0, 9.0); \
     /* Define functions f(x) = expr/expr - 1 == 0 and g(x) = expr */ \
-    std::function<type(const ArrayX##type&)> f, g; \
-    f = [](const ArrayX##type& x) -> type { return expr/expr - 1.0; }; \
-    g = [](const ArrayX##type& x) -> type { return expr; }; \
+    auto f = [](const Array<type,5>& x) -> type { return expr/expr - 1.0; }; \
+    auto g = [](const Array<type,5>& x) -> type { return expr; }; \
     /* Auxiliary matrices fxx, gxx, gww where w is a vector with a combination of x entries */ \
-    Eigen::MatrixXd fxx, gxx, gww; \
-    Eigen::Map<Eigen::MatrixXd> map_5x5(y, 5, 5); \
+    Matrix<double,5,5> fxx, gxx; \
+    Eigen::Map<Eigen::Matrix<double,5,5>> map_5x5(y); \
     /* The indices of the x variables in the w vector */ \
     std::vector<size_t> iw; \
     /* Compute fxx which is identical to zero by construction */ \
@@ -121,59 +126,65 @@ using namespace autodiff;
     gxx = hessian(g, wrt(x), at(x)); \
     /* Compute hessian using pre-allocated storage */ \
     type u; \
-    VectorXd grad; \
+    Vector<double,5> grad; \
     hessian(g, wrt(x), at(x), u, grad, map_5x5); \
     for(size_t i = 0; i < gxx.rows(); ++i) \
         for(size_t j = 0; j < gxx.cols(); ++j) \
             CHECK( gxx(i, j) == approx(map_5x5(i, j)) ); \
     /* Compute gww where w = (x1, x2, x3, x4, x0) */ \
-    gww = hessian(g, wrt(x.tail(4), x[0]), at(x)); \
-    iw = {1, 2, 3, 4, 0}; \
-    CHECK( gww.rows() == iw.size() ); \
-    CHECK( gww.rows() == gww.cols() ); \
-    for(size_t i = 0; i < iw.size(); ++i) \
-        for(size_t j = 0; j < iw.size(); ++j) \
-            CHECK( gxx(iw[i], iw[j]) == approx(gww(i, j)) ); \
+    { \
+        Matrix<double,5,5> gww = hessian(g, wrt(x.tail<4>(), x[0]), at(x)); \
+        iw = {1, 2, 3, 4, 0}; \
+        CHECK( gww.rows() == iw.size() ); \
+        CHECK( gww.rows() == gww.cols() ); \
+        for(size_t i = 0; i < iw.size(); ++i) \
+            for(size_t j = 0; j < iw.size(); ++j) \
+                CHECK( gxx(iw[i], iw[j]) == approx(gww(i, j)) ); \
+    } \
     /* Compute gww where w = (x3, x0, x4) */ \
-    gww = hessian(g, wrt(x[3], x[0], x[4]), at(x)); \
-    iw = {3, 0, 4}; \
-    CHECK( gww.rows() == iw.size() ); \
-    CHECK( gww.rows() == gww.cols() ); \
-    for(size_t i = 0; i < iw.size(); ++i) \
-        for(size_t j = 0; j < iw.size(); ++j) \
-            CHECK( gxx(iw[i], iw[j]) == approx(gww(i, j)) ); \
+    { \
+        Matrix<double,3,3> gww = hessian(g, wrt(x[3], x[0], x[4]), at(x)); \
+        iw = {3, 0, 4}; \
+        CHECK( gww.rows() == iw.size() ); \
+        CHECK( gww.rows() == gww.cols() ); \
+        for(size_t i = 0; i < iw.size(); ++i) \
+            for(size_t j = 0; j < iw.size(); ++j) \
+                CHECK( gxx(iw[i], iw[j]) == approx(gww(i, j)) ); \
+    } \
     /* Compute gww where w = (x3) */ \
-    gww = hessian(g, wrt(x[3]), at(x)); \
-    iw = {3}; \
-    CHECK( gww.rows() == iw.size() ); \
-    CHECK( gww.rows() == gww.cols() ); \
-    for(size_t i = 0; i < iw.size(); ++i) \
-        for(size_t j = 0; j < iw.size(); ++j) \
-            CHECK( gxx(iw[i], iw[j]) == approx(gww(i, j)) ); \
+    { \
+        Matrix<double,1,1> gww = hessian(g, wrt(x[3]), at(x)); \
+        iw = {3}; \
+        CHECK( gww.rows() == iw.size() ); \
+        CHECK( gww.rows() == gww.cols() ); \
+        for(size_t i = 0; i < iw.size(); ++i) \
+            for(size_t j = 0; j < iw.size(); ++j) \
+                CHECK( gxx(iw[i], iw[j]) == approx(gww(i, j)) ); \
+    } \
     /* Compute gww where w = (x0, x1, x2, x3, x4, x0, x1, x2, x3, x4) */ \
-    gww = hessian(g, wrt(x, x), at(x)); \
-    iw = {0, 1, 2, 3, 4, 0, 1, 2, 3, 4}; \
-    CHECK( gww.rows() == iw.size() ); \
-    CHECK( gww.rows() == gww.cols() ); \
-    for(size_t i = 0; i < iw.size(); ++i) \
-        for(size_t j = 0; j < iw.size(); ++j) \
-            CHECK( gxx(iw[i], iw[j]) == approx(gww(i, j)) ); \
+    { \
+        Matrix<double,10,10> gww = hessian(g, wrt(x, x), at(x)); \
+        iw = {0, 1, 2, 3, 4, 0, 1, 2, 3, 4}; \
+        CHECK( gww.rows() == iw.size() ); \
+        CHECK( gww.rows() == gww.cols() ); \
+        for(size_t i = 0; i < iw.size(); ++i) \
+            for(size_t j = 0; j < iw.size(); ++j) \
+                CHECK( gxx(iw[i], iw[j]) == approx(gww(i, j)) ); \
+    } \
 }
 
 #define CHECK_JACOBIAN(type, expr) \
 { \
     /* Define vector x and matrix y */ \
     double y[25]; \
-    ArrayX##type x(5); \
-    x << 2.0, 3.0, 5.0, 7.0, 9.0; \
+    Array<type,5> x(2.0, 3.0, 5.0, 7.0, 9.0); \
     /* Define functions f(x) = expr/expr - 1 == 0 and g(x) = expr */ \
-    std::function<ArrayX##type(const ArrayX##type&)> f, g; \
-    f = [](const ArrayX##type& x) -> ArrayX##type { return expr/expr - 1.0; }; \
-    g = [](const ArrayX##type& x) -> ArrayX##type { return expr; }; \
+    auto f = [](const Array<type,5>& x) -> Array<type,5> { return expr/expr - 1.0; }; \
+    auto g = [](const Array<type,5>& x) -> Array<type,5> { return expr; }; \
     /* Auxiliary matrices dfdx, dgdx, dgdw where w is a vector with a combination of x entries */ \
-    Eigen::MatrixXd dfdx, dgdx, dgdw; \
-    Eigen::Map<Eigen::MatrixXd> map_5x5(y, 5, 5); \
-    Eigen::Map<Eigen::MatrixXd> map_5x3(y, 5, 3); \
+    Eigen::Matrix<double,5,5> dfdx, dgdx; \
+    Eigen::Map<Eigen::Matrix<double,5,5>> map_5x5(y); \
+    Eigen::Map<Eigen::Matrix<double,5,3>> map_5x3(y); \
     /* Compute dfdx which is identical to zero by construction */ \
     dfdx = jacobian(f, wrt(x), at(x)); \
     CHECK( dfdx.rows() == 5 ); \
@@ -182,60 +193,70 @@ using namespace autodiff;
     /* Compute dgdx to be used as reference when checking againts dgdw below for different orderings of x entries in w */ \
     dgdx = jacobian(g, wrt(x), at(x)); \
     /* Compute square jacobian using pre-allocated storage */ \
-    VectorX##type Gval; \
-    jacobian(g, wrt(x), at(x), Gval, map_5x5); \
-    CHECK( dgdx.col(0).isApprox(map_5x5.col(0)) ); \
-    CHECK( dgdx.col(1).isApprox(map_5x5.col(1)) ); \
-    CHECK( dgdx.col(2).isApprox(map_5x5.col(2)) ); \
-    CHECK( dgdx.col(3).isApprox(map_5x5.col(3)) ); \
-    CHECK( dgdx.col(4).isApprox(map_5x5.col(4)) ); \
+    { \
+        Array<type,5> Gval; \
+        jacobian(g, wrt(x), at(x), Gval, map_5x5); \
+        CHECK( dgdx.col(0).isApprox(map_5x5.col(0)) ); \
+        CHECK( dgdx.col(1).isApprox(map_5x5.col(1)) ); \
+        CHECK( dgdx.col(2).isApprox(map_5x5.col(2)) ); \
+        CHECK( dgdx.col(3).isApprox(map_5x5.col(3)) ); \
+        CHECK( dgdx.col(4).isApprox(map_5x5.col(4)) ); \
+    } \
     /* Compute rectangular jacobian using pre-allocated storage */ \
-    jacobian(g, wrt(x[0], x[1], x[2]), at(x), Gval, map_5x3); \
-    CHECK( dgdx.col(0).isApprox(map_5x3.col(0)) ); \
-    CHECK( dgdx.col(1).isApprox(map_5x3.col(1)) ); \
-    CHECK( dgdx.col(2).isApprox(map_5x3.col(2)) ); \
+    { \
+        Array<type,5> Gval; \
+        jacobian(g, wrt(x[0], x[1], x[2]), at(x), Gval, map_5x3); \
+        CHECK( dgdx.col(0).isApprox(map_5x3.col(0)) ); \
+        CHECK( dgdx.col(1).isApprox(map_5x3.col(1)) ); \
+        CHECK( dgdx.col(2).isApprox(map_5x3.col(2)) ); \
+    } \
     /* Compute dgdw where w = (x1, x2, x3, x4, x0) */ \
-    dgdw = jacobian(g, wrt(x.tail(4), x[0]), at(x)); \
-    CHECK( dgdw.rows() == 5 ); \
-    CHECK( dgdw.cols() == 5 ); \
-    CHECK( dgdw.col(0).isApprox(dgdx.col(1)) ); \
-    CHECK( dgdw.col(1).isApprox(dgdx.col(2)) ); \
-    CHECK( dgdw.col(2).isApprox(dgdx.col(3)) ); \
-    CHECK( dgdw.col(3).isApprox(dgdx.col(4)) ); \
-    CHECK( dgdw.col(4).isApprox(dgdx.col(0)) ); \
+    { \
+        Matrix<double,5,5> dgdw = jacobian(g, wrt(x.tail<4>(), x[0]), at(x)); \
+        CHECK( dgdw.rows() == 5 ); \
+        CHECK( dgdw.cols() == 5 ); \
+        CHECK( dgdw.col(0).isApprox(dgdx.col(1)) ); \
+        CHECK( dgdw.col(1).isApprox(dgdx.col(2)) ); \
+        CHECK( dgdw.col(2).isApprox(dgdx.col(3)) ); \
+        CHECK( dgdw.col(3).isApprox(dgdx.col(4)) ); \
+        CHECK( dgdw.col(4).isApprox(dgdx.col(0)) ); \
+    } \
     /* Compute dgdw where w = (x3, x0, x4) */ \
-    dgdw = jacobian(g, wrt(x[3], x[0], x[4]), at(x)); \
-    CHECK( dgdw.rows() == 5 ); \
-    CHECK( dgdw.cols() == 3 ); \
-    CHECK( dgdw.col(0).isApprox(dgdx.col(3)) ); \
-    CHECK( dgdw.col(1).isApprox(dgdx.col(0)) ); \
-    CHECK( dgdw.col(2).isApprox(dgdx.col(4)) ); \
+    { \
+        Matrix<double,5,3> dgdw = jacobian(g, wrt(x[3], x[0], x[4]), at(x)); \
+        CHECK( dgdw.rows() == 5 ); \
+        CHECK( dgdw.cols() == 3 ); \
+        CHECK( dgdw.col(0).isApprox(dgdx.col(3)) ); \
+        CHECK( dgdw.col(1).isApprox(dgdx.col(0)) ); \
+        CHECK( dgdw.col(2).isApprox(dgdx.col(4)) ); \
+    } \
     /* Compute dgdw where w = (x3) */ \
-    dgdw = jacobian(g, wrt(x[3]), at(x)); \
-    CHECK( dgdw.rows() == 5 ); \
-    CHECK( dgdw.cols() == 1 ); \
-    CHECK( dgdw.col(0).isApprox(dgdx.col(3)) ); \
+    { \
+        Matrix<double,5,1> dgdw = jacobian(g, wrt(x[3]), at(x)); \
+        CHECK( dgdw.rows() == 5 ); \
+        CHECK( dgdw.cols() == 1 ); \
+        CHECK( dgdw.col(0).isApprox(dgdx.col(3)) ); \
+    } \
     /* Compute dgdw where w = (x0, x1, x2, x3, x4, x0, x1, x2, x3, x4) */ \
-    dgdw = jacobian(g, wrt(x, x), at(x)); \
-    CHECK( dgdw.rows() == 5 ); \
-    CHECK( dgdw.cols() == 10 ); \
-    CHECK( dgdw.col(0).isApprox(dgdx.col(0)) ); \
-    CHECK( dgdw.col(1).isApprox(dgdx.col(1)) ); \
-    CHECK( dgdw.col(2).isApprox(dgdx.col(2)) ); \
-    CHECK( dgdw.col(3).isApprox(dgdx.col(3)) ); \
-    CHECK( dgdw.col(4).isApprox(dgdx.col(4)) ); \
-    CHECK( dgdw.col(5).isApprox(dgdx.col(0)) ); \
-    CHECK( dgdw.col(6).isApprox(dgdx.col(1)) ); \
-    CHECK( dgdw.col(7).isApprox(dgdx.col(2)) ); \
-    CHECK( dgdw.col(8).isApprox(dgdx.col(3)) ); \
-    CHECK( dgdw.col(9).isApprox(dgdx.col(4)) ); \
+    { \
+        Matrix<double,5,10> dgdw = jacobian(g, wrt(x, x), at(x)); \
+        CHECK( dgdw.rows() == 5 ); \
+        CHECK( dgdw.cols() == 10 ); \
+        CHECK( dgdw.col(0).isApprox(dgdx.col(0)) ); \
+        CHECK( dgdw.col(1).isApprox(dgdx.col(1)) ); \
+        CHECK( dgdw.col(2).isApprox(dgdx.col(2)) ); \
+        CHECK( dgdw.col(3).isApprox(dgdx.col(3)) ); \
+        CHECK( dgdw.col(4).isApprox(dgdx.col(4)) ); \
+        CHECK( dgdw.col(5).isApprox(dgdx.col(0)) ); \
+        CHECK( dgdw.col(6).isApprox(dgdx.col(1)) ); \
+        CHECK( dgdw.col(7).isApprox(dgdx.col(2)) ); \
+        CHECK( dgdw.col(8).isApprox(dgdx.col(3)) ); \
+        CHECK( dgdw.col(9).isApprox(dgdx.col(4)) ); \
+    } \
 }
 
 TEST_CASE("testing forward gradient module", "[forward][utils][gradient]")
 {
-    using Eigen::MatrixXd;
-    using Eigen::VectorXd;
-
     SECTION("testing gradient computations")
     {
         CHECK_GRADIENT( real, x.sum() );
@@ -260,13 +281,13 @@ TEST_CASE("testing forward gradient module", "[forward][utils][gradient]")
     SECTION("testing hessian computations")
     {
         CHECK_HESSIAN( dual2nd, x.sum() );
-        // CHECK_HESSIAN( dual2nd, x.exp().sum() );
-        // CHECK_HESSIAN( dual2nd, x.log().sum() );
-        // CHECK_HESSIAN( dual2nd, x.tan().sum() );
-        // CHECK_HESSIAN( dual2nd, (x * x).sum() );
-        // CHECK_HESSIAN( dual2nd, (x.sin() * x.exp()).sum() );
-        // CHECK_HESSIAN( dual2nd, (x * x.log()).sum() );
-        // CHECK_HESSIAN( dual2nd, (x.sin() * x.cos()).sum() );
+         CHECK_HESSIAN( dual2nd, x.exp().sum() );
+         CHECK_HESSIAN( dual2nd, x.log().sum() );
+         CHECK_HESSIAN( dual2nd, x.tan().sum() );
+         CHECK_HESSIAN( dual2nd, (x * x).sum() );
+         CHECK_HESSIAN( dual2nd, (x.sin() * x.exp()).sum() );
+         CHECK_HESSIAN( dual2nd, (x * x.log()).sum() );
+         CHECK_HESSIAN( dual2nd, (x.sin() * x.cos()).sum() );
     }
 
     SECTION("testing jacobian computations")

@@ -17,6 +17,7 @@ mkdir build
 cd build
 cmake ..
 make
+./tests/autodiff-cpptests
 ./examples/forward/example-forward-single-variable-function
 ```
 

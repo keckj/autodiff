@@ -1592,7 +1592,7 @@ using detail::val;
 
 using var = Variable<double>;
 
-__host__ __device__ auto boolref(const bool& v) {
+__host__ __device__ inline auto boolref(const bool& v) {
     return detail::BooleanExpr([&]() { return v; });
 }
 

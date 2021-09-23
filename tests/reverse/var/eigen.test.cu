@@ -38,10 +38,8 @@ using autodiff::gradient;
 using autodiff::hessian;
 using autodiff::val;
 using autodiff::var;
-using autodiff::VectorXvar;
-
-using Eigen::MatrixXd;
-using Eigen::VectorXd;
+using autodiff::Vector;
+using autodiff::Matrix;
 
 template<typename Var>
 auto approx(const Var& x) -> Approx
@@ -52,11 +50,9 @@ auto approx(const Var& x) -> Approx
 TEST_CASE("testing autodiff::var (with eigen)", "[reverse][var][eigen]")
 {
     var y;
-    VectorXd g;
-    MatrixXd H;
-    VectorXvar x(5);
-    x << 1, 2, 3, 4, 5;
-    // x.setConstant(3.0); // In Eigen 3.4.0+, this call causes all elements in x to be the same var object, and thus the tests below fail!
+    Vector<var,5> x(1, 2, 3, 4, 5);
+    Vector<double,5> g;
+    Matrix<double,5,5> H;
 
     //--------------------------------------------------------------------------
     // TESTING GRADIENT AND HESSIAN WHEN y = sum(x)
