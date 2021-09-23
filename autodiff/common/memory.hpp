@@ -36,7 +36,6 @@
 namespace autodiff {
 namespace detail {
 
-
 template <typename T>
 class shared_ptr {
     template <typename U>
@@ -130,7 +129,7 @@ class shared_ptr {
         __host__ __device__ T* get() const { return ptr; }
         __host__ __device__ T& operator*()  const { return *ptr; }
         __host__ __device__ T* operator->() const { return ptr; }
-        __host__ __device__ operator bool() const { return ptr != nullptr; }
+        __host__ __device__ explicit operator bool() const { return ptr != nullptr; }
 };
 
 

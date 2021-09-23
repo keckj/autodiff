@@ -34,8 +34,6 @@
 #include <ostream>
 #endif
 
-#include <cmath>
-
 #include <cuda/std/cassert>
 #include <autodiff/std/array>
 
@@ -50,24 +48,24 @@ namespace autodiff {}
 namespace autodiff {
 namespace detail {
 
-using std::abs;
-using std::acos;
-using std::asin;
-using std::atan;
-using std::atan2;
-using std::cos;
-using std::cosh;
-using std::erf;
-using std::exp;
-using std::hypot;
-using std::log;
-using std::log10;
-using std::pow;
-using std::sin;
-using std::sinh;
-using std::sqrt;
-using std::tan;
-using std::tanh;
+using ::abs;
+using ::acos;
+using ::asin;
+using ::atan;
+using ::atan2;
+using ::cos;
+using ::cosh;
+using ::erf;
+using ::exp;
+using ::hypot;
+using ::log;
+using ::log10;
+using ::pow;
+using ::sin;
+using ::sinh;
+using ::sqrt;
+using ::tan;
+using ::tanh;
 
 template<typename T> struct Expr;
 template<typename T> struct VariableExpr;
@@ -161,15 +159,15 @@ template<typename T> __host__ __device__ ExprPtr<T> operator-(const ExprPtr<T>& 
 template<typename T> __host__ __device__ ExprPtr<T> operator*(const ExprPtr<T>& l, const ExprPtr<T>& r);
 template<typename T> __host__ __device__ ExprPtr<T> operator/(const ExprPtr<T>& l, const ExprPtr<T>& r);
 
-template<typename T, typename U, EnableIf<isArithmetic<U>>> __host__ __device__ ExprPtr<T> operator+(const U& l, const ExprPtr<T>& r);
-template<typename T, typename U, EnableIf<isArithmetic<U>>> __host__ __device__ ExprPtr<T> operator-(const U& l, const ExprPtr<T>& r);
-template<typename T, typename U, EnableIf<isArithmetic<U>>> __host__ __device__ ExprPtr<T> operator*(const U& l, const ExprPtr<T>& r);
-template<typename T, typename U, EnableIf<isArithmetic<U>>> __host__ __device__ ExprPtr<T> operator/(const U& l, const ExprPtr<T>& r);
+template<typename T, typename U, EnableIf<isArithmetic<U>> = true> __host__ __device__ ExprPtr<T> operator+(const U& l, const ExprPtr<T>& r);
+template<typename T, typename U, EnableIf<isArithmetic<U>> = true> __host__ __device__ ExprPtr<T> operator-(const U& l, const ExprPtr<T>& r);
+template<typename T, typename U, EnableIf<isArithmetic<U>> = true> __host__ __device__ ExprPtr<T> operator*(const U& l, const ExprPtr<T>& r);
+template<typename T, typename U, EnableIf<isArithmetic<U>> = true> __host__ __device__ ExprPtr<T> operator/(const U& l, const ExprPtr<T>& r);
 
-template<typename T, typename U, EnableIf<isArithmetic<U>>> __host__ __device__ ExprPtr<T> operator+(const ExprPtr<T>& l, const U& r);
-template<typename T, typename U, EnableIf<isArithmetic<U>>> __host__ __device__ ExprPtr<T> operator-(const ExprPtr<T>& l, const U& r);
-template<typename T, typename U, EnableIf<isArithmetic<U>>> __host__ __device__ ExprPtr<T> operator*(const ExprPtr<T>& l, const U& r);
-template<typename T, typename U, EnableIf<isArithmetic<U>>> __host__ __device__ ExprPtr<T> operator/(const ExprPtr<T>& l, const U& r);
+template<typename T, typename U, EnableIf<isArithmetic<U>> = true> __host__ __device__ ExprPtr<T> operator+(const ExprPtr<T>& l, const U& r);
+template<typename T, typename U, EnableIf<isArithmetic<U>> = true> __host__ __device__ ExprPtr<T> operator-(const ExprPtr<T>& l, const U& r);
+template<typename T, typename U, EnableIf<isArithmetic<U>> = true> __host__ __device__ ExprPtr<T> operator*(const ExprPtr<T>& l, const U& r);
+template<typename T, typename U, EnableIf<isArithmetic<U>> = true> __host__ __device__ ExprPtr<T> operator/(const ExprPtr<T>& l, const U& r);
 
 //------------------------------------------------------------------------------
 // TRIGONOMETRIC FUNCTIONS (DECLARATION ONLY)
@@ -181,8 +179,8 @@ template<typename T> __host__ __device__ ExprPtr<T> asin(const ExprPtr<T>& x);
 template<typename T> __host__ __device__ ExprPtr<T> acos(const ExprPtr<T>& x);
 template<typename T> __host__ __device__ ExprPtr<T> atan(const ExprPtr<T>& x);
 template<typename T> __host__ __device__ ExprPtr<T> atan2(const ExprPtr<T>& l, const ExprPtr<T>& r);
-template<typename T, typename U, EnableIf<isArithmetic<U>>> __host__ __device__ ExprPtr<T> atan2(const U& l, const ExprPtr<T>& r);
-template<typename T, typename U, EnableIf<isArithmetic<U>>> __host__ __device__ ExprPtr<T> atan2(const ExprPtr<T>& l, const U& r);
+template<typename T, typename U, EnableIf<isArithmetic<U>> = true> __host__ __device__ ExprPtr<T> atan2(const U& l, const ExprPtr<T>& r);
+template<typename T, typename U, EnableIf<isArithmetic<U>> = true> __host__ __device__ ExprPtr<T> atan2(const ExprPtr<T>& l, const U& r);
 
 //------------------------------------------------------------------------------
 // HYPERBOLIC FUNCTIONS (DECLARATION ONLY)
@@ -203,8 +201,8 @@ template<typename T> __host__ __device__ ExprPtr<T> log10(const ExprPtr<T>& x);
 //------------------------------------------------------------------------------
 template<typename T> __host__ __device__ ExprPtr<T> sqrt(const ExprPtr<T>& x);
 template<typename T> __host__ __device__ ExprPtr<T> pow(const ExprPtr<T>& l, const ExprPtr<T>& r);
-template<typename T, typename U, EnableIf<isArithmetic<U>>> __host__ __device__ ExprPtr<T> pow(const U& l, const ExprPtr<T>& r);
-template<typename T, typename U, EnableIf<isArithmetic<U>>> __host__ __device__ ExprPtr<T> pow(const ExprPtr<T>& l, const U& r);
+template<typename T, typename U, EnableIf<isArithmetic<U>> = true> __host__ __device__ ExprPtr<T> pow(const U& l, const ExprPtr<T>& r);
+template<typename T, typename U, EnableIf<isArithmetic<U>> = true> __host__ __device__ ExprPtr<T> pow(const ExprPtr<T>& l, const U& r);
 
 //------------------------------------------------------------------------------
 // OTHER FUNCTIONS (DECLARATION ONLY)
@@ -1174,15 +1172,15 @@ template<typename T> __host__ __device__ ExprPtr<T> operator-(const ExprPtr<T>& 
 template<typename T> __host__ __device__ ExprPtr<T> operator*(const ExprPtr<T>& l, const ExprPtr<T>& r) { return make_shared<MulExpr<T>>(l->val * r->val, l, r); }
 template<typename T> __host__ __device__ ExprPtr<T> operator/(const ExprPtr<T>& l, const ExprPtr<T>& r) { return make_shared<DivExpr<T>>(l->val / r->val, l, r); }
 
-template<typename T, typename U, EnableIf<isArithmetic<U>> = true> __host__ __device__ ExprPtr<T> operator+(const U& l, const ExprPtr<T>& r) { return constant<T>(l) + r; }
-template<typename T, typename U, EnableIf<isArithmetic<U>> = true> __host__ __device__ ExprPtr<T> operator-(const U& l, const ExprPtr<T>& r) { return constant<T>(l) - r; }
-template<typename T, typename U, EnableIf<isArithmetic<U>> = true> __host__ __device__ ExprPtr<T> operator*(const U& l, const ExprPtr<T>& r) { return constant<T>(l) * r; }
-template<typename T, typename U, EnableIf<isArithmetic<U>> = true> __host__ __device__ ExprPtr<T> operator/(const U& l, const ExprPtr<T>& r) { return constant<T>(l) / r; }
+template<typename T, typename U, EnableIf<isArithmetic<U>>> __host__ __device__ ExprPtr<T> operator+(const U& l, const ExprPtr<T>& r) { return constant<T>(l) + r; }
+template<typename T, typename U, EnableIf<isArithmetic<U>>> __host__ __device__ ExprPtr<T> operator-(const U& l, const ExprPtr<T>& r) { return constant<T>(l) - r; }
+template<typename T, typename U, EnableIf<isArithmetic<U>>> __host__ __device__ ExprPtr<T> operator*(const U& l, const ExprPtr<T>& r) { return constant<T>(l) * r; }
+template<typename T, typename U, EnableIf<isArithmetic<U>>> __host__ __device__ ExprPtr<T> operator/(const U& l, const ExprPtr<T>& r) { return constant<T>(l) / r; }
 
-template<typename T, typename U, EnableIf<isArithmetic<U>> = true> __host__ __device__ ExprPtr<T> operator+(const ExprPtr<T>& l, const U& r) { return l + constant<T>(r); }
-template<typename T, typename U, EnableIf<isArithmetic<U>> = true> __host__ __device__ ExprPtr<T> operator-(const ExprPtr<T>& l, const U& r) { return l - constant<T>(r); }
-template<typename T, typename U, EnableIf<isArithmetic<U>> = true> __host__ __device__ ExprPtr<T> operator*(const ExprPtr<T>& l, const U& r) { return l * constant<T>(r); }
-template<typename T, typename U, EnableIf<isArithmetic<U>> = true> __host__ __device__ ExprPtr<T> operator/(const ExprPtr<T>& l, const U& r) { return l / constant<T>(r); }
+template<typename T, typename U, EnableIf<isArithmetic<U>>> __host__ __device__ ExprPtr<T> operator+(const ExprPtr<T>& l, const U& r) { return l + constant<T>(r); }
+template<typename T, typename U, EnableIf<isArithmetic<U>>> __host__ __device__ ExprPtr<T> operator-(const ExprPtr<T>& l, const U& r) { return l - constant<T>(r); }
+template<typename T, typename U, EnableIf<isArithmetic<U>>> __host__ __device__ ExprPtr<T> operator*(const ExprPtr<T>& l, const U& r) { return l * constant<T>(r); }
+template<typename T, typename U, EnableIf<isArithmetic<U>>> __host__ __device__ ExprPtr<T> operator/(const ExprPtr<T>& l, const U& r) { return l / constant<T>(r); }
 
 //------------------------------------------------------------------------------
 // TRIGONOMETRIC FUNCTIONS
@@ -1194,27 +1192,27 @@ template<typename T> __host__ __device__ ExprPtr<T> asin(const ExprPtr<T>& x) { 
 template<typename T> __host__ __device__ ExprPtr<T> acos(const ExprPtr<T>& x) { return make_shared<ArcCosExpr<T>>(acos(x->val), x); }
 template<typename T> __host__ __device__ ExprPtr<T> atan(const ExprPtr<T>& x) { return make_shared<ArcTanExpr<T>>(atan(x->val), x); }
 template<typename T> __host__ __device__ ExprPtr<T> atan2(const ExprPtr<T>& l, const ExprPtr<T>& r) { return make_shared<ArcTan2Expr<T>>(atan2(l->val, r->val), l, r); }
-template<typename T, typename U, EnableIf<isArithmetic<U>> = true> __host__ __device__ ExprPtr<T> atan2(const U& l, const ExprPtr<T>& r) { return make_shared<ArcTan2Expr<T>>(atan2(l, r->val), constant<T>(l), r); }
-template<typename T, typename U, EnableIf<isArithmetic<U>> = true> __host__ __device__ ExprPtr<T> atan2(const ExprPtr<T>& l, const U& r) { return make_shared<ArcTan2Expr<T>>(atan2(l->val, r), l, constant<T>(r)); }
+template<typename T, typename U, EnableIf<isArithmetic<U>>> __host__ __device__ ExprPtr<T> atan2(const U& l, const ExprPtr<T>& r) { return make_shared<ArcTan2Expr<T>>(atan2(l, r->val), constant<T>(l), r); }
+template<typename T, typename U, EnableIf<isArithmetic<U>>> __host__ __device__ ExprPtr<T> atan2(const ExprPtr<T>& l, const U& r) { return make_shared<ArcTan2Expr<T>>(atan2(l->val, r), l, constant<T>(r)); }
 
 
 //------------------------------------------------------------------------------
 // HYPOT2 FUNCTIONS
 //------------------------------------------------------------------------------
 template<typename T> __host__ __device__ ExprPtr<T> hypot(const ExprPtr<T>& l, const ExprPtr<T>& r) { return make_shared<Hypot2Expr<T>>(hypot(l->val, r->val), l, r); }
-template<typename T, typename U, EnableIf<isArithmetic<U>> = true> __host__ __device__ ExprPtr<T> hypot(const U& l, const ExprPtr<T>& r) { return make_shared<Hypot2Expr<T>>(hypot(l, r->val), constant<T>(l), r); }
-template<typename T, typename U, EnableIf<isArithmetic<U>> = true> __host__ __device__ ExprPtr<T> hypot(const ExprPtr<T>& l, const U& r) { return make_shared<Hypot2Expr<T>>(hypot(l->val, r), l, constant<T>(r)); }
+template<typename T, typename U, EnableIf<isArithmetic<U>>> __host__ __device__ ExprPtr<T> hypot(const U& l, const ExprPtr<T>& r) { return make_shared<Hypot2Expr<T>>(hypot(l, r->val), constant<T>(l), r); }
+template<typename T, typename U, EnableIf<isArithmetic<U>>> __host__ __device__ ExprPtr<T> hypot(const ExprPtr<T>& l, const U& r) { return make_shared<Hypot2Expr<T>>(hypot(l->val, r), l, constant<T>(r)); }
 
 //------------------------------------------------------------------------------
 // HYPOT3 FUNCTIONS
 //------------------------------------------------------------------------------
 template<typename T> __host__ __device__ ExprPtr<T> hypot(const ExprPtr<T>& l, const ExprPtr<T>& c, const ExprPtr<T>& r) { return make_shared<Hypot3Expr<T>>(hypot(l->val,c->val, r->val), l, c, r); }
-template<typename T, typename U, EnableIf<isArithmetic<U>> = true> __host__ __device__ ExprPtr<T> hypot(const ExprPtr<T>& l, const ExprPtr<T>& c, const U& r) { return make_shared<Hypot3Expr<T>>(hypot(l->val, c->val, r), l, c, constant<T>(r)); }
-template<typename T, typename U, EnableIf<isArithmetic<U>> = true> __host__ __device__ ExprPtr<T> hypot(const U& l, const ExprPtr<T>& c, const ExprPtr<T>& r) { return make_shared<Hypot3Expr<T>>(hypot(l, c->val, r->val), constant<T>(l), c, r); }
-template<typename T, typename U, EnableIf<isArithmetic<U>> = true> __host__ __device__ ExprPtr<T> hypot(const ExprPtr<T>& l,const U& c, const ExprPtr<T>& r) { return make_shared<Hypot3Expr<T>>(hypot(l->val, c, r->val), l, constant<T>(c), r); }
-template<typename T, typename U, typename V, EnableIf<isArithmetic<U> && isArithmetic<V>> = true> __host__ __device__ ExprPtr<T> hypot(const ExprPtr<T>& l, const U& c, const V& r) { return make_shared<Hypot3Expr<T>>(hypot(l->val, c, r), l, constant<T>(c), constant<T>(r)); }
-template<typename T, typename U, typename V, EnableIf<isArithmetic<U> && isArithmetic<V>> = true> __host__ __device__ ExprPtr<T> hypot(const U& l, const ExprPtr<T>& c, const V& r) { return make_shared<Hypot3Expr<T>>(hypot(l, c->val, r), constant<T>(l), c, constant<T>(r)); }
-template<typename T, typename U, typename V, EnableIf<isArithmetic<U> && isArithmetic<V>> = true> __host__ __device__ ExprPtr<T> hypot(const V& l, const U& c, const ExprPtr<T>& r) { return make_shared<Hypot3Expr<T>>(hypot(l, c, r->val), constant<T>(l), constant<T>(c), r); }
+template<typename T, typename U, EnableIf<isArithmetic<U>>> __host__ __device__ ExprPtr<T> hypot(const ExprPtr<T>& l, const ExprPtr<T>& c, const U& r) { return make_shared<Hypot3Expr<T>>(hypot(l->val, c->val, r), l, c, constant<T>(r)); }
+template<typename T, typename U, EnableIf<isArithmetic<U>>> __host__ __device__ ExprPtr<T> hypot(const U& l, const ExprPtr<T>& c, const ExprPtr<T>& r) { return make_shared<Hypot3Expr<T>>(hypot(l, c->val, r->val), constant<T>(l), c, r); }
+template<typename T, typename U, EnableIf<isArithmetic<U>>> __host__ __device__ ExprPtr<T> hypot(const ExprPtr<T>& l,const U& c, const ExprPtr<T>& r) { return make_shared<Hypot3Expr<T>>(hypot(l->val, c, r->val), l, constant<T>(c), r); }
+template<typename T, typename U, typename V, EnableIf<isArithmetic<U> && isArithmetic<V>>> __host__ __device__ ExprPtr<T> hypot(const ExprPtr<T>& l, const U& c, const V& r) { return make_shared<Hypot3Expr<T>>(hypot(l->val, c, r), l, constant<T>(c), constant<T>(r)); }
+template<typename T, typename U, typename V, EnableIf<isArithmetic<U> && isArithmetic<V>>> __host__ __device__ ExprPtr<T> hypot(const U& l, const ExprPtr<T>& c, const V& r) { return make_shared<Hypot3Expr<T>>(hypot(l, c->val, r), constant<T>(l), c, constant<T>(r)); }
+template<typename T, typename U, typename V, EnableIf<isArithmetic<U> && isArithmetic<V>>> __host__ __device__ ExprPtr<T> hypot(const V& l, const U& c, const ExprPtr<T>& r) { return make_shared<Hypot3Expr<T>>(hypot(l, c, r->val), constant<T>(l), constant<T>(c), r); }
 
 //------------------------------------------------------------------------------
 // HYPERBOLIC FUNCTIONS
@@ -1235,8 +1233,8 @@ template<typename T> __host__ __device__ ExprPtr<T> log10(const ExprPtr<T>& x) {
 //------------------------------------------------------------------------------
 template<typename T> __host__ __device__ ExprPtr<T> sqrt(const ExprPtr<T>& x) { return make_shared<SqrtExpr<T>>(sqrt(x->val), x); }
 template<typename T> __host__ __device__ ExprPtr<T> pow(const ExprPtr<T>& l, const ExprPtr<T>& r) { return make_shared<PowExpr<T>>(pow(l->val, r->val), l, r); }
-template<typename T, typename U, EnableIf<isArithmetic<U>> = true> __host__ __device__ ExprPtr<T> pow(const U& l, const ExprPtr<T>& r) { return make_shared<PowConstantLeftExpr<T>>(pow(l, r->val), constant<T>(l), r); }
-template<typename T, typename U, EnableIf<isArithmetic<U>> = true> __host__ __device__ ExprPtr<T> pow(const ExprPtr<T>& l, const U& r) { return make_shared<PowConstantRightExpr<T>>(pow(l->val, r), l, constant<T>(r)); }
+template<typename T, typename U, EnableIf<isArithmetic<U>>> __host__ __device__ ExprPtr<T> pow(const U& l, const ExprPtr<T>& r) { return make_shared<PowConstantLeftExpr<T>>(pow(l, r->val), constant<T>(l), r); }
+template<typename T, typename U, EnableIf<isArithmetic<U>>> __host__ __device__ ExprPtr<T> pow(const ExprPtr<T>& l, const U& r) { return make_shared<PowConstantRightExpr<T>>(pow(l->val, r), l, constant<T>(r)); }
 
 //------------------------------------------------------------------------------
 // OTHER FUNCTIONS
@@ -1269,7 +1267,7 @@ struct Variable
     __host__ __device__ Variable(const ExprPtr<T>& e) : expr(make_shared<DependentVariableExpr<T>>(e)) {}
 
     /// Default copy assignment
-    __host__ __device__ Variable& operator=(const Variable&) = default;
+    Variable& operator=(const Variable&) = default;
 
     /// Update the value of this variable with changes in its expression tree
     __host__ __device__ void update() { expr->update(); }
@@ -1474,7 +1472,7 @@ __host__ __device__ auto val(const T& t) { return expr_value(t); }
 /// Return the derivatives of a variable y with respect to all independent variables.
 template<typename T>
 [[deprecated("Use method `derivatives(y, wrt(a, b, c,...)` instead.")]]
-__host__ __device__ auto derivatives(const T&)
+__host__ __device__ constexpr auto derivatives(const T&)
 {
     static_assert(!cuda::std::is_same_v<T,T>, "Method derivatives(const var&) has been deprecated. Use method derivatives(y, wrt(a, b, c,...) instead.");
 }
@@ -1482,7 +1480,7 @@ __host__ __device__ auto derivatives(const T&)
 /// Return the derivatives of a variable y with respect to all independent variables.
 template<typename T>
 [[deprecated("Use method derivativesx(y, wrt(a, b, c,...) instead.")]]
-__host__ __device__ auto derivativesx(const T&)
+__host__ __device__ constexpr auto derivativesx(const T&)
 {
     static_assert(!cuda::std::is_same_v<T,T>, "Method derivativesx(const var&) has been deprecated. Use method derivativesx(y, wrt(a, b, c,...) instead.");
 }
@@ -1593,7 +1591,9 @@ using detail::val;
 using var = Variable<double>;
 
 template <typename B>
-__host__ __device__ inline detail::BooleanExpr<B> boolref(const bool& v) { return detail::BooleanExpr<B>([&]() { return v; }); }
+__host__ __device__ inline detail::BooleanExpr<B> boolref(const bool& v) {
+    return detail::BooleanExpr<B>([&]() { return v; });
+}
 
 } // namespace autodiff
 

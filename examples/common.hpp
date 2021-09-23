@@ -1,6 +1,5 @@
 #include <limits>
 #include <autodiff/common/eigen.hpp>
-#include <autodiff/forward/real.hpp>
 
 namespace autodiff {
 
@@ -16,16 +15,6 @@ __host__ bool allclose(double x, double y, size_t n=1)
         return true;
     }
     return false;
-}
-
-template<int N, typename Scalar>
-__host__ bool allclose(const detail::Real<N,Scalar>& x, const detail::Real<N,Scalar>& y, size_t n=1) {
-    for (size_t j = 0; j < N; j++) {
-        if (!allclose(x[j], y[j], n)) {
-            return false;
-        }
-    }
-    return true;
 }
 
 template<typename Scalar, int M, int N>
