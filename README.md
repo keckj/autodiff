@@ -3,15 +3,46 @@
 </a>
 
 # Overview of cuda autodiff
-Cuda-autodiff is a fork of [autodiff](https://github.com/autodiff/autodiff) thats has been ported to CUDA 11.2+. It is currently based against **autodiff version 0.6.4+** (commit 9cd6af0) and supports a subset of the autodiff library with some limitations due to the fact that it has to run in device code. The library and its dependencies are header only and can be included directly in kernel code. Most of the routines are implemented as \_\_host\_\_ \_\_device\_\_ when possible, see the current limitations subsection.
+Cuda-autodiff is a fork of [autodiff](https://github.com/autodiff/autodiff) thats has been ported to CUDA 11. It is currently based against **autodiff version 0.6.4+** (commit 9cd6af0) and supports a subset of the autodiff library with some limitations due to the fact that it has to run in device code. The library and its dependencies are header only and can be included directly in kernel code. Most of the routines are implemented as \_\_host\_\_ \_\_device\_\_ when possible, see the current limitations subsection. All examples adapted from the original library are running on both host and device.
 
 Even though cuda now support heap allocation in \_\_device_\_ code, the autodiff library internals have been completely reworked to handle only statically sized vector and matrix types. This choice has been made for performance but also because of the lack of support of dynamic allocation in cuda dependencies. Eigen3 in cuda kernels does not support dynamically sized types and the [cuda C++ standard library](https://nvidia.github.io/libcudacxx/) does not provide `std::vector`.
 
 ## How to get started
-Look at official [autodiff documentation](https://autodiff.github.io/) and compare autodiff examples to cuda-autodiff examples in the examples directory.
+Look at official [autodiff documentation](https://autodiff.github.io/) and compare autodiff examples to cuda-autodiff examples in the examples directory. It is easier to get started with forward mode autodiff because there are less device-side limitations to consider.
+
+```
+git clone --recursive https://github.com/keckj/autodiff.git
+cd autodiff
+mkdir build
+cd build
+cmake ..
+make
+./examples/forward/example-forward-single-variable-function
+```
+
+## Dependencies
+Bellow are the minimul required version supported by cuda-autodiff:
+ - CUDA 11, both nvcc and nvrtc are supported
+ - libcu++ 1.3.0 (shipped with cuda 11.2, header only)
+ - Eigen 3.4 (header only, available in the [ext/eigen](ext/eigen) directory)
+
+Note that `std::complex` support can be added by using libcu++ 1.4.1 or later (shipped with cuda 11.3+.)
+The library is currently developped and tested under CUDA 11.4
+
+## How to use the library
+The library and all of its dependencies are header only. The following build options may be required:
+1. `-I/path/to/autodiff` path to cuda-autodiff headers.
+3. `-I/path/to/eigen` path to eigen3 headers.
+2. `-I/usr/local/cuda/include` or equivalent path to your libcu++ headers.
+3. `--diag_suppress=esa_on_defaulted_function_ignored` if you want to hide some spurious eigen warnings.
+
+Cuda-autodiff is a fork of autodiff. It currently use the same namespace and may thus clash
+with existing autodiff installations on your system. See `CMakelists.txt` for an example of cmake integration.
 
 ## What is currently supported
- - Forward mode autodiff using real and dual (see [examples/forward](examples/forward)).
+ - Forward mode autodiff using  `real` and `dual` (see [examples/forward](examples/forward)).
+ - Reverse mode autodiff using `var` as long as variables are not passed as _\_global\_\_ function arguments (see [examples/backward](examples/backward)).
+ - All examples and tests from the original autodiff library have been adapted to work with cuda.
  - Support for `std::array` like types based on a distinct `cuda::std::array` type.
  - Eigen3 statically sized types (`Array` and `Matrix`).
  - Custom user-provided scalar and vector types (statically allocated with compile-time known size).
@@ -23,30 +54,21 @@ Look at official [autodiff documentation](https://autodiff.github.io/) and compa
 
 
 ## Current limitations
-- No reverse autodiff.
-- As `cuda::std::array` has not yet been implemented in the standard c++ cuda library (libcu++, see this [issue](https://github.com/NVIDIA/libcudacxx/issues/51)), a basic implementation is provided by the cuda-autodiff library. Everything is supported as long as array iterators are not involved. Please note that `std::array` and `cuda::std::array` represent distinct types, cuda-autodiff internally works with `cuda::std::array` which is available in the `<autodiff/std/array>` header but lives in the `cuda::std` namespace.
-- `std::stream` (ostream, stringstream) based functions are only defined as \_\_host\_\_ functions when using nvcc and are disabled when using nvrtc.
+- Forward mode autodiff will work as expected.
+- Reverse mode autodiff exhibit some limitations due to the use of virtual inheritance and shared pointer to build the expression tree. This leads to the following device-side restrictions:
+    1. Types used in reversed mode autodiff such as `var` cannot be used as \_\_global\_\_ function arguments (it is not allowed to pass as an argument to a global function an object of a class with virtual functions). See [examples/reverse/example-reverse-multi-variable-function.cu](examples/reverse/example-reverse-multi-variable-function.cu).
+    2. Ptxas is not able to statically determine maximum stack size when using reverse mode autodiff on the device and will emit a warning about it. A stack overflow may occur with default device stack limit when using large expressions. In this case, you will get  `cudaErrorHardwareStackError (714)` on stream synchronization. Maximum device supported stack size can be retrieved with `cudaDeviceGetLimit(size_t *pValue, cudaLimitStackSize)` and effective device limit can be set with `cudaDeviceSetLimit(new_limit, cudaLimitStackSize)`. See [examples/reverse/example-reverse-hessian-derivatives-using-eigen.cu](examples/reverse/example-reverse-hessian-derivatives-using-eigen.cu).
+    3. The expression tree is built dynamically by using heap allocations. If required, maximum device supported heap size can be retrieved with `cudaDeviceGetLimit(size_t *pValue, cudaLimitMallocHeapSize)` and effective device limit can be set with `cudaDeviceSetLimit(new_limit, cudaLimitMallocHeapSize)`.
 
+- `std::stream` (ostream, stringstream) based functions are only defined as \_\_host\_\_ functions when using nvcc and are disabled when using nvrtc.
 - Some spurious warnings may appear when using eigen. They can be removed by providing the following compiler option: `--diag_suppress=esa_on_defaulted_function_ignored`.
 
-## Dependencies
-Bellow are the minimul required version supported by cuda-autodiff:
- - CUDA 11, both nvcc and nvrtc are supported
- - libcu++ 1.3.0 (shipped with cuda 11.2, header only)
- - Eigen 3.4 (header only, available in the ext/ directory)
+## Differences with original autodiff library
+- Occurences of `std::vector<T>` have been replaced with `cuda::std::array<T,N>`.
+- Dynamically sized types such as `autodiff::VectorX`, `autodiff::MatrixX` and `autodiff::ArrayX` have been replaced by statically sized types `autodiff::Vector<T,N>`, `autodiff::Matrix<T,N,M>` and `autodiff::Array<T,N,M=1>`. Those types are aliases of static eigen3 types Matrix and Array and work in device code.
+- As `cuda::std::shared_ptr` is not provided by the standard c++ cuda library, `autodiff::detail::shared_ptr` has been implemented in `autodiff/common/memory.hpp` to cover basic shared pointer usage in cuda-autodiff. All dynamic casts have been removed from the library because \_\_device\_\_ functions cannot call `dynamic_cast` or `dynamic_pointer_cast` (RTTI-related features are supported in host code, but not in device code).
+- As `cuda::std::array` has not yet been implemented in the standard c++ cuda library (libcu++, see this [issue](https://github.com/NVIDIA/libcudacxx/issues/51)), a basic implementation is provided by the cuda-autodiff library. Everything is supported as long as array iterators are not involved. Please note that `std::array` and `cuda::std::array` represent distinct types, cuda-autodiff internally works with `cuda::std::array` which is available in the `<autodiff/std/array>` header but lives in the `cuda::std` namespace.
 
-Note that `std::complex` support can be added by using libcu++ 1.4.1 or later (shipped with cuda 11.3+.)
-The library is currently developped and tested under CUDA 11.4
-
-## How to Build
-The library and all of its dependencies are header only. The following build options may be required:
-1. `-I/path/to/autodiff` path to cuda-autodiff headers.
-3. `-I/path/to/eigen` path to eigen3 headers.
-2. `-I/usr/local/cuda/include` or equivalent path to your libcu++ headers.
-3. `--diag_suppress=esa_on_defaulted_function_ignored` if you want to hide some spurious eigen warnings.
-
-Cuda-autodiff is a fork of autodiff. It currently use the same namespace and may thus clash
-with existing autodiff installations on your system. See `CMakelists.txt` for an example of cmake integration.
 
 
 # General information about autodiff v0.6.4
