@@ -1,8 +1,8 @@
-// C++ includes
 #include <iostream>
 
-// autodiff include
 #include <examples/common.hpp>
+
+AUTODIFF_NVRTC_BEGIN_SOURCE
 #include <autodiff/forward/real.hpp>
 #include <autodiff/forward/real/eigen.hpp>
 using namespace autodiff;
@@ -19,6 +19,8 @@ __global__ void kernel(Array<real4th,5> x, real4th p, Array<double,5> vx, double
 {
     output[0] = derivatives(f, along(vx, vp), at(x, p)); // the directional derivatives of f along direction v = (vx, vp) at (x, p)
 }
+AUTODIFF_NVRTC_END_SOURCE
+
 
 int main()
 {
@@ -34,17 +36,23 @@ int main()
     {
         T* output;
         cudaMalloc(&output, sizeof(T));
-        kernel<<<1,1>>>(x,p,vx,vp,output);
+        kernel<<<1,1>>>(x, p, vx, vp, output);
         cudaMemcpy(&d_dfdv, output, sizeof(T), cudaMemcpyDeviceToHost);
         cudaFree(output);
     }
+    
+    T n_dfdv;
+    {
+        T* output;
+        cudaMalloc(&output, sizeof(T));
+        CUfunction nvrtc_kernel = build_nvrtc_kernel(__FILE__);
+        void *args[] = {&x, &p, &vx, &vp, &output};
+        cuLaunchKernel(nvrtc_kernel, 1, 1, 1, 1, 1, 1, 0, 0, args, 0);
+        cudaMemcpy(&n_dfdv, output, sizeof(T), cudaMemcpyDeviceToHost);
+        cudaFree(output);
+    }
 
-
-    double t = 0.1; // the step length along direction v = (vx, vp) used to compute 4th order Taylor estimate of f
-
-    Array<real4th,5> u = f(x + t * vx, p + t * vp); // start from (x, p), walk a step length t = 0.1 along direction v = (vx, vp) and evaluate f at this current point
-
-    Array<double,5> utaylor = h_dfdv[0] + t*h_dfdv[1] + (t*t/2.0)*h_dfdv[2] + (t*t*t/6.0)*h_dfdv[3] + (t*t*t*t/24.0)*h_dfdv[4]; // evaluate the 4th order Taylor estimate of f along direction v = (vx, vp) at a step length of t = 0.1
+    print_example_header(__FILE__);
 
     std::cout << std::scientific << std::showpos;
     std::cout << "Directional derivatives of f along v = (vx, vp) up to 4th order:" << std::endl;
@@ -62,11 +70,22 @@ int main()
     std::cout << "dfdv[3] = " << d_dfdv[3].transpose() << std::endl; // print the evaluated 3rd order directional derivative of f along v
     std::cout << "dfdv[4] = " << d_dfdv[4].transpose() << std::endl; // print the evaluated 4th order directional derivative of f along v
     std::cout << std::endl;
+    std::cout << "NVRTC" << std::endl;
+    std::cout << "dfdv[0] = " << n_dfdv[0].transpose() << std::endl; // print the evaluated 0th order directional derivative of f along v (equivalent to f(x, p))
+    std::cout << "dfdv[1] = " << n_dfdv[1].transpose() << std::endl; // print the evaluated 1st order directional derivative of f along v
+    std::cout << "dfdv[2] = " << n_dfdv[2].transpose() << std::endl; // print the evaluated 2nd order directional derivative of f along v
+    std::cout << "dfdv[3] = " << n_dfdv[3].transpose() << std::endl; // print the evaluated 3rd order directional derivative of f along v
+    std::cout << "dfdv[4] = " << n_dfdv[4].transpose() << std::endl; // print the evaluated 4th order directional derivative of f along v
+    std::cout << std::endl;
+    
+    double t = 0.1; // the step length along direction v = (vx, vp) used to compute 4th order Taylor estimate of f
+    Array<real4th,5> u = f(x + t * vx, p + t * vp); // start from (x, p), walk a step length t = 0.1 along direction v = (vx, vp) and evaluate f at this current point
+    Array<double,5> utaylor = h_dfdv[0] + t*h_dfdv[1] + (t*t/2.0)*h_dfdv[2] + (t*t*t/6.0)*h_dfdv[3] + (t*t*t*t/24.0)*h_dfdv[4]; // evaluate the 4th order Taylor estimate of f along direction v = (vx, vp) at a step length of t = 0.1
     std::cout << "Comparison between exact evaluation and 4th order Taylor estimate:" << std::endl;
     std::cout << "u(exact)  = " << u.transpose() << std::endl;
     std::cout << "u(taylor) = " << utaylor.transpose() << std::endl;
     
-    return allclose(h_dfdv, d_dfdv) ? EXIT_SUCCESS : EXIT_FAILURE;
+    return exit_example<T>(h_dfdv, d_dfdv, n_dfdv);
 }
 
 /*-------------------------------------------------------------------------------------------------

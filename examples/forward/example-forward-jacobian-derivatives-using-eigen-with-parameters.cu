@@ -1,9 +1,9 @@
-// C++ includes
 #include <iostream>
 
-// autodiff include
-#define AUTODIFF_ENABLE_IMPLICIT_CONVERSION
 #include <examples/common.hpp>
+
+AUTODIFF_NVRTC_BEGIN_SOURCE
+#define AUTODIFF_ENABLE_IMPLICIT_CONVERSION
 #include <autodiff/forward/real.hpp>
 #include <autodiff/forward/real/eigen.hpp>
 using namespace autodiff;
@@ -15,11 +15,7 @@ struct T {
     Matrix<double,5,3> Jp;
     Matrix<double,5,1> Jq;
     Matrix<double,5,9> JJ;
-    static bool allclose(const T& x, const T& y) { 
-        return ::allclose(x.F, y.F) && ::allclose(x.Jx, y.Jx) && ::allclose(x.Jq, y.Jq) && ::allclose(x.Jp, y.Jp) && ::allclose(x.JJ, y.JJ);
-    }
 };
-
 
 // The vector function with parameters for which the Jacobian is needed
 __host__ __device__ Vector<real,5> f(const Vector<real,5>& x, const Vector<real,3>& p, const real& q)
@@ -29,13 +25,24 @@ __host__ __device__ Vector<real,5> f(const Vector<real,5>& x, const Vector<real,
     
 __global__ void kernel(Vector<real,5> x, Vector<real,3> p, real q, T* output)
 {
-    Vector<real,5> F;                                         // the output vector F = f(x, p, q) evaluated together with Jacobian below
-    output[0].Jx = jacobian(f, wrt(x), at(x, p, q), F);       // evaluate the function and the Jacobian matrix Jx = dF/dx
-    output[0].Jp = jacobian(f, wrt(p), at(x, p, q), F);       // evaluate the function and the Jacobian matrix Jp = dF/dp
-    output[0].Jq = jacobian(f, wrt(q), at(x, p, q), F);       // evaluate the function and the Jacobian matrix Jq = dF/dq
-    output[0].JJ = jacobian(f, wrt(q, p, x), at(x, p, q), F); // evaluate the function and the Jacobian matrix Jqpx = [dF/dq, dF/dp, dF/dx]
-    output[0].F = F;
+    T d_results;
+    {
+        Vector<real,5> F;                                         // the output vector F = f(x, p, q) evaluated together with Jacobian below
+        d_results.Jx = jacobian(f, wrt(x), at(x, p, q), F);       // evaluate the function and the Jacobian matrix Jx = dF/dx
+        d_results.Jp = jacobian(f, wrt(p), at(x, p, q), F);       // evaluate the function and the Jacobian matrix Jp = dF/dp
+        d_results.Jq = jacobian(f, wrt(q), at(x, p, q), F);       // evaluate the function and the Jacobian matrix Jq = dF/dq
+        d_results.JJ = jacobian(f, wrt(q, p, x), at(x, p, q), F); // evaluate the function and the Jacobian matrix Jqpx = [dF/dq, dF/dp, dF/dx]
+        d_results.F = F;
+    }
+    output[0] = d_results;
 }
+AUTODIFF_NVRTC_END_SOURCE
+    
+
+static bool check_results(const T& x, const T& y) { 
+    return ::allclose(x.F, y.F) && ::allclose(x.Jx, y.Jx) && ::allclose(x.Jq, y.Jq) && ::allclose(x.Jp, y.Jp) && ::allclose(x.JJ, y.JJ);
+}
+
 
 int main()
 {
@@ -61,6 +68,19 @@ int main()
         cudaMemcpy(&d_results, output, sizeof(T), cudaMemcpyDeviceToHost);
         cudaFree(output);
     }
+    
+    T n_results;
+    {
+        T* output;
+        cudaMalloc(&output, sizeof(T));
+        CUfunction nvrtc_kernel = build_nvrtc_kernel(__FILE__);
+        void *args[] = {&x, &p, &q, &output};
+        cuLaunchKernel(nvrtc_kernel, 1, 1, 1, 1, 1, 1, 0, 0, args, 0);
+        cudaMemcpy(&n_results, output, sizeof(T), cudaMemcpyDeviceToHost);
+        cudaFree(output);
+    }
+
+    print_example_header(__FILE__);
 
     std::cout << "HOST" << std::endl;
     std::cout << "F = \n" << h_results.F << std::endl;     // print the evaluated output vector F
@@ -75,6 +95,13 @@ int main()
     std::cout << "Jp = \n" << d_results.Jp << std::endl;   // print the evaluated Jacobian matrix dF/dp
     std::cout << "Jq = \n" << d_results.Jq << std::endl;   // print the evaluated Jacobian matrix dF/dq
     std::cout << "Jqpx = \n" << d_results.JJ << std::endl; // print the evaluated Jacobian matrix [dF/dq, dF/dp, dF/dx]
+    std::cout << std::endl;
+    std::cout << "NVRTC" << std::endl;
+    std::cout << "F = \n" << n_results.F << std::endl;     // print the evaluated output vector F
+    std::cout << "Jx = \n" << n_results.Jx << std::endl;   // print the evaluated Jacobian matrix dF/dx
+    std::cout << "Jp = \n" << n_results.Jp << std::endl;   // print the evaluated Jacobian matrix dF/dp
+    std::cout << "Jq = \n" << n_results.Jq << std::endl;   // print the evaluated Jacobian matrix dF/dq
+    std::cout << "Jqpx = \n" << n_results.JJ << std::endl; // print the evaluated Jacobian matrix [dF/dq, dF/dp, dF/dx]
     
-    return T::allclose(h_results, d_results) ? EXIT_SUCCESS : EXIT_FAILURE;
+    return exit_example<T>(h_results, d_results, n_results, check_results);
 }

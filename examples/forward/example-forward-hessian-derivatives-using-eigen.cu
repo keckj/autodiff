@@ -1,9 +1,9 @@
-// C++ includes
 #include <iostream>
 
-// autodiff include
-#define AUTODIFF_ENABLE_IMPLICIT_CONVERSION
 #include <examples/common.hpp>
+
+AUTODIFF_NVRTC_BEGIN_SOURCE
+#define AUTODIFF_ENABLE_IMPLICIT_CONVERSION
 #include <autodiff/forward/dual.hpp>
 #include <autodiff/forward/dual/eigen.hpp>
 using namespace autodiff;
@@ -13,9 +13,6 @@ struct T {
     double u;
     Vector<double,3> g;
     Matrix<double,3,3> h;
-    static bool allclose(const T& x, const T& y) { 
-        return ::allclose(x.u, y.u) && ::allclose(x.g, y.g) && ::allclose(x.h, y.h);
-    }
 };
 
 // The scalar function for which the gradient is needed
@@ -25,13 +22,24 @@ __host__ __device__ dual2nd f(const Vector<dual2nd,3>& x)
 }
 
 __global__ void kernel(Vector<dual2nd,3> x, T* output) {
-    dual2nd u;
-    Vector<dual,3> g;
-    Matrix<double,3,3> h = hessian(f, wrt(x), at(x), u, g); // evaluate the function value u and its Hessian matrix H
-    output[0].u = u;
-    output[0].g = g;
-    output[0].h = h;
+    T d_results;
+    {
+        dual2nd u;
+        Vector<dual,3> g;
+        Matrix<double,3,3> h = hessian(f, wrt(x), at(x), u, g); // evaluate the function value u and its Hessian matrix H
+        d_results.u = u;
+        d_results.g = g;
+        d_results.h = h;
+    }
+    output[0] = d_results;
 }
+AUTODIFF_NVRTC_END_SOURCE
+    
+
+static bool check_results(const T& x, const T& y) { 
+    return ::allclose(x.u, y.u) && ::allclose(x.g, y.g) && ::allclose(x.h, y.h);
+}
+
 
 int main()
 {
@@ -51,10 +59,23 @@ int main()
     {
         T* output;
         cudaMalloc(&output, sizeof(T));
-        kernel<<<1,1>>>(x,output);
+        kernel<<<1,1>>>(x, output);
         cudaMemcpy(&d_results, output, sizeof(T), cudaMemcpyDeviceToHost);
         cudaFree(output);
     }
+
+    T n_results;
+    {
+        T* output;
+        cudaMalloc(&output, sizeof(T));
+        CUfunction nvrtc_kernel = build_nvrtc_kernel(__FILE__);
+        void *args[] = {&x, &output};
+        cuLaunchKernel(nvrtc_kernel, 1, 1, 1, 1, 1, 1, 0, 0, args, 0);
+        cudaMemcpy(&n_results, output, sizeof(T), cudaMemcpyDeviceToHost);
+        cudaFree(output);
+    }
+
+    print_example_header(__FILE__);
 
     std::cout << "HOST" << std::endl;
     std::cout << "u = " << h_results.u << std::endl;      // print the evaluated output u
@@ -65,6 +86,11 @@ int main()
     std::cout << "u = " << d_results.u << std::endl;      // print the evaluated output u
     std::cout << "g = \n" << d_results.g << std::endl;    // print the evaluated gradient vector g = du/dx
     std::cout << "H = \n" << d_results.h << std::endl;    // print the evaluated Hessian matrix H = d²u/dx²
+    std::cout << std::endl;
+    std::cout << "NVRTC" << std::endl;
+    std::cout << "u = " << n_results.u << std::endl;      // print the evaluated output u
+    std::cout << "g = \n" << n_results.g << std::endl;    // print the evaluated gradient vector g = du/dx
+    std::cout << "H = \n" << n_results.h << std::endl;    // print the evaluated Hessian matrix H = d²u/dx²
     
-    return T::allclose(h_results, d_results) ? EXIT_SUCCESS : EXIT_FAILURE;
+    return exit_example<T>(h_results, d_results, n_results, check_results);
 }

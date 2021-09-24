@@ -1,8 +1,8 @@
-// C++ includes
 #include <iostream>
 
-// autodiff include
 #include <examples/common.hpp>
+
+AUTODIFF_NVRTC_BEGIN_SOURCE
 #include <autodiff/forward/dual.hpp>
 using namespace autodiff;
 
@@ -17,6 +17,8 @@ __host__ __device__ dual4th f(dual4th x, dual4th y, dual4th z)
 __global__ void kernel(dual4th x, dual4th y, dual4th z, T* output) {
     output[0] = derivatives(f, wrt(x, y, x, z), at(x, y, z));
 }
+AUTODIFF_NVRTC_END_SOURCE
+
 
 int main()
 {
@@ -32,10 +34,24 @@ int main()
     {
         T* output;
         cudaMalloc(&output, sizeof(T));
-        kernel<<<1,1>>>(x,y,z,output);
+        kernel<<<1,1>>>(x, y, z, output);
         cudaMemcpy(&d_derivatives, output, sizeof(T), cudaMemcpyDeviceToHost);
         cudaFree(output);
     }
+    
+    T n_derivatives;
+    const auto& [n_u0, n_ux, n_uxy, n_uxyx, n_uxyxz] = n_derivatives;
+    {
+        T* output;
+        cudaMalloc(&output, sizeof(T));
+        CUfunction nvrtc_kernel = build_nvrtc_kernel(__FILE__);
+        void *args[] = {&x, &y, &z, &output};
+        cuLaunchKernel(nvrtc_kernel, 1, 1, 1, 1, 1, 1, 0, 0, args, 0);
+        cudaMemcpy(&n_derivatives, output, sizeof(T), cudaMemcpyDeviceToHost);
+        cudaFree(output);
+    }
+    
+    print_example_header(__FILE__);
     
     std::cout << "HOST" << std::endl;
     std::cout << "u0 = " << h_u0 << " (expected 27.2113)" << std::endl;         // print the evaluated value of u = f(x, y, z)
@@ -50,8 +66,15 @@ int main()
     std::cout << "uxy = " << d_uxy << " (expected 3.33099)" << std::endl;       // print the evaluated derivative d²u/dxdy
     std::cout << "uxyx = " << d_uxyx << " (expected -0.735916)" << std::endl;   // print the evaluated derivative d³u/dx²dy
     std::cout << "uxyxz = " << d_uxyxz << " (expected 0.074335)" << std::endl;  // print the evaluated derivative d⁴u/dx²dydz
+    std::cout << std::endl;
+    std::cout << "NVRTC" << std::endl;
+    std::cout << "u0 = " << n_u0 << " (expected 27.2113)" << std::endl;         // print the evaluated value of u = f(x, y, z)
+    std::cout << "ux = " << n_ux << " (expected 13.6056)" << std::endl;         // print the evaluated derivative du/dx
+    std::cout << "uxy = " << n_uxy << " (expected 3.33099)" << std::endl;       // print the evaluated derivative d²u/dxdy
+    std::cout << "uxyx = " << n_uxyx << " (expected -0.735916)" << std::endl;   // print the evaluated derivative d³u/dx²dy
+    std::cout << "uxyxz = " << n_uxyxz << " (expected 0.074335)" << std::endl;  // print the evaluated derivative d⁴u/dx²dydz
     
-    return allclose(h_derivatives, d_derivatives) ? EXIT_SUCCESS : EXIT_FAILURE;
+    return exit_example<T>(h_derivatives, d_derivatives, n_derivatives);
 }
 
 /*-------------------------------------------------------------------------------------------------
