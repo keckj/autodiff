@@ -100,7 +100,15 @@ template<typename T, size_t N>
     }
 
 
+__host__ void print_banner() {
+    for (size_t i = 0; i < 100; ++i) {
+        std::cout << '*'; 
+    }
+    std::cout << std::endl;
+}
+
 __host__ void print_example_header(const std::string& filename) {
+    print_banner();
     std::cout << "Running example " << filename << std::endl;
 }
 
@@ -109,34 +117,48 @@ template <typename T>
     [[nodiscard]] 
     __host__ int exit_example(
             const T& host_results, const T& device_results, const T& nvrtc_results,
-            const std::function<bool(const T&, const T&, size_t)>& fn = [](const T& lhs, const T& rhs, size_t n) -> bool { return allclose(lhs, rhs, n); }) {
-        bool host_and_device_match  = fn(host_results, device_results, 1);
-        bool host_and_nvrtc_match   = fn(host_results, nvrtc_results, 1);
-        bool device_and_nvrtc_match = fn(device_results, nvrtc_results, 1);
+            const std::function<bool(const T&, const T&)>& fn = [](const T& lhs, const T& rhs) -> bool { return allclose(lhs, rhs); }) {
+        bool host_and_device_match  = fn(host_results, device_results);
+        bool host_and_nvrtc_match   = fn(host_results, nvrtc_results);
+        bool device_and_nvrtc_match = fn(device_results, nvrtc_results);
         bool success = host_and_device_match && host_and_nvrtc_match && device_and_nvrtc_match;
         if (success) {
-            std::cout << "Host, device and nvrtc results match." << std::endl;
+            std::cout << std::endl;
+            std::cout << "SUCCESS, all results match." << std::endl;
         }
         else {
             static const std::string cmp[2] = {"!=", "=="};
+            std::cerr << std::endl;
             std::cerr << "Host, device and nvrtc results do not match:" << std::endl;
             std::cerr << "    host results " << cmp[host_and_device_match]  << " device results" << std::endl;
             std::cerr << "    host results " << cmp[host_and_nvrtc_match]   << " nvrtc results" << std::endl;
             std::cerr << "  device results " << cmp[device_and_nvrtc_match] << " nvrtc results" << std::endl;
-            std::cerr << "This is a bug, please open an issue." << std::endl;
+            std::cerr << "FAILURE, this is a bug, please open an issue." << std::endl;
         }
+        print_banner();
         std::cout << std::endl;
         return success ? EXIT_SUCCESS : EXIT_FAILURE;
     }
 
 
-[[noreturn]] void fail(const std::string& msg, int code) {
+[[noreturn]] void nvrtc_fail(const std::string& msg, nvrtcResult code) {
+    const char *error_string = nvrtcGetErrorString(code);
     std::cerr << "error: " << msg << " (" << code << ')' << std::endl;
+    std::cerr << error_string << std::endl;
+    std::exit(EXIT_FAILURE);
+}
+
+[[noreturn]] void cuda_fail(const std::string& msg, CUresult code) {
+    const char *error_name, *error_string;
+    cuGetErrorName(code, &error_name);
+    cuGetErrorString(code, &error_string);
+    std::cerr << "error: " << msg << " (" << code << ')' << std::endl;
+    std::cerr << error_name  << ": " << error_string << std::endl;
     std::exit(EXIT_FAILURE);
 }
 
 
-CUfunction build_nvrtc_kernel(const std::string& filename, const::std::string& kernel_name = "kernel") {
+CUfunction build_nvrtc_kernel(const std::string& filename, const char* kernel_name = "kernel") {
     /* extract kernel source from the example file */
     std::string source;
     {
@@ -171,6 +193,7 @@ CUfunction build_nvrtc_kernel(const std::string& filename, const::std::string& k
 
     /* build the kernel */
     nvrtcProgram prog;
+    const char* mangled_kernel_name;
     {
         nvrtcResult rv;
         rv = nvrtcCreateProgram(
@@ -181,7 +204,10 @@ CUfunction build_nvrtc_kernel(const std::string& filename, const::std::string& k
                 nullptr,
                 nullptr
                 );
-        if(rv != NVRTC_SUCCESS) fail("nvrtcCreateProgram", rv);
+        if(rv != NVRTC_SUCCESS) nvrtc_fail("nvrtcCreateProgram", rv);
+
+        rv = nvrtcAddNameExpression(prog, kernel_name);
+        if(rv != NVRTC_SUCCESS) nvrtc_fail("nvrtcAddNameExpression", rv);
 
         std::vector<const char*> options = {
             "-std=c++17",
@@ -196,17 +222,20 @@ CUfunction build_nvrtc_kernel(const std::string& filename, const::std::string& k
         if(rv != NVRTC_SUCCESS) {
             std::size_t log_size;
             rv = nvrtcGetProgramLogSize(prog, &log_size);
-            if(rv != NVRTC_SUCCESS) fail("nvrtcGetProgramLogSize", rv);
+            if(rv != NVRTC_SUCCESS) nvrtc_fail("nvrtcGetProgramLogSize", rv);
 
             auto log = std::make_unique<char[]>(log_size);
             rv = nvrtcGetProgramLog(prog, log.get());
-            if(rv != NVRTC_SUCCESS) fail("nvrtcGetProgramLog", rv);
+            if(rv != NVRTC_SUCCESS) nvrtc_fail("nvrtcGetProgramLog", rv);
             assert(log[log_size - 1] == '\0');
 
             std::cerr << "Compile error; log:\n" << log.get() << std::endl;
 
-            fail("nvrtcCompileProgram", rv);
+            nvrtc_fail("nvrtcCompileProgram", rv);
         }
+
+        rv = nvrtcGetLoweredName(prog, kernel_name, &mangled_kernel_name);
+        if(rv != NVRTC_SUCCESS) nvrtc_fail("nvrtcGetLoweredName", rv);
     }
     
     /* Extract PTX and destroy program */
@@ -216,15 +245,13 @@ CUfunction build_nvrtc_kernel(const std::string& filename, const::std::string& k
         std::size_t ptx_size;
 
         rv = nvrtcGetPTXSize(prog, &ptx_size);
-        if(rv != NVRTC_SUCCESS) fail("nvrtcGetPTXSize", rv);
+        if(rv != NVRTC_SUCCESS) nvrtc_fail("nvrtcGetPTXSize", rv);
 
-        auto ptx = std::make_unique<char[]>(ptx_size);
+        ptx = std::make_unique<char[]>(ptx_size);
         rv = nvrtcGetPTX(prog, ptx.get());
         
-        if(rv != NVRTC_SUCCESS) fail("nvrtcGetPTX", rv);
+        if(rv != NVRTC_SUCCESS) nvrtc_fail("nvrtcGetPTX", rv);
         assert(ptx[ptx_size - 1] == '\0');
-
-        nvrtcDestroyProgram(&prog);
     }
 
     /* Build module and extract function */
@@ -234,10 +261,12 @@ CUfunction build_nvrtc_kernel(const std::string& filename, const::std::string& k
         CUmodule cuda_module;
 
         rv = cuModuleLoadData(&cuda_module, ptx.get());
-        if(rv != CUDA_SUCCESS) fail("cuModuleLoadData", rv);
+        if(rv != CUDA_SUCCESS) cuda_fail("cuModuleLoadData", rv);
+
+        rv = cuModuleGetFunction(&kernel, cuda_module, mangled_kernel_name);
+        if(rv != CUDA_SUCCESS) cuda_fail("cuModuleGetFunction", rv);
         
-        rv = cuModuleGetFunction(&kernel, cuda_module, kernel_name.c_str());
-        if(rv != CUDA_SUCCESS) fail("cuModuleGetFunction", rv);
+        nvrtcDestroyProgram(&prog);
     }
 
     return kernel;
