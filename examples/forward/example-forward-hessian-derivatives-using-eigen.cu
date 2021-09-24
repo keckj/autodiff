@@ -1,5 +1,3 @@
-#include <iostream>
-
 #include <examples/common.hpp>
 
 AUTODIFF_NVRTC_BEGIN_SOURCE

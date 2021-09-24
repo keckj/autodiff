@@ -1,5 +1,3 @@
-#include <iostream>
-
 #include <examples/common.hpp>
 
 AUTODIFF_NVRTC_BEGIN_SOURCE
@@ -22,10 +20,14 @@ __host__ __device__ Vector<real,5> f(const Vector<real,5>& x)
 
 __global__ void kernel(Vector<real,5> x, T* output)
 {
-    Vector<real,5> F;                                     // the output vector F = f(x) evaluated together with Jacobian matrix below
-    Matrix<double,5,5> J = jacobian(f, wrt(x), at(x), F); // evaluate the output vector F and the Jacobian matrix dF/dx
-    output[0].F = F;
-    output[0].J = J;
+    T d_results;
+    {
+        Vector<real,5> F;                                     // the output vector F = f(x) evaluated together with Jacobian matrix below
+        Matrix<double,5,5> J = jacobian(f, wrt(x), at(x), F); // evaluate the output vector F and the Jacobian matrix dF/dx
+        d_results.F = F;
+        d_results.J = J;
+    }
+    output[0] = d_results;
 }
 AUTODIFF_NVRTC_END_SOURCE
     
@@ -51,7 +53,7 @@ int main()
     {
         T* output;
         cudaMalloc(&output, sizeof(T));
-        kernel<<<1,1>>>(x,output);
+        kernel<<<1,1>>>(x, output);
         cudaMemcpy(&d_results, output, sizeof(T), cudaMemcpyDeviceToHost);
         cudaFree(output);
     }

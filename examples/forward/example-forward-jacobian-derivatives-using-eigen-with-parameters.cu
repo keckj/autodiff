@@ -1,5 +1,3 @@
-#include <iostream>
-
 #include <examples/common.hpp>
 
 AUTODIFF_NVRTC_BEGIN_SOURCE
@@ -64,7 +62,7 @@ int main()
     {
         T* output;
         cudaMalloc(&output, sizeof(T));
-        kernel<<<1,1>>>(x,p,q,output);
+        kernel<<<1,1>>>(x, p, q, output);
         cudaMemcpy(&d_results, output, sizeof(T), cudaMemcpyDeviceToHost);
         cudaFree(output);
     }

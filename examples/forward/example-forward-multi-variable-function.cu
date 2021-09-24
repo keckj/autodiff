@@ -1,5 +1,3 @@
-#include <iostream>
-
 #include <examples/common.hpp>
 
 AUTODIFF_NVRTC_BEGIN_SOURCE
@@ -20,10 +18,14 @@ __host__ __device__ dual f(dual x, dual y, dual z)
 
 __global__ void kernel(dual x, dual y, dual z, T* output) 
 {
-    output[0].u = f(x, y, z);
-    output[0].dudx = derivative(f, wrt(x), at(x, y, z));
-    output[0].dudy = derivative(f, wrt(y), at(x, y, z));
-    output[0].dudz = derivative(f, wrt(z), at(x, y, z));
+    T d_results;
+    {
+        d_results.u = f(x, y, z);
+        d_results.dudx = derivative(f, wrt(x), at(x, y, z));
+        d_results.dudy = derivative(f, wrt(y), at(x, y, z));
+        d_results.dudz = derivative(f, wrt(z), at(x, y, z));
+    }
+    output[0] = d_results;
 }
 AUTODIFF_NVRTC_END_SOURCE
     
@@ -51,7 +53,7 @@ int main()
     {
         T* output;
         cudaMalloc(&output, sizeof(T));
-        kernel<<<1,1>>>(x,y,z,output);
+        kernel<<<1,1>>>(x, y, z, output);
         cudaMemcpy(&d_results, output, sizeof(T), cudaMemcpyDeviceToHost);
         cudaFree(output);
     }
