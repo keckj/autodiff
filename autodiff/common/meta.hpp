@@ -79,9 +79,9 @@ __host__ __device__ constexpr auto TupleTail(Tuple&& tuple)
 template<size_t i>
 struct Index
 {
-    constexpr static size_t index = i;
-    __host__ __device__ constexpr operator size_t() const { return index; }
-    __host__ __device__ constexpr operator size_t() { return index; }
+    __host__ __device__ constexpr size_t index() { return i; }
+    __host__ __device__ constexpr operator size_t() const { return i; }
+    __host__ __device__ constexpr operator size_t() { return i; }
 };
 
 template<size_t i, size_t ibegin, size_t iend, typename Function>

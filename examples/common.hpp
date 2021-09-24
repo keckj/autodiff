@@ -110,6 +110,7 @@ __host__ void print_banner() {
 __host__ void print_example_header(const std::string& filename) {
     print_banner();
     std::cout << "Running example " << filename << std::endl;
+    std::cout << std::endl;
 }
 
 

@@ -1,25 +1,20 @@
-// C++ includes
 #include <iostream>
 
-// autodiff include
 #include <examples/common.hpp>
+
+AUTODIFF_NVRTC_BEGIN_SOURCE
 #include <autodiff/forward/dual.hpp>
 using namespace autodiff;
 
 // A simple struct to hold our results
 struct T { 
     double u, dudx, duda, dudb, dudc;
-    static bool allclose(const T& x, const T& y) { 
-        return ::allclose(x.u, y.u) && ::allclose(x.dudx, y.dudx) && ::allclose(x.duda, y.duda) && ::allclose(x.dudb, y.dudb) && ::allclose(x.dudc, y.dudc);
-    }
 };
 
 // A type defining parameters for a function of interest
 struct Params
 {
-    dual a;
-    dual b;
-    dual c;
+    dual a, b, c;
 };
 
 // The function that depends on parameters for which derivatives are needed
@@ -30,13 +25,24 @@ __host__ __device__ dual f(dual x, const Params& params)
 
 __global__ void kernel(dual x, Params params, T* output)
 {
-    dual u = f(x, params);                                        // the output variable u
-    output[0].dudx = derivative(f, wrt(x), at(x, params));        // evaluate the derivative du/dx
-    output[0].duda = derivative(f, wrt(params.a), at(x, params)); // evaluate the derivative du/da
-    output[0].dudb = derivative(f, wrt(params.b), at(x, params)); // evaluate the derivative du/db
-    output[0].dudc = derivative(f, wrt(params.c), at(x, params)); // evaluate the derivative du/dc
-    output[0].u = u.val;
+    T d_results;
+    {
+        dual u = f(x, params);                                        // the output variable u
+        d_results.dudx = derivative(f, wrt(x), at(x, params));        // evaluate the derivative du/dx
+        d_results.duda = derivative(f, wrt(params.a), at(x, params)); // evaluate the derivative du/da
+        d_results.dudb = derivative(f, wrt(params.b), at(x, params)); // evaluate the derivative du/db
+        d_results.dudc = derivative(f, wrt(params.c), at(x, params)); // evaluate the derivative du/dc
+        d_results.u = u.val;
+    }
+    output[0] = d_results;
 }
+AUTODIFF_NVRTC_END_SOURCE
+    
+
+static bool check_results(const T& x, const T& y) { 
+    return ::allclose(x.u, y.u) && ::allclose(x.dudx, y.dudx) && ::allclose(x.duda, y.duda) && ::allclose(x.dudb, y.dudb) && ::allclose(x.dudc, y.dudc);
+}
+
 
 int main()
 {
@@ -65,6 +71,19 @@ int main()
         cudaMemcpy(&d_results, output, sizeof(T), cudaMemcpyDeviceToHost);
         cudaFree(output);
     }
+    
+    T n_results;
+    {
+        T* output;
+        cudaMalloc(&output, sizeof(T));
+        CUfunction nvrtc_kernel = build_nvrtc_kernel(__FILE__);
+        void *args[] = {&x, &params, &output};
+        cuLaunchKernel(nvrtc_kernel, 1, 1, 1, 1, 1, 1, 0, 0, args, 0);
+        cudaMemcpy(&n_results, output, sizeof(T), cudaMemcpyDeviceToHost);
+        cudaFree(output);
+    }
+
+    print_example_header(__FILE__);
 
     std::cout << "HOST" << std::endl;
     std::cout << "u = " << h_results.u << " (expected 3.4968)" << std::endl;           // print the evaluated output u
@@ -79,8 +98,15 @@ int main()
     std::cout << "du/da = " << d_results.duda << " (expected 0.479426)" << std::endl;  // print the evaluated derivative du/da
     std::cout << "du/db = " << d_results.dudb << " (expected 0.877583)" << std::endl;  // print the evaluated derivative du/db
     std::cout << "du/dc = " << d_results.dudc << " (expected 0.420735)" << std::endl;  // print the evaluated derivative du/dc
+    std::cout << std::endl;
+    std::cout << "NVRTC" << std::endl;
+    std::cout << "u = " << n_results.u << " (expected 3.4968)" << std::endl;           // print the evaluated output u
+    std::cout << "du/dx = " << n_results.dudx << " (expected 1.53964)" << std::endl;   // print the evaluated derivative du/dx
+    std::cout << "du/da = " << n_results.duda << " (expected 0.479426)" << std::endl;  // print the evaluated derivative du/da
+    std::cout << "du/db = " << n_results.dudb << " (expected 0.877583)" << std::endl;  // print the evaluated derivative du/db
+    std::cout << "du/dc = " << n_results.dudc << " (expected 0.420735)" << std::endl;  // print the evaluated derivative du/dc
     
-    return T::allclose(h_results, d_results) ? EXIT_SUCCESS : EXIT_FAILURE;
+    return exit_example<T>(h_results, d_results, n_results, check_results);
 }
 
 /*-------------------------------------------------------------------------------------------------

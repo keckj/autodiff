@@ -169,8 +169,7 @@ public:
         auto& x = *this;
         ReverseFor<N + 1>([&](auto i) constexpr {
             x[i] = Sum<0, i + 1>([&](auto j) constexpr {
-                constexpr auto c = BinomialCoefficient<i.index, j.index>;
-                return c * x[i - j] * y[j];
+                return binom(i.index(), j.index()) * x[i - j] * y[j];
             });
         });
         return *this;
@@ -181,8 +180,7 @@ public:
         auto& x = *this;
         For<N + 1>([&](auto i) constexpr {
             x[i] -= Sum<0, i>([&](auto j) constexpr {
-                constexpr auto c = BinomialCoefficient<i.index, j.index>;
-                return c * x[j] * y[i - j];
+                return binom(i.index(), j.index()) * x[j] * y[i - j];
             });
             x[i] /= y[0];
         });
@@ -376,8 +374,7 @@ __host__ __device__ constexpr auto exp(const Real<N, T>& x)
     expx[0] = exp(x[0]);
     For<1, N + 1>([&](auto i) constexpr {
         expx[i] = Sum<0, i>([&](auto j) constexpr {
-            constexpr auto c = BinomialCoefficient<i.index - 1, j.index>;
-            return c * x[i - j] * expx[j];
+            return binom(i.index()-1, j.index()) * x[i - j] * expx[j];
         });
     });
     return expx;
@@ -391,8 +388,7 @@ __host__ __device__ constexpr auto log(const Real<N, T>& x)
     logx[0] = log(x[0]);
     For<1, N + 1>([&](auto i) constexpr {
         logx[i] = x[i] - Sum<1, i>([&](auto j) constexpr {
-            constexpr auto c = BinomialCoefficient<i.index - 1, j.index - 1>;
-            return c * x[i - j] * logx[j];
+            return binom(i.index()-1, j.index()-1) * x[i - j] * logx[j];
         });
         logx[i] /= x[0];
     });
@@ -421,14 +417,12 @@ __host__ __device__ constexpr auto sqrt(const Real<N, T>& x)
         Real<N, T> a;
         For<1, N + 1>([&](auto i) constexpr {
             a[i] = x[i] - Sum<1, i>([&](auto j) constexpr {
-                constexpr auto c = BinomialCoefficient<i.index - 1, j.index - 1>;
-                return c * x[i - j] * a[j];
+                return binom(i.index()-1, j.index()-1) * x[i - j] * a[j];
             });
             a[i] /= x[0];
 
             res[i] = 0.5 * Sum<0, i>([&](auto j) constexpr {
-                constexpr auto c = BinomialCoefficient<i.index - 1, j.index>;
-                return c * a[i - j] * res[j];
+                return binom(i.index()-1, j.index()) * a[i - j] * res[j];
             });
         });
     }
@@ -448,14 +442,12 @@ __host__ __device__ constexpr auto cbrt(const Real<N, T>& x)
         Real<N, T> a;
         For<1, N + 1>([&](auto i) constexpr {
             a[i] = x[i] - Sum<1, i>([&](auto j) constexpr {
-                constexpr auto c = BinomialCoefficient<i.index - 1, j.index - 1>;
-                return c * x[i - j] * a[j];
+                return binom(i.index()-1, j.index()-1) * x[i - j] * a[j];
             });
             a[i] /= x[0];
 
             res[i] = (1.0/3.0) * Sum<0, i>([&](auto j) constexpr {
-                constexpr auto c = BinomialCoefficient<i.index - 1, j.index>;
-                return c * a[i - j] * res[j];
+                return binom(i.index()-1, j.index()) * a[i - j] * res[j];
             });
         });
     }
@@ -475,13 +467,11 @@ __host__ __device__ constexpr auto pow(const Real<N, T>& x, const Real<N, T>& y)
         Real<N, T> a;
         For<1, N + 1>([&](auto i) constexpr {
             a[i] = Sum<0, i + 1>([&](auto j) constexpr {
-                constexpr auto c = BinomialCoefficient<i.index, j.index>;
-                return c * y[i - j] * lnx[j];
+                return binom(i.index(), j.index()) * y[i - j] * lnx[j];
             });
 
             res[i] = Sum<0, i>([&](auto j) constexpr {
-                constexpr auto c = BinomialCoefficient<i.index - 1, j.index>;
-                return c * a[i - j] * res[j];
+                return binom(i.index()-1, j.index()) * a[i - j] * res[j];
             });
         });
     }
@@ -500,8 +490,7 @@ __host__ __device__ constexpr auto pow(const Real<N, T>& x, const U& c)
         Real<N, T> a = c * log(x);
         For<1, N + 1>([&](auto i) constexpr {
             res[i] = Sum<0, i>([&](auto j) constexpr {
-                constexpr auto c = BinomialCoefficient<i.index - 1, j.index>;
-                return c * a[i - j] * res[j];
+                return binom(i.index()-1, j.index()) * a[i - j] * res[j];
             });
         });
     }
@@ -520,8 +509,7 @@ __host__ __device__ constexpr auto pow(const U& c, const Real<N, T>& y)
         Real<N, T> a = y * log(c);
         For<1, N + 1>([&](auto i) constexpr {
             res[i] = Sum<0, i>([&](auto j) constexpr {
-                constexpr auto c = BinomialCoefficient<i.index - 1, j.index>;
-                return c * a[i - j] * res[j];
+                return binom(i.index()-1,j) * a[i - j] * res[j];
             });
         });
     }
@@ -545,13 +533,11 @@ __host__ __device__ auto sincos(const Real<N, T>& x) -> cuda::std::tuple<Real<N,
 
     For<1, N + 1>([&](auto i) constexpr {
         cosx[i] = -Sum<0, i>([&](auto j) constexpr {
-            constexpr auto c = BinomialCoefficient<i.index - 1, j.index>;
-            return c * x[i - j] * sinx[j];
+            return binom(i.index()-1,j) * x[i - j] * sinx[j];
         });
 
         sinx[i] = Sum<0, i>([&](auto j) constexpr {
-            constexpr auto c = BinomialCoefficient<i.index - 1, j.index>;
-            return c * x[i - j] * cosx[j];
+            return binom(i.index()-1,j) * x[i - j] * cosx[j];
         });
     });
 
@@ -583,13 +569,11 @@ __host__ __device__ auto tan(const Real<N, T>& x)
 
         For<1, N + 1>([&](auto i) constexpr {
             tanx[i] = Sum<0, i>([&](auto j) constexpr {
-                constexpr auto c = BinomialCoefficient<i.index - 1, j.index>;
-                return c * x[i - j] * aux[j];
+                return binom(i.index()-1, j.index()) * x[i - j] * aux[j];
             });
 
             aux[i] = 2*Sum<0, i>([&](auto j) constexpr {
-                constexpr auto c = BinomialCoefficient<i.index - 1, j.index>;
-                return c * tanx[i - j] * tanx[j];
+                return binom(i.index()-1, j.index()) * tanx[i - j] * tanx[j];
             });
         });
     }
@@ -664,13 +648,11 @@ __host__ __device__ auto sinhcosh(const Real<N, T>& x) -> cuda::std::tuple<Real<
 
     For<1, N + 1>([&](auto i) constexpr {
         coshx[i] = Sum<0, i>([&](auto j) constexpr {
-            constexpr auto c = BinomialCoefficient<i.index - 1, j.index>;
-            return c * x[i - j] * sinhx[j];
+            return binom(i.index()-1, j.index()) * x[i - j] * sinhx[j];
         });
 
         sinhx[i] = Sum<0, i>([&](auto j) constexpr {
-            constexpr auto c = BinomialCoefficient<i.index - 1, j.index>;
-            return c * x[i - j] * coshx[j];
+            return binom(i.index()-1, j.index()) * x[i - j] * coshx[j];
         });
     });
 
@@ -704,13 +686,11 @@ __host__ __device__ auto tanh(const Real<N, T>& x)
 
         For<1, N + 1>([&](auto i) constexpr {
             tanhx[i] = Sum<0, i>([&](auto j) constexpr {
-                constexpr auto c = BinomialCoefficient<i.index - 1, j.index>;
-                return c * x[i - j] * aux[j];
+                return binom(i.index()-1, j.index()) * x[i - j] * aux[j];
             });
 
             aux[i] = -2*Sum<0, i>([&](auto j) constexpr {
-                constexpr auto c = BinomialCoefficient<i.index - 1, j.index>;
-                return c * tanhx[i - j] * tanhx[j];
+                return binom(i.index()-1, j.index()) * tanhx[i - j] * tanhx[j];
             });
         });
     }

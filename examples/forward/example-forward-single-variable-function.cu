@@ -1,6 +1,4 @@
-// C++ includes
 #include <iostream>
-
 #include <examples/common.hpp>
 
 AUTODIFF_NVRTC_BEGIN_SOURCE
@@ -62,12 +60,13 @@ int main()
         cudaMalloc(&output, sizeof(T));
         CUfunction nvrtc_kernel = build_nvrtc_kernel(__FILE__);
         void *args[] = {&x, &output};
-        cuLaunchKernel(nvrtc_kernel, 1, 1, 1, 1, 1, 1, 0, 0, &args[0], 0);
+        cuLaunchKernel(nvrtc_kernel, 1, 1, 1, 1, 1, 1, 0, 0, args, 0);
         cudaMemcpy(&n_results, output, sizeof(T), cudaMemcpyDeviceToHost);
         cudaFree(output);
     }
 
     print_example_header(__FILE__);
+
     std::cout << "HOST" << std::endl;
     std::cout << "u = " << h_results.u << " (expected 8.19315)" << std::endl;     // print the evaluated output u
     std::cout << "du/dx = " << h_results.dudx << " (expected 5.25)" << std::endl; // print the evaluated derivative du/dx

@@ -1,9 +1,9 @@
-// C++ includes
 #include <iostream>
 
-// autodiff include
-#define AUTODIFF_ENABLE_IMPLICIT_CONVERSION
 #include <examples/common.hpp>
+
+AUTODIFF_NVRTC_BEGIN_SOURCE
+#define AUTODIFF_ENABLE_IMPLICIT_CONVERSION
 #include <autodiff/forward/real.hpp>
 #include <autodiff/forward/real/eigen.hpp>
 using namespace autodiff;
@@ -12,9 +12,6 @@ using namespace autodiff;
 struct T {
     Vector<double,5> F;
     Matrix<double,5,5> J;
-    static bool allclose(const T& x, const T& y) { 
-        return ::allclose(x.F, y.F) && ::allclose(x.J, y.J);
-    }
 };
 
 // The vector function for which the Jacobian is needed
@@ -30,6 +27,13 @@ __global__ void kernel(Vector<real,5> x, T* output)
     output[0].F = F;
     output[0].J = J;
 }
+AUTODIFF_NVRTC_END_SOURCE
+    
+
+static bool check_results(const T& x, const T& y) { 
+    return ::allclose(x.F, y.F) && ::allclose(x.J, y.J);
+}
+
 
 int main()
 {
@@ -51,6 +55,19 @@ int main()
         cudaMemcpy(&d_results, output, sizeof(T), cudaMemcpyDeviceToHost);
         cudaFree(output);
     }
+    
+    T n_results;
+    {
+        T* output;
+        cudaMalloc(&output, sizeof(T));
+        CUfunction nvrtc_kernel = build_nvrtc_kernel(__FILE__);
+        void *args[] = {&x, &output};
+        cuLaunchKernel(nvrtc_kernel, 1, 1, 1, 1, 1, 1, 0, 0, args, 0);
+        cudaMemcpy(&n_results, output, sizeof(T), cudaMemcpyDeviceToHost);
+        cudaFree(output);
+    }
+
+    print_example_header(__FILE__);
 
     std::cout << "HOST" << std::endl;
     std::cout << "F = \n" << h_results.F << std::endl;    // print the evaluated output vector F
@@ -59,6 +76,10 @@ int main()
     std::cout << "DEVICE" << std::endl;
     std::cout << "F = \n" << d_results.F << std::endl;    // print the evaluated output vector F
     std::cout << "J = \n" << d_results.J << std::endl;    // print the evaluated Jacobian matrix dF/dx
+    std::cout << std::endl;
+    std::cout << "NVRTC" << std::endl;
+    std::cout << "F = \n" << n_results.F << std::endl;    // print the evaluated output vector F
+    std::cout << "J = \n" << n_results.J << std::endl;    // print the evaluated Jacobian matrix dF/dx
     
-    return T::allclose(h_results, d_results) ? EXIT_SUCCESS : EXIT_FAILURE;
+    return exit_example<T>(h_results, d_results, n_results, check_results);
 }
