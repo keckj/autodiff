@@ -3,6 +3,9 @@ find_package(Catch2 REQUIRED)
 file(GLOB_RECURSE TEST_FILES "*.test.cu")
 add_executable(autodiff-cpptests main.cpp ${TEST_FILES})
 target_link_libraries(autodiff-cpptests autodiff::autodiff Catch2::Catch2)
+if (USE_SYSTEM_EIGEN)
+    target_link_libraries(autodiff-cpptests Eigen3::Eigen)
+endif()
 set_target_properties(autodiff-cpptests PROPERTIES CXX_STANDARD 17 CXX_STANDARD_REQUIRED ON CXX_EXTENSIONS OFF)
 
 # Add target tests that performs all C++ and Python tests

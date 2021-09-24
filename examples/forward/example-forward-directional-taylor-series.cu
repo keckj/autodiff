@@ -1,9 +1,9 @@
 // C++ includes
 #include <iostream>
-#include <cstdlib>
 
-// autodiff include
 #include <examples/common.hpp>
+
+AUTODIFF_NVRTC_BEGIN_SOURCE
 #include <autodiff/forward/real.hpp>
 using namespace autodiff;
 
@@ -17,6 +17,7 @@ __global__ void kernel(real4th x, real4th y, real4th z, double t, double* output
     auto g = taylorseries(f, along(1, 1, 2), at(x, y, z));
     output[0] = g(t);
 }
+AUTODIFF_NVRTC_END_SOURCE
 
 int main()
 {
@@ -30,24 +31,35 @@ int main()
 
     real4th u = f(x + t, y + t, z + 2*t);                  // the exact value of f(x + t, y + t, z + 2t)
 
-    double h_utaylor = g(t);                               // the 4th order Taylor estimate of f(x + t, y + t, z + 2t)
+    double h_results = g(t);                               // the 4th order Taylor estimate of f(x + t, y + t, z + 2t)
     
-    double d_utaylor;
+    double d_results;
     {
         double* output;
         cudaMalloc(&output, sizeof(double));
         kernel<<<1,1>>>(x,y,z,t,output);
-        cudaMemcpy(&d_utaylor, output, sizeof(double), cudaMemcpyDeviceToHost);
+        cudaMemcpy(&d_results, output, sizeof(double), cudaMemcpyDeviceToHost);
         cudaFree(output);
     }
 
+    double n_results;
+    {
+        double* output;
+        cudaMalloc(&output, sizeof(double));
+        auto nvrtc_kernel = build_nvrtc_kernel(__FILE__);
+        /*nvrtc_kernel<<<1,1>>>(x,y,z,t,output);*/
+        cudaMemcpy(&n_results, output, sizeof(double), cudaMemcpyDeviceToHost);
+        cudaFree(output);
+    }
+    
+    print_example_header(__FILE__);
     std::cout << std::fixed;
     std::cout << "Comparison between exact evaluation and 4th order Taylor estimate of f(x + t, y + t, z + 2t):" << std::endl;
     std::cout << "u(exact)  = " << u << " (expected value: -16.847071)" << std::endl;
-    std::cout << "u(taylor) = " << h_utaylor << " on __host__   (expected value: -16.793986)" << std::endl;
-    std::cout << "u(taylor) = " << d_utaylor << " on __device__ (expected value: -16.793986)" << std::endl;
-
-    return allclose(h_utaylor, d_utaylor) ? EXIT_SUCCESS : EXIT_FAILURE;
+    std::cout << "u(taylor) = " << h_results << " on host    (expected value: -16.793986)" << std::endl;
+    std::cout << "u(taylor) = " << d_results << " on device  (expected value: -16.793986)" << std::endl;
+    std::cout << "u(taylor) = " << n_results << " with nvrtc (expected value: -16.793986)" << std::endl;
+    return exit_example(h_results, d_results, n_results);
 }
 
 /*-------------------------------------------------------------------------------------------------

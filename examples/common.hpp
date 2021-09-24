@@ -1,5 +1,53 @@
+//                  _  _
+//  _   _|_ _  _|o_|__|_
+// (_||_||_(_)(_|| |  |
+//
+// automatic differentiation made easier in C++
+// https://github.com/autodiff/autodiff
+//
+// Licensed under the MIT License <http://opensource.org/licenses/MIT>.
+//
+// Copyright (c) 2018-2020 Allan Leal
+//
+// Permission is hereby granted, free of charge, to any person obtaining a copy
+// of this software and associated documentation files (the "Software"), to deal
+// in the Software without restriction, including without limitation the rights
+// to use, copy, modify, merge, publish, distribute, sublicense, and/or sell
+// copies of the Software, and to permit persons to whom the Software is
+// furnished to do so, subject to the following conditions:
+//
+// The above copyright notice and this permission notice shall be included in all
+// copies or substantial portions of the Software.
+//
+// THE SOFTWARE IS PROVIDED "AS IS", WITHOUT WARRANTY OF ANY KIND, EXPRESS OR
+// IMPLIED, INCLUDING BUT NOT LIMITED TO THE WARRANTIES OF MERCHANTABILITY,
+// FITNESS FOR A PARTICULAR PURPOSE AND NONINFRINGEMENT. IN NO EVENT SHALL THE
+// AUTHORS OR COPYRIGHT HOLDERS BE LIABLE FOR ANY CLAIM, DAMAGES OR OTHER
+// LIABILITY, WHETHER IN AN ACTION OF CONTRACT, TORT OR OTHERWISE, ARISING FROM,
+// OUT OF OR IN CONNECTION WITH THE SOFTWARE OR THE USE OR OTHER DEALINGS IN THE
+// SOFTWARE.
+
 #include <limits>
+#include <cstdlib>
+#include <cassert>
+#include <fstream>
+#include <iostream>
+#include <functional>
+#include <stdexcept>
+#include <string>
+#include <vector>
+#include <memory>
+
+#include "nvrtc.h"
+#include "cuda.h"
+
 #include <autodiff/common/eigen.hpp>
+
+#define XSTR(s) STR(s)
+#define STR(s) #s
+
+#define AUTODIFF_NVRTC_BEGIN_SOURCE
+#define AUTODIFF_NVRTC_END_SOURCE
 
 namespace autodiff {
 
@@ -18,37 +66,181 @@ __host__ bool allclose(double x, double y, size_t n=1)
 }
 
 template<typename Scalar, int M, int N>
-__host__ bool allclose(const Array<Scalar,M,N>& x, const Array<Scalar,M,N>& y, size_t n=1) {
-    for (size_t i = 0; i < M; i++) {
-        for (size_t j = 0; j < N; j++) {
-            if (!allclose(x(i,j), y(i,j), n)) {
-                return false;
+    __host__ bool allclose(const Array<Scalar,M,N>& x, const Array<Scalar,M,N>& y, size_t n=1) {
+        for (size_t i = 0; i < M; i++) {
+            for (size_t j = 0; j < N; j++) {
+                if (!allclose(x(i,j), y(i,j), n)) {
+                    return false;
+                }
             }
         }
+        return true;
     }
-    return true;
-}
 
 template<typename Scalar, int M, int N>
-__host__ bool allclose(const Matrix<Scalar,M,N>& x, const Matrix<Scalar,M,N>& y, size_t n=1) {
-    for (size_t i = 0; i < M; i++) {
+    __host__ bool allclose(const Matrix<Scalar,M,N>& x, const Matrix<Scalar,M,N>& y, size_t n=1) {
+        for (size_t i = 0; i < M; i++) {
+            for (size_t j = 0; j < N; j++) {
+                if (!allclose(x(i,j), y(i,j), n)) {
+                    return false;
+                }
+            }
+        }
+        return true;
+    }
+
+template<typename T, size_t N>
+    __host__ bool allclose(const cuda::std::array<T,N>& x, const cuda::std::array<T,N>& y, size_t n=1) {
         for (size_t j = 0; j < N; j++) {
-            if (!allclose(x(i,j), y(i,j), n)) {
+            if (!allclose(x[j], y[j], n)) {
                 return false;
             }
         }
+        return true;
     }
-    return true;
+
+
+__host__ void print_example_header(const std::string& filename) {
+    std::cout << "Running example " << filename << std::endl;
 }
 
-template<typename T, size_t N>
-__host__ bool allclose(const cuda::std::array<T,N>& x, const cuda::std::array<T,N>& y, size_t n=1) {
-    for (size_t j = 0; j < N; j++) {
-        if (!allclose(x[j], y[j], n)) {
-            return false;
+
+template <typename T>
+    [[nodiscard]] 
+    __host__ int exit_example(
+            const T& host_results, const T& device_results, const T& nvrtc_results,
+            const std::function<bool(const T&, const T&, size_t)>& fn = [](const T& lhs, const T& rhs, size_t n) -> bool { return allclose(lhs, rhs, n); }) {
+        bool host_and_device_match  = fn(host_results, device_results, 1);
+        bool host_and_nvrtc_match   = fn(host_results, nvrtc_results, 1);
+        bool device_and_nvrtc_match = fn(device_results, nvrtc_results, 1);
+        bool success = host_and_device_match && host_and_nvrtc_match && device_and_nvrtc_match;
+        if (success) {
+            std::cout << "Host, device and nvrtc results match." << std::endl;
+        }
+        else {
+            static const std::string cmp[2] = {"!=", "=="};
+            std::cerr << "Host, device and nvrtc results do not match:" << std::endl;
+            std::cerr << "    host results " << cmp[host_and_device_match]  << " device results" << std::endl;
+            std::cerr << "    host results " << cmp[host_and_nvrtc_match]   << " nvrtc results" << std::endl;
+            std::cerr << "  device results " << cmp[device_and_nvrtc_match] << " nvrtc results" << std::endl;
+            std::cerr << "This is a bug, please open an issue." << std::endl;
+        }
+        std::cout << std::endl;
+        return success ? EXIT_SUCCESS : EXIT_FAILURE;
+    }
+
+
+[[noreturn]] void fail(const std::string& msg, int code) {
+    std::cerr << "error: " << msg << " (" << code << ')' << std::endl;
+    std::exit(EXIT_FAILURE);
+}
+
+
+CUfunction build_nvrtc_kernel(const std::string& filename, const::std::string& kernel_name = "kernel") {
+    /* extract kernel source from the example file */
+    std::string source;
+    {
+        std::stringstream source_stream;
+        std::fstream fs;
+        bool start_found(false), end_found(false);
+
+        fs.open(filename, std::fstream::in);
+        {
+            std::string line;
+            while (std::getline(fs, line)) {
+                if (line.rfind("AUTODIFF_NVRTC_BEGIN_SOURCE", 0) == 0) {
+                    start_found = true;
+                    break;
+                }
+            }
+            while (std::getline(fs, line)) {
+                if (line.rfind("AUTODIFF_NVRTC_END_SOURCE", 0) == 0) {
+                    end_found = true;
+                    break;
+                }
+                source_stream << line << std::endl;
+            }
+        }
+        fs.close();
+
+        if (!start_found || !end_found) {
+            throw std::invalid_argument("Invalid nvrtc source file '" + filename + "'.");
+        }
+        source = source_stream.str();
+    }
+
+    /* build the kernel */
+    nvrtcProgram prog;
+    {
+        nvrtcResult rv;
+        rv = nvrtcCreateProgram(
+                &prog,
+                source.c_str(),
+                "kernel.cu",
+                0,
+                nullptr,
+                nullptr
+                );
+        if(rv != NVRTC_SUCCESS) fail("nvrtcCreateProgram", rv);
+
+        std::vector<const char*> options = {
+            "-std=c++17",
+            "-default-device",
+            "--gpu-architecture", "compute_" XSTR(AUTODIFF_CUDA_ARCHITECTURE),
+            "-I" XSTR(AUTODIFF_PROJECT_ROOT),
+            "-I" XSTR(AUTODIFF_CUDA_INCLUDE_DIR),
+            "-DAUTODIFF_USE_INTERNAL_EIGEN",
+        };
+
+        rv = nvrtcCompileProgram(prog, options.size(), options.data());
+        if(rv != NVRTC_SUCCESS) {
+            std::size_t log_size;
+            rv = nvrtcGetProgramLogSize(prog, &log_size);
+            if(rv != NVRTC_SUCCESS) fail("nvrtcGetProgramLogSize", rv);
+
+            auto log = std::make_unique<char[]>(log_size);
+            rv = nvrtcGetProgramLog(prog, log.get());
+            if(rv != NVRTC_SUCCESS) fail("nvrtcGetProgramLog", rv);
+            assert(log[log_size - 1] == '\0');
+
+            std::cerr << "Compile error; log:\n" << log.get() << std::endl;
+
+            fail("nvrtcCompileProgram", rv);
         }
     }
-    return true;
+    
+    /* Extract PTX and destroy program */
+    std::unique_ptr<char[]> ptx;
+    {
+        nvrtcResult rv;
+        std::size_t ptx_size;
+
+        rv = nvrtcGetPTXSize(prog, &ptx_size);
+        if(rv != NVRTC_SUCCESS) fail("nvrtcGetPTXSize", rv);
+
+        auto ptx = std::make_unique<char[]>(ptx_size);
+        rv = nvrtcGetPTX(prog, ptx.get());
+        
+        if(rv != NVRTC_SUCCESS) fail("nvrtcGetPTX", rv);
+        assert(ptx[ptx_size - 1] == '\0');
+
+        nvrtcDestroyProgram(&prog);
+    }
+
+    /* Build module and extract function */
+    CUfunction kernel;
+    {
+        CUresult rv;
+        CUmodule cuda_module;
+
+        rv = cuModuleLoadData(&cuda_module, ptx.get());
+        if(rv != CUDA_SUCCESS) fail("cuModuleLoadData", rv);
+        
+        rv = cuModuleGetFunction(&kernel, cuda_module, kernel_name.c_str());
+        if(rv != CUDA_SUCCESS) fail("cuModuleGetFunction", rv);
+    }
+
+    return kernel;
 }
 
 } /* end of namespace autodiff */

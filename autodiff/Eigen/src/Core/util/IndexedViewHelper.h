@@ -35,7 +35,7 @@ struct symbolic_last_tag {};
   *
   * \sa end
   */
-static const symbolic::SymbolExpr<internal::symbolic_last_tag> last; // PLEASE use Eigen::last   instead of Eigen::placeholders::last
+static constexpr symbolic::SymbolExpr<internal::symbolic_last_tag> last; // PLEASE use Eigen::last   instead of Eigen::placeholders::last
 
 /** \var lastp1
   * \ingroup Core_Module
@@ -54,7 +54,7 @@ static const auto lastp1 = last+fix<1>;
 #else
 // Using a FixedExpr<1> expression is important here to make sure the compiler
 // can fully optimize the computation starting indices with zero overhead.
-static const symbolic::AddExpr<symbolic::SymbolExpr<internal::symbolic_last_tag>,symbolic::ValueExpr<Eigen::internal::FixedInt<1> > > lastp1(last+fix<1>());
+static constexpr symbolic::AddExpr<symbolic::SymbolExpr<internal::symbolic_last_tag>,symbolic::ValueExpr<Eigen::internal::FixedInt<1> > > lastp1(last+fix<1>());
 #endif
 
 namespace internal {

@@ -30,14 +30,10 @@
 #ifndef EIGEN_HPP_CZJQT5NM
 #define EIGEN_HPP_CZJQT5NM
 
-// Eigen includes
-#define EIGEN_MPL2_ONLY
-#include <autodiff/Eigen/Core>
-
 // autodiff includes
+#include <autodiff/common/eigen.hpp>
 #include <autodiff/forward/dual.hpp>
 #include <autodiff/forward/utils/gradient.hpp>
-#include <autodiff/common/eigen.hpp>
 
 //------------------------------------------------------------------------------
 // SUPPORT FOR EIGEN MATRICES AND VECTORS OF DUAL

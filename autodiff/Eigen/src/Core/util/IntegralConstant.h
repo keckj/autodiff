@@ -51,43 +51,43 @@ template<int N> class VariableAndFixedInt;
 template<int N> class FixedInt
 {
 public:
-  static const int value = N;
+  static constexpr int value = N;
   EIGEN_CONSTEXPR operator int() const { return value; }
-  FixedInt() {}
-  FixedInt( VariableAndFixedInt<N> other) {
+  constexpr FixedInt() {}
+  constexpr FixedInt( VariableAndFixedInt<N> other) {
     #ifndef EIGEN_INTERNAL_DEBUGGING
     EIGEN_UNUSED_VARIABLE(other);
     #endif
     eigen_internal_assert(int(other)==N);
   }
 
-  FixedInt<-N> operator-() const { return FixedInt<-N>(); }
+  constexpr FixedInt<-N> operator-() const { return FixedInt<-N>(); }
   template<int M>
-  FixedInt<N+M> operator+( FixedInt<M>) const { return FixedInt<N+M>(); }
+  constexpr FixedInt<N+M> operator+( FixedInt<M>) const { return FixedInt<N+M>(); }
   template<int M>
-  FixedInt<N-M> operator-( FixedInt<M>) const { return FixedInt<N-M>(); }
+  constexpr FixedInt<N-M> operator-( FixedInt<M>) const { return FixedInt<N-M>(); }
   template<int M>
-  FixedInt<N*M> operator*( FixedInt<M>) const { return FixedInt<N*M>(); }
+  constexpr FixedInt<N*M> operator*( FixedInt<M>) const { return FixedInt<N*M>(); }
   template<int M>
-  FixedInt<N/M> operator/( FixedInt<M>) const { return FixedInt<N/M>(); }
+  constexpr FixedInt<N/M> operator/( FixedInt<M>) const { return FixedInt<N/M>(); }
   template<int M>
-  FixedInt<N%M> operator%( FixedInt<M>) const { return FixedInt<N%M>(); }
+  constexpr FixedInt<N%M> operator%( FixedInt<M>) const { return FixedInt<N%M>(); }
   template<int M>
-  FixedInt<N|M> operator|( FixedInt<M>) const { return FixedInt<N|M>(); }
+  constexpr FixedInt<N|M> operator|( FixedInt<M>) const { return FixedInt<N|M>(); }
   template<int M>
-  FixedInt<N&M> operator&( FixedInt<M>) const { return FixedInt<N&M>(); }
+  constexpr FixedInt<N&M> operator&( FixedInt<M>) const { return FixedInt<N&M>(); }
 
 #if EIGEN_HAS_CXX14_VARIABLE_TEMPLATES
   // Needed in C++14 to allow fix<N>():
-  FixedInt operator() () const { return *this; }
+  constexpr FixedInt operator() () const { return *this; }
 
-  VariableAndFixedInt<N> operator() (int val) const { return VariableAndFixedInt<N>(val); }
+  constexpr VariableAndFixedInt<N> operator() (int val) const { return VariableAndFixedInt<N>(val); }
 #else
-  FixedInt ( FixedInt<N> (*)() ) {}
+  constexpr FixedInt ( FixedInt<N> (*)() ) {}
 #endif
 
 #if EIGEN_HAS_CXX11
-  FixedInt(std::integral_constant<int,N>) {}
+  constexpr FixedInt(std::integral_constant<int,N>) {}
 #endif
 };
 
@@ -186,10 +186,10 @@ template<int N, int DynamicKey> struct cleanup_index_type<std::integral_constant
 
 #if EIGEN_HAS_CXX14_VARIABLE_TEMPLATES
 template<int N>
-static const internal::FixedInt<N> fix{};
+static constexpr internal::FixedInt<N> fix{};
 #else
 template<int N>
-inline internal::FixedInt<N> fix() { return internal::FixedInt<N>(); }
+constexpr inline internal::FixedInt<N> fix() { return internal::FixedInt<N>(); }
 
 // The generic typename T is mandatory. Otherwise, a code like fix<N> could refer to either the function above or this next overload.
 // This way a code like fix<N> can only refer to the previous function.
@@ -232,7 +232,7 @@ inline internal::VariableAndFixedInt<N> fix(T val) { return internal::VariableAn
   * \sa fix<N>(int), seq, seqN
   */
 template<int N>
-static const auto fix();
+static constexpr const auto fix();
 
 /** \fn fix<N>(int)
   * \ingroup Core_Module
@@ -263,7 +263,7 @@ static const auto fix();
   * \sa fix, seqN, class ArithmeticSequence
   */
 template<int N>
-static const auto fix(int val);
+static constexpr const auto fix(int val);
 
 #endif // EIGEN_PARSED_BY_DOXYGEN
 

@@ -31,8 +31,11 @@
 #define EIGEN_HPP_KU8GYPEF
 
 // Eigen includes
-#define EIGEN_MPL2_ONLY
+#ifdef AUTODIFF_USE_INTERNAL_EIGEN
 #include <autodiff/Eigen/Core>
+#else
+#include <Eigen/Core>
+#endif
 
 // autodiff includes
 #include <autodiff/common/vectortraits.hpp>

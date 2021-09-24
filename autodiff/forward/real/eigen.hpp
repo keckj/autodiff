@@ -30,14 +30,10 @@
 #ifndef EIGEN_HPP_OCUSY3FK
 #define EIGEN_HPP_OCUSY3FK
 
-// Eigen includes
-#define EIGEN_MPL2_ONLY
-#include <autodiff/Eigen/Core>
-
 // autodiff includes
+#include <autodiff/common/eigen.hpp>
 #include <autodiff/forward/real.hpp>
 #include <autodiff/forward/utils/gradient.hpp>
-#include <autodiff/common/eigen.hpp>
 
 //------------------------------------------------------------------------------
 // SUPPORT FOR EIGEN MATRICES AND VECTORS OF REAL
