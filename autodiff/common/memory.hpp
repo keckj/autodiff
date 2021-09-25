@@ -38,6 +38,28 @@
 namespace autodiff {
 namespace detail {
 
+template <typename T, typename... Args>
+__host__ __device__ T* autodiff_new(Args&&... args) {
+#if defined(__CUDA_ARCH__)
+    T* ptr = static_cast<T*>(malloc(sizeof(T)));
+    assert(ptr != nullptr);
+    new (ptr) T(args...);
+    return ptr;
+#else
+    return new T(cuda::std::forward<Args>(args)...);
+#endif
+}
+
+template <typename T>
+__host__ __device__ void autodiff_delete(T* ptr) {
+#if defined(__CUDA_ARCH__)
+    ptr->~T();
+    free(ptr);
+#else
+    delete ptr;
+#endif
+}
+
 template <typename T>
 class shared_ptr {
     template <typename U>
@@ -49,7 +71,7 @@ class shared_ptr {
 
         __host__ __device__ void initialize(bool increase_refcount) {
             if (cnt == nullptr) {
-                cnt = new unsigned int(1);
+                cnt = autodiff_new<unsigned int>(1);
             }
             else if (increase_refcount) {
                 this->incref();
@@ -59,11 +81,11 @@ class shared_ptr {
         __host__ __device__ void finalize() {
             if (this->decref()) {
                 if (ptr != nullptr) {
-                    delete ptr;
+                    autodiff_delete(ptr);
                     ptr = nullptr;
                 }
                 if (cnt != nullptr) {
-                    delete cnt;
+                    autodiff_delete(cnt);
                     cnt = nullptr;
                 }
             }
@@ -199,7 +221,7 @@ __host__ __device__ bool operator!=(cuda::std::nullptr_t, shared_ptr<T> const & 
 
 template<class T, typename... Args>
 __host__ __device__ shared_ptr<T> make_shared(Args&&... args) {
-    return shared_ptr<T>(new T(args...));
+    return shared_ptr<T>(autodiff_new<T>(args...));
 }
 
 template<class T, class U>

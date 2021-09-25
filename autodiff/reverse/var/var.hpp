@@ -844,19 +844,21 @@ struct PowExpr : BinaryExpr<T>
 
     __host__ __device__ void propagate(const T& wprime) override
     {
+        using R = NumericType<T>; static_assert(isArithmetic<R>);
         const auto lval = l->val;
         const auto rval = r->val;
         const auto aux = wprime * pow(lval, rval - 1);
         l->propagate(aux * rval);
-        const auto auxr = lval == 0.0 ? 0.0 : lval * log(lval); // since x*log(x) -> 0 as x -> 0
+        const auto auxr = lval == R(0) ? R(0) : lval * log(lval); // since x*log(x) -> 0 as x -> 0
         r->propagate(aux * auxr);
     }
 
     __host__ __device__ void propagatex(const ExprPtr<T>& wprime) override
     {
+        using R = NumericType<T>; static_assert(isArithmetic<R>);
         const auto aux = wprime * pow(l, r - 1);
         l->propagatex(aux * r);
-        const auto auxr = l == 0.0 ? 0.0*l : l * log(l); // since x*log(x) -> 0 as x -> 0
+        const auto auxr = l == R(0) ? R(0)*l : l * log(l); // since x*log(x) -> 0 as x -> 0
         r->propagatex(aux * auxr);
     }
 
@@ -880,17 +882,19 @@ struct PowConstantLeftExpr : BinaryExpr<T>
 
     __host__ __device__ void propagate(const T& wprime) override
     {
+        using R = NumericType<T>; static_assert(isArithmetic<R>);
         const auto lval = l->val;
         const auto rval = r->val;
         const auto aux = wprime * pow(lval, rval - 1);
-        const auto auxr = lval == 0.0 ? 0.0 : lval * log(lval); // since x*log(x) -> 0 as x -> 0
+        const auto auxr = lval == R(0) ? R(0) : lval * log(lval); // since x*log(x) -> 0 as x -> 0
         r->propagate(aux * auxr);
     }
 
     __host__ __device__ void propagatex(const ExprPtr<T>& wprime) override
     {
+        using R = NumericType<T>; static_assert(isArithmetic<R>);
         const auto aux = wprime * pow(l, r - 1);
-        const auto auxr = l == 0.0 ? 0.0*l : l * log(l); // since x*log(x) -> 0 as x -> 0
+        const auto auxr = l == R(0) ? R(0)*l : l * log(l); // since x*log(x) -> 0 as x -> 0
         r->propagatex(aux * auxr);
     }
 
@@ -964,15 +968,17 @@ struct AbsExpr : UnaryExpr<T>
 
     __host__ __device__ void propagate(const T& wprime) override
     {
-        if(x->val < 0.0) x->propagate(-wprime);
-        else if(x->val > 0.0) x->propagate(wprime);
+        using R = NumericType<T>; static_assert(isArithmetic<R>);
+        if(x->val < R(0)) x->propagate(-wprime);
+        else if(x->val > R(0)) x->propagate(wprime);
         else x->propagate(T(0));
     }
 
     __host__ __device__ void propagatex(const ExprPtr<T>& wprime) override
     {
-        if(x->val < 0.0) x->propagatex(-wprime);
-        else if(x->val > 0.0) x->propagatex(wprime);
+        using R = NumericType<T>; static_assert(isArithmetic<R>);
+        if(x->val < R(0)) x->propagatex(-wprime);
+        else if(x->val > R(0)) x->propagatex(wprime);
         else x->propagate(T(0));
     }
 
@@ -1135,8 +1141,8 @@ struct ConditionalExpr : Expr<T>
 
     __host__ __device__ void propagatex(const ExprPtr<T>& wprime) override
     {
-        l->propagatex(derive(wprime, constant<T>(0.0)));
-        r->propagatex(derive(constant<T>(0.0), wprime));
+        l->propagatex(derive(wprime, constant<T>(0)));
+        r->propagatex(derive(constant<T>(0), wprime));
     }
 
     __host__ __device__ void update() override
@@ -1243,7 +1249,7 @@ template<typename T> __host__ __device__ ExprPtr<T> abs(const ExprPtr<T>& x) { r
 template<typename T> __host__ __device__ ExprPtr<T> abs2(const ExprPtr<T>& x) { return x * x; }
 template<typename T> __host__ __device__ ExprPtr<T> conj(const ExprPtr<T>& x) { return x; }
 template<typename T> __host__ __device__ ExprPtr<T> real(const ExprPtr<T>& x) { return x; }
-template<typename T> __host__ __device__ ExprPtr<T> imag(const ExprPtr<T>&) { return constant<T>(0.0); }
+template<typename T> __host__ __device__ ExprPtr<T> imag(const ExprPtr<T>&) { return constant<T>(0); }
 template<typename T> __host__ __device__ ExprPtr<T> erf(const ExprPtr<T>& x) { return make_shared<ErfExpr<T>>(erf(x->val), x); }
 
 /// The autodiff variable type used for detail mode automatic differentiation.
@@ -1255,7 +1261,7 @@ struct Variable
     bool is_independent;
 
     /// Construct a default Variable object
-    __host__ __device__ Variable() : Variable(0.0) {}
+    __host__ __device__ Variable() : Variable(0) {}
 
     /// Construct a copy of a Variable object
     __host__ __device__ Variable(const Variable& other) : Variable(other.expr) {}
@@ -1369,10 +1375,20 @@ __host__ __device__ auto condition(BooleanExpr<B>&& p, const T& t, const U& u) {
   return expr;
 }
 
-template<typename T, typename U, EnableIf<is_binary_expr_v<T, U>> = true> __host__ __device__ auto min(const T& x, const U& y) { return condition(x < y, x, y); }
-template<typename T, typename U, EnableIf<is_binary_expr_v<T, U>> = true> __host__ __device__ auto max(const T& x, const U& y) { return condition(x > y, x, y); }
-template<typename T> __host__ __device__ ExprPtr<T> sgn(const ExprPtr<T>& x) { return condition(x < 0, -1.0, condition(x > 0, 1.0, 0.0)); }
-template<typename T> __host__ __device__ ExprPtr<T> sgn(const Variable<T>& x) { return condition(x.expr < 0, -1.0, condition(x.expr > 0, 1.0, 0.0)); }
+template<typename T, typename U, EnableIf<is_binary_expr_v<T, U>> = true> __host__ __device__ auto min(const T& x, const U& y) { 
+    return condition(x < y, x, y);
+}
+template<typename T, typename U, EnableIf<is_binary_expr_v<T, U>> = true> __host__ __device__ auto max(const T& x, const U& y) {
+    return condition(x > y, x, y);
+}
+template<typename T> __host__ __device__ ExprPtr<T> sgn(const ExprPtr<T>& x) { 
+    using R = NumericType<T>; static_assert(isArithmetic<R>);
+    return condition(x < R(0), R(-1), condition(x > R(0), R(1), R(0)));
+}
+template<typename T> __host__ __device__ ExprPtr<T> sgn(const Variable<T>& x) {
+    using R = NumericType<T>; static_assert(isArithmetic<R>);
+    return condition(x.expr < R(0), R(-1), condition(x.expr > R(0), R(1), R(0)));
+}
 
 //------------------------------------------------------------------------------
 // ARITHMETIC OPERATORS (DEFINED FOR ARGUMENTS OF TYPE Variable)
@@ -1506,7 +1522,7 @@ __host__ __device__ auto derivatives(const Variable<T>& y, const Wrt<Vars...>& w
 {
     constexpr auto N = sizeof...(Vars);
     cuda::std::array<T, N> values;
-    values.fill(0.0);
+    values.fill(0);
 
     For<N>([&](auto i) constexpr {
         cuda::std::get<i>(wrt.args).expr->bind_value(&values.at(i));
