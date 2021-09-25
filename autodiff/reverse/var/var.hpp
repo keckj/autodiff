@@ -30,7 +30,7 @@
 #ifndef VAR_HPP_6EYUBRAG
 #define VAR_HPP_6EYUBRAG
 
-#ifndef __NVRTC__
+#ifndef __CUDACC_RTC__
 #include <ostream>
 #endif
 
@@ -1542,7 +1542,7 @@ __host__ __device__ auto derivativesx(const Variable<T>& y, const Wrt<Vars...>& 
 }
 
 /// Output a Variable object to the output stream.
-#ifndef __NVRTC__
+#ifndef __CUDACC_RTC__
 template<typename T>
 __host__ std::ostream& operator<<(std::ostream& out, const Variable<T>& x)
 {

@@ -172,12 +172,12 @@ __host__ __device__ bool operator==(shared_ptr<T0> const & lhs, shared_ptr<T1> c
 }
 
 template<class T>
-__host__ __device__ bool operator==(shared_ptr<T> const & lhs, nullptr_t) {
+__host__ __device__ bool operator==(shared_ptr<T> const & lhs, cuda::std::nullptr_t) {
     return lhs.get() == nullptr;
 }
 
 template<class T>
-__host__ __device__ bool operator==(nullptr_t, shared_ptr<T> const & rhs) {
+__host__ __device__ bool operator==(cuda::std::nullptr_t, shared_ptr<T> const & rhs) {
     return rhs.get() == nullptr;
 }
 
@@ -188,12 +188,12 @@ __host__ __device__ bool operator!=(shared_ptr<T0> const & lhs, shared_ptr<T1> c
 }
 
 template<class T>
-__host__ __device__ bool operator!=(shared_ptr<T> const & lhs, nullptr_t) {
+__host__ __device__ bool operator!=(shared_ptr<T> const & lhs, cuda::std::nullptr_t) {
     return lhs.get() != nullptr;
 }
 
 template<class T>
-__host__ __device__ bool operator!=(nullptr_t, shared_ptr<T> const & rhs) {
+__host__ __device__ bool operator!=(cuda::std::nullptr_t, shared_ptr<T> const & rhs) {
     return rhs.get() != nullptr;
 }
 
@@ -208,6 +208,7 @@ __host__ __device__ shared_ptr<T> static_pointer_cast(const shared_ptr<U>& r) {
     return shared_ptr<T>(r, p);
 }
 
+#ifndef __CUDACC_RTC__
 template< class T, class U > 
 __host__ shared_ptr<T> dynamic_pointer_cast(const shared_ptr<U>& r) noexcept
 {
@@ -217,6 +218,7 @@ __host__ shared_ptr<T> dynamic_pointer_cast(const shared_ptr<U>& r) noexcept
         return shared_ptr<T>();
     }
 }
+#endif
 
 template< class T, class U >
 __host__ __device__ shared_ptr<T> const_pointer_cast(const shared_ptr<U>& r) noexcept

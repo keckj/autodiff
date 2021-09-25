@@ -416,9 +416,17 @@ _LIBCUDACXX_END_NAMESPACE_STD
 
 #include "cuda/std/detail/__pragma_pop"
 
-#ifndef __CUDACC_RTC__
-#include <tuple>
+#ifdef __CUDACC_RTC__
 
+namespace std {
+    using cuda::std::array;
+    using cuda::std::tuple_size;
+    using cuda::std::tuple_element;
+}
+
+#else
+
+#include <tuple>
 namespace std {
     template <class _Tp, size_t _Size>
     struct _LIBCUDACXX_TEMPLATE_VIS std::tuple_size<cuda::std::array<_Tp, _Size> >
@@ -432,6 +440,7 @@ namespace std {
     };
     using cuda::std::get;
 }
-#endif
+
+#endif /* ifdef __CUDACC_RTC__ */
 
 #endif /* end of include guard: ARRAY_2YQKDORT */

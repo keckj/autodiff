@@ -1,20 +1,13 @@
-// C++ includes
-#include <iostream>
-using namespace std;
-
-// autodiff include
 #include <examples/common.hpp>
+
+AUTODIFF_NVRTC_BEGIN_SOURCE
 #include <autodiff/reverse/var.hpp>
 using namespace autodiff;
 
 // A simple struct to hold and compare our results
 struct T { 
     double u, ux, ua, ub, uc;
-    static bool allclose(const T& x, const T& y) { 
-        return ::allclose(x.u, y.u) && ::allclose(x.ux, y.ux) && ::allclose(x.ua, y.ua) && ::allclose(x.ub, y.ub) && ::allclose(x.uc, y.uc);
-    }
 };
-
 
 // A type defining parameters for a function of interest
 // As var cannot directly be passed by argument to cuda kernels
@@ -40,6 +33,13 @@ __global__ void kernel(double xval, Params<double> pval, T* output) {
     auto [ux, ua, ub, uc] = derivatives(u, wrt(x, p.a, p.b, p.c)); // evaluate the derivatives of u with respect to x and parameters a, b, c
     output[0] = T{double(u), ux, ua, ub, uc};
 }
+AUTODIFF_NVRTC_END_SOURCE
+
+
+static bool check_results(const T& x, const T& y) { 
+    return ::allclose(x.u, y.u) && ::allclose(x.ux, y.ux) && ::allclose(x.ua, y.ua) && ::allclose(x.ub, y.ub) && ::allclose(x.uc, y.uc);
+}
+
 
 int main()
 {
@@ -68,19 +68,39 @@ int main()
         cudaFree(output);
     }
 
+    T n_results;
+    {
+        T* output;
+        cudaMalloc(&output, sizeof(T));
+        CUfunction nvrtc_kernel = build_nvrtc_kernel(__FILE__);
+        void *args[] = {&xval, &pval, &output};
+        cuLaunchKernel(nvrtc_kernel, 1, 1, 1, 1, 1, 1, 0, 0, args, 0);
+        cudaMemcpy(&n_results, output, sizeof(T), cudaMemcpyDeviceToHost);
+        cudaFree(output);
+    }
+
+    print_example_header(__FILE__);
+
     std::cout << "HOST" << std::endl;
-    cout << "u = "  << h_results.u  << endl;  // print the evaluated output u
-    cout << "ux = " << h_results.ux << endl;  // print the evaluated derivative du/dx
-    cout << "ua = " << h_results.ua << endl;  // print the evaluated derivative du/da
-    cout << "ub = " << h_results.ub << endl;  // print the evaluated derivative du/db
-    cout << "uc = " << h_results.uc << endl;  // print the evaluated derivative du/dc
+    std::cout << "u  = " << h_results.u  << std::endl;  // print the evaluated output u
+    std::cout << "ux = " << h_results.ux << std::endl;  // print the evaluated derivative du/dx
+    std::cout << "ua = " << h_results.ua << std::endl;  // print the evaluated derivative du/da
+    std::cout << "ub = " << h_results.ub << std::endl;  // print the evaluated derivative du/db
+    std::cout << "uc = " << h_results.uc << std::endl;  // print the evaluated derivative du/dc
     std::cout << std::endl;
     std::cout << "DEVICE" << std::endl;
-    cout << "u = "  << d_results.u  << endl;  // print the evaluated output u
-    cout << "ux = " << d_results.ux << endl;  // print the evaluated derivative du/dx
-    cout << "ua = " << d_results.ua << endl;  // print the evaluated derivative du/da
-    cout << "ub = " << d_results.ub << endl;  // print the evaluated derivative du/db
-    cout << "uc = " << d_results.uc << endl;  // print the evaluated derivative du/dc
+    std::cout << "u  = " << d_results.u  << std::endl;  // print the evaluated output u
+    std::cout << "ux = " << d_results.ux << std::endl;  // print the evaluated derivative du/dx
+    std::cout << "ua = " << d_results.ua << std::endl;  // print the evaluated derivative du/da
+    std::cout << "ub = " << d_results.ub << std::endl;  // print the evaluated derivative du/db
+    std::cout << "uc = " << d_results.uc << std::endl;  // print the evaluated derivative du/dc
+    std::cout << std::endl;
+    std::cout << "DEVICE" << std::endl;
+    std::cout << "u =  " << n_results.u  << std::endl;  // print the evaluated output u
+    std::cout << "ux = " << n_results.ux << std::endl;  // print the evaluated derivative du/dx
+    std::cout << "ua = " << n_results.ua << std::endl;  // print the evaluated derivative du/da
+    std::cout << "ub = " << n_results.ub << std::endl;  // print the evaluated derivative du/db
+    std::cout << "uc = " << n_results.uc << std::endl;  // print the evaluated derivative du/dc
     
-    return T::allclose(h_results, d_results) ? EXIT_SUCCESS : EXIT_FAILURE;
+    return exit_example<T>(h_results, d_results, n_results, check_results);
 }

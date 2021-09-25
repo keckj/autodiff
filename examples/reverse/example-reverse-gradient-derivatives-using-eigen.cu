@@ -1,8 +1,6 @@
-// C++ includes
-#include <iostream>
-
-// autodiff include
 #include <examples/common.hpp>
+
+AUTODIFF_NVRTC_BEGIN_SOURCE
 #include <autodiff/reverse/var.hpp>
 #include <autodiff/reverse/var/eigen.hpp>
 using namespace autodiff;
@@ -11,9 +9,6 @@ using namespace autodiff;
 struct T { 
     double u;
     Vector<double,5> du;
-    static bool allclose(const T& x, const T& y) { 
-        return ::allclose(x.u, y.u) && ::allclose(x.du, y.du);
-    }
 };
 
 // The scalar function for which the gradient is needed
@@ -33,6 +28,13 @@ __global__ void kernel(Array<double,5> xvals, T* output)
     }
     output[0] = d_results;
 }
+AUTODIFF_NVRTC_END_SOURCE
+
+    
+static bool check_results(const T& x, const T& y) { 
+    return ::allclose(x.u, y.u) && ::allclose(x.du, y.du);
+}
+
 
 int main()
 {
@@ -54,14 +56,31 @@ int main()
         cudaMemcpy(&d_results, output, sizeof(T), cudaMemcpyDeviceToHost);
         cudaFree(output);
     }
+    
+    T n_results;
+    {
+        T* output;
+        cudaMalloc(&output, sizeof(T));
+        CUfunction nvrtc_kernel = build_nvrtc_kernel(__FILE__);
+        void *args[] = {&xvals, &output};
+        cuLaunchKernel(nvrtc_kernel, 1, 1, 1, 1, 1, 1, 0, 0, args, 0);
+        cudaMemcpy(&n_results, output, sizeof(T), cudaMemcpyDeviceToHost);
+        cudaFree(output);
+    }
+    
+    print_example_header(__FILE__);
 
     std::cout << "HOST" << std::endl;
-    std::cout << "u = " << h_results.u << std::endl;         // print the evaluated output y
-    std::cout << "du/dx = \n" << h_results.du << std::endl;  // print the evaluated gradient vector du/dx
+    std::cout << "u = " << h_results.u << std::endl;                   // print the evaluated output y
+    std::cout << "du/dx = " << h_results.du.transpose() << std::endl;  // print the evaluated gradient vector du/dx
     std::cout << std::endl;
     std::cout << "DEVICE" << std::endl;
-    std::cout << "u = " << d_results.u << std::endl;         // print the evaluated output y
-    std::cout << "du/dx = \n" << d_results.du << std::endl;  // print the evaluated gradient vector du/dx
+    std::cout << "u = " << d_results.u << std::endl;                   // print the evaluated output y
+    std::cout << "du/dx = " << d_results.du.transpose() << std::endl;  // print the evaluated gradient vector du/dx
+    std::cout << std::endl;
+    std::cout << "NVRTC" << std::endl;
+    std::cout << "u = " << n_results.u << std::endl;                   // print the evaluated output y
+    std::cout << "du/dx = " << n_results.du.transpose() << std::endl;  // print the evaluated gradient vector du/dx
     
-    return T::allclose(h_results, d_results) ? EXIT_SUCCESS : EXIT_FAILURE;
+    return exit_example<T>(h_results, d_results, n_results, check_results);
 }

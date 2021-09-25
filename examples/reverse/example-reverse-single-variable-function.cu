@@ -1,19 +1,13 @@
-// C++ includes
-#include <iostream>
-
-// autodiff include
 #include <examples/common.hpp>
+
+AUTODIFF_NVRTC_BEGIN_SOURCE
 #include <autodiff/reverse/var.hpp>
 using namespace autodiff;
 
 // A simple struct to hold and compare our results
 struct T { 
     double u, ux;
-    static bool allclose(const T& x, const T& y) { 
-        return ::allclose(x.u, y.u) && ::allclose(x.ux, y.ux);
-    }
 };
-
 
 // The single-variable function for which derivatives are needed
 __host__ __device__ var f(var x)
@@ -28,6 +22,13 @@ __global__ void kernel(T* output) {
     output[0].u = double(u);            // extract value from variable
     output[0].ux = ux;
 }
+AUTODIFF_NVRTC_END_SOURCE
+
+
+static bool check_results(const T& x, const T& y) { 
+    return ::allclose(x.u, y.u) && ::allclose(x.ux, y.ux);
+}
+
 
 int main()
 {
@@ -48,14 +49,31 @@ int main()
         cudaMemcpy(&d_results, output, sizeof(T), cudaMemcpyDeviceToHost);
         cudaFree(output);
     }
+    
+    T n_results;
+    {
+        T* output;
+        cudaMalloc(&output, sizeof(T));
+        CUfunction nvrtc_kernel = build_nvrtc_kernel(__FILE__);
+        void *args[] = {&output};
+        cuLaunchKernel(nvrtc_kernel, 1, 1, 1, 1, 1, 1, 0, 0, args, 0);
+        cudaMemcpy(&n_results, output, sizeof(T), cudaMemcpyDeviceToHost);
+        cudaFree(output);
+    }
+
+    print_example_header(__FILE__);
 
     std::cout << "HOST" << std::endl;
-    std::cout << "u = " << h_results.u << std::endl;  // print the evaluated output variable u
+    std::cout << "u = " << h_results.u << std::endl;    // print the evaluated output variable u
     std::cout << "ux = " << h_results.ux << std::endl;  // print the evaluated derivative ux
     std::cout << std::endl;
     std::cout << "DEVICE" << std::endl;
-    std::cout << "u = " << d_results.u << std::endl;  // print the evaluated output variable u
+    std::cout << "u = " << d_results.u << std::endl;    // print the evaluated output variable u
     std::cout << "ux = " << d_results.ux << std::endl;  // print the evaluated derivative ux
+    std::cout << std::endl;
+    std::cout << "NVRTC" << std::endl;
+    std::cout << "u = " << n_results.u << std::endl;    // print the evaluated output variable u
+    std::cout << "ux = " << n_results.ux << std::endl;  // print the evaluated derivative ux
     
-    return T::allclose(h_results, d_results) ? EXIT_SUCCESS : EXIT_FAILURE;
+    return exit_example<T>(h_results, d_results, n_results, check_results);
 }
