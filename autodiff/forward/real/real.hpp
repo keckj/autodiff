@@ -763,7 +763,7 @@ __host__ __device__ constexpr auto abs(const Real<N, T>& x)
     {
         // assert(x[0] != 0 && "autodiff::abs(x) has undefined derivatives when x = 0");
         if(x[0] == 0) return res;
-        const T s = ::copysign(1.0, x[0]);
+        const T s = ::copysign(T(1.0), x[0]);
         For<1, N + 1>([&](auto i) constexpr {
             res[i] = s * x[i];
         });

@@ -23,7 +23,7 @@ make
 
 ## Dependencies
 Bellow are the minimul required version supported by cuda-autodiff:
- - CUDA 11, both nvcc and nvrtc are supported
+ - CUDA 11, both nvcc offline compiler and nvrtc JIT compiler are supported
  - libcu++ 1.3.0 (shipped with cuda 11.2, header only)
  - Eigen 3.4 (header only)
 
