@@ -74,7 +74,13 @@ using ::sinh;
 using ::tanh;
 using ::erf;
 using ::hypot;
+using ::copysign;
 
+template <typename T, EnableIf<isArithmetic<T>> = true>
+__host__ __device__ constexpr T sign(const T& x) {
+	T t = (x < 0 ? T(-1) : T(0));
+	return (x > T(0) ? T(1) : t);
+}
 
 //=====================================================================================================================
 //
@@ -111,6 +117,7 @@ struct Log10Op   {};  // BASE-10 LOGARITHM OPERATOR
 struct SqrtOp    {};  // SQUARE ROOT OPERATOR
 struct PowOp     {};  // POWER OPERATOR
 struct AbsOp     {};  // ABSOLUTE OPERATOR
+struct SignOp    {};  // SIGN OPERATOR
 struct ErfOp     {};  // ERROR FUNCTION OPERATOR
 struct Hypot2Op  {};  // 2D HYPOT OPERATOR
 struct Hypot3Op  {};  // 3D HYPOT OPERATOR
@@ -201,6 +208,9 @@ using PowExpr = BinaryExpr<PowOp, L, R>;
 
 template<typename R>
 using AbsExpr = UnaryExpr<AbsOp, R>;
+
+template<typename R>
+using SignExpr = UnaryExpr<SignOp, R>;
 
 template<typename R>
 using ErfExpr = UnaryExpr<ErfOp, R>;
@@ -943,6 +953,7 @@ template<typename R, EnableIf<isExpr<R>> = true> __host__ __device__ constexpr a
 //=====================================================================================================================
 
 template<typename R, EnableIf<isExpr<R>> = true> __host__ __device__ constexpr auto abs(R&& r) -> AbsExpr<R> { return { r }; }
+template<typename R, EnableIf<isExpr<R>> = true> __host__ __device__ constexpr auto sign(R&& r) -> SignExpr<R> { return { r }; }
 template<typename R, EnableIf<isExpr<R>> = true> __host__ __device__ constexpr auto abs2(R&& r) { return cuda::std::forward<R>(r) * cuda::std::forward<R>(r); }
 template<typename R, EnableIf<isExpr<R>> = true> __host__ __device__ constexpr auto conj(R&& r) { return cuda::std::forward<R>(r); }
 template<typename R, EnableIf<isExpr<R>> = true> __host__ __device__ constexpr auto real(R&& r) { return cuda::std::forward<R>(r); }
@@ -963,6 +974,14 @@ __host__ __device__ constexpr auto max(L&& l, R&& r)
     const auto x = eval(l);
     const auto y = eval(r);
     return (x >= y) ? x : y;
+}
+
+template<typename L, typename R, EnableIf<isOperable<L, R>> = true>
+__host__ __device__ constexpr auto copysign(L&& mag, R&& sgn)
+{
+    const auto _sgn = eval(sgn);
+    const auto _mag = eval(mag);
+    return (_sgn >= 0 ? +_mag : -_mag);
 }
 
 //=====================================================================================================================
@@ -1693,6 +1712,13 @@ __host__ __device__ constexpr void apply(Dual<T, G>& self, AbsOp)
 {
     self.grad *= self.val < T(0) ? G(-1) : (self.val > T(0) ? G(1) : G(0));
     self.val = abs(self.val);
+}
+
+template<typename T, typename G>
+__host__ __device__ constexpr void apply(Dual<T, G>& self, SignOp)
+{
+    self.grad = G(0);
+    self.val = sign(self.val);
 }
 
 template<typename T, typename G>

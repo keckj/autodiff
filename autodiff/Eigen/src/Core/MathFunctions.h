@@ -1016,14 +1016,7 @@ EIGEN_DEVICE_FUNC
 typename internal::enable_if<(!internal::is_integral<T>::value)&&(!NumTraits<T>::IsComplex),bool>::type
 isnan_impl(const T& x)
 {
-  #if defined(EIGEN_GPU_COMPILE_PHASE)
-    return (::isnan)(x);
-  #elif EIGEN_USE_STD_FPCLASSIFY
-    using std::isnan;
-    return isnan EIGEN_NOT_A_MACRO (x);
-  #else
-    return x != x;
-  #endif
+   return x != x;
 }
 
 #if (!EIGEN_USE_STD_FPCLASSIFY)

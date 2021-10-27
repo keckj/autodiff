@@ -33,6 +33,9 @@
 namespace autodiff {
 namespace detail {
 
+template<typename T>
+__constant__ constexpr T pi(3.141592653589793238462643383279502884197169399375105820974944592307816406286);
+
 template <typename T>
 __constant__ constexpr T ln10(2.3025850929940456840179914546843);
     
@@ -40,6 +43,7 @@ template <typename T>
 __constant__ constexpr T sqrt_pi(1.7724538509055160272981674833411451872554456638435);
 
 namespace math {
+
 template <typename T>
 __forceinline__ __host__ __device__ T hypot(T x, T y, T z) {
 #ifdef __CUDA_ARCH__
@@ -48,8 +52,8 @@ __forceinline__ __host__ __device__ T hypot(T x, T y, T z) {
     return ::hypot(x,y,z);
 #endif
 }
-}
 
+} /* end of namespace math */
 } /* end of namespace detail */
 } /* end of namespace autodiff */
 

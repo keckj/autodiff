@@ -225,6 +225,12 @@ using ::sqrt;
 using ::tan;
 using ::tanh;
 
+template <typename T, EnableIf<isArithmetic<T>> = true>
+__host__ __device__ constexpr T sign(const T& x) {
+	T t = (x < 0 ? T(-1) : T(0));
+	return (x > T(0) ? T(1) : t);
+}
+
 //=====================================================================================================================
 //
 // TYPE TRAITS
@@ -766,6 +772,19 @@ __host__ __device__ constexpr auto abs(const Real<N, T>& x)
         const T s = ::copysign(T(1.0), x[0]);
         For<1, N + 1>([&](auto i) constexpr {
             res[i] = s * x[i];
+        });
+    }
+    return res;
+}
+
+template<size_t N, typename T>
+__host__ __device__ constexpr auto sign(const Real<N, T>& x)
+{
+    Real<N, T> res;
+    res[0] = sign(x[0]);
+    if constexpr (N > 0) {
+        For<1, N + 1>([&](auto i) constexpr {
+            res[i] = T(0.0);
         });
     }
     return res;
