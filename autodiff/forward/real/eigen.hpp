@@ -44,7 +44,7 @@ template<typename T>
 struct NumTraits;
 
 template<size_t N, typename T>
-struct NumTraits<autodiff::Real<N, T>> : NumTraits<double> // permits to get the epsilon, dummy_precision, lowest, highest functions
+struct NumTraits<autodiff::Real<N, T>> : NumTraits<T> // permits to get the epsilon, dummy_precision, lowest, highest functions
 {
     typedef autodiff::Real<N, T> Real;
     typedef autodiff::Real<N, T> NonInteger;

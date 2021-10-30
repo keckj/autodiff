@@ -47,6 +47,9 @@ struct ArithmeticTraits
 template<typename T>
 constexpr bool isArithmetic = ArithmeticTraits<PlainType<T>>::isArithmetic;
 
+template<typename... Args>
+constexpr bool areArithmetic = (... && isArithmetic<Args>);
+
 /// An auxiliary template type to indicate NumberTraits has not been defined for a type.
 template<typename T>
 struct NumericTypeInfoNotDefinedFor { using type = T; };

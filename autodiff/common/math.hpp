@@ -30,6 +30,8 @@
 #ifndef MATHS_HPP_U7IYJWBZ
 #define MATHS_HPP_U7IYJWBZ
 
+#include <autodiff/common/numbertraits.hpp>
+
 namespace autodiff {
 namespace detail {
 
@@ -41,6 +43,13 @@ __constant__ constexpr T ln10(2.3025850929940456840179914546843);
     
 template <typename T>
 __constant__ constexpr T sqrt_pi(1.7724538509055160272981674833411451872554456638435);
+
+
+template <typename T, EnableIf<isArithmetic<T>> = true>
+__host__ __device__ constexpr T sign(const T& x) {
+	T t = (x < 0 ? T(-1) : T(0));
+	return (x > T(0) ? T(1) : t);
+}
 
 namespace math {
 

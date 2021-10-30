@@ -225,12 +225,6 @@ using ::sqrt;
 using ::tan;
 using ::tanh;
 
-template <typename T, EnableIf<isArithmetic<T>> = true>
-__host__ __device__ constexpr T sign(const T& x) {
-	T t = (x < 0 ? T(-1) : T(0));
-	return (x > T(0) ? T(1) : t);
-}
-
 //=====================================================================================================================
 //
 // TYPE TRAITS

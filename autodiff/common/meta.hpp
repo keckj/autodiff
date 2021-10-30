@@ -46,8 +46,8 @@ using PlainType = typename cuda::std::remove_cv<typename cuda::std::remove_refer
 template<bool Cond, typename WhenTrue, typename WhenFalse>
 using ConditionalType = typename cuda::std::conditional<Cond, WhenTrue, WhenFalse>::type;
 
-template<typename A, typename B>
-using CommonType = typename cuda::std::common_type<A, B>::type;
+template<typename... Args>
+using CommonType = typename cuda::std::common_type<Args...>::type;
 
 template<typename Fun, typename... Args>
 using ReturnType = cuda::std::invoke_result_t<Fun, Args...>;
