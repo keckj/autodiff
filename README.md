@@ -36,7 +36,6 @@ The library is currently developped and tested under CUDA 11.4
  - Forward mode autodiff using  `real` and `dual` (see [examples/forward](examples/forward)).
  - Reverse mode autodiff using `var` as long as variables are not passed as _\_global\_\_ function arguments (see [examples/backward](examples/backward)).
  - All tests and examples and tests from the original autodiff library have been adapted to work with cuda.
- - Support for `std::array` like types based on a distinct `cuda::std::array` type.
  - Eigen3 statically sized types (`Array` and `Matrix`).
  - Custom user-provided scalar and vector types (statically allocated with compile-time known size).
 
@@ -60,7 +59,7 @@ The library is currently developped and tested under CUDA 11.4
 - Occurences of `std::vector<T>` have been replaced with `cuda::std::array<T,N>`.
 - Dynamically sized types such as `autodiff::VectorX`, `autodiff::MatrixX` and `autodiff::ArrayX` have been replaced by statically sized types `autodiff::Vector<T,N>`, `autodiff::Matrix<T,N,M>` and `autodiff::Array<T,N,M=1>`. Those types are aliases of static eigen3 types Matrix and Array and work in device code.
 - As `cuda::std::shared_ptr` is not provided by the standard c++ cuda library, `autodiff::detail::shared_ptr` has been implemented in `autodiff/common/memory.hpp` to cover basic shared pointer usage in cuda-autodiff. All dynamic casts have been removed from the library because \_\_device\_\_ functions cannot call `dynamic_cast` or `dynamic_pointer_cast` (RTTI-related features are supported in host code, but not in device code).
-- As `cuda::std::array` has not yet been implemented in the standard c++ cuda library (libcu++, see this [issue](https://github.com/NVIDIA/libcudacxx/issues/51)), a basic implementation is provided by the cuda-autodiff library. Everything is supported as long as array iterators are not involved. Please note that `std::array` and `cuda::std::array` represent distinct types, cuda-autodiff internally works with `cuda::std::array` which is available in the `<autodiff/std/array>` header but lives in the `cuda::std` namespace.
+- ~~As `cuda::std::array` has not yet been implemented in the standard c++ cuda library (libcu++, see this [issue](https://github.com/NVIDIA/libcudacxx/issues/51)), a basic implementation is provided by the cuda-autodiff library. Everything is supported as long as array iterators are not involved. Please note that `std::array` and `cuda::std::array` represent distinct types, cuda-autodiff internally works with `cuda::std::array` which is available in the `<autodiff/std/array>` header but lives in the `cuda::std` namespace.~~
 
 ## How to use the library with nvcc
 **With nvcc you can use both system eigen3 or internal eigen3.** The library and all of its dependencies are header only.
@@ -235,7 +234,7 @@ Check the documentation website for more details:
 This repository is licensed as the following:
 1. This repository contains a substancial portion of the original autodiff library that is licensed under the MIT license.
 
-2. The header that provides array implementation (autodiff/std/array) is part of the LLVM Project, and is licensed under the Apache License v2.0 with LLVM Exceptions (https://llvm.org/LICENSE.txt).
+2. ~~The header that provides array implementation (autodiff/std/array) is part of the LLVM Project, and is licensed under the Apache License v2.0 with LLVM Exceptions (https://llvm.org/LICENSE.txt).~~
 
 3. Apart from this header, all other modifications and additions to the original autodiff codebase constitute the cuda-autodiff library and is licensed under the MIT license.
 

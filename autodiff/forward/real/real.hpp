@@ -34,7 +34,7 @@
 #include <cuda/std/cassert>
 #include <cuda/std/tuple>
 #include <cuda/std/utility>
-#include <autodiff/std/array>
+#include <cuda/std/array>
 
 #ifndef __CUDACC_RTC__
 #include <ostream>

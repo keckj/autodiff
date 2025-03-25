@@ -38,7 +38,7 @@
 #include <autodiff/common/meta.hpp>
 #include <autodiff/common/numbertraits.hpp>
 #include <autodiff/common/vectortraits.hpp>
-#include <autodiff/std/array>
+#include <cuda/std/array>
 
 namespace autodiff {
 namespace detail {

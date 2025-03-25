@@ -35,7 +35,7 @@
 #endif
 
 #include <cuda/std/cassert>
-#include <autodiff/std/array>
+#include <cuda/std/array>
 
 // autodiff includes
 #include <autodiff/common/memory.hpp>

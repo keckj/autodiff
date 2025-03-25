@@ -31,7 +31,7 @@
 #define VECTORTRAITS_HPP_YR1Y0AVW
 
 // C++ includes
-#include <autodiff/std/array>
+#include <cuda/std/array>
 
 // autodiff includes
 #include <autodiff/common/meta.hpp>

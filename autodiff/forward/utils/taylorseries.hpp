@@ -31,7 +31,7 @@
 #define TAYLORSERIES_HPP_YYO0SIG9
 
 // C++ includes
-#include <autodiff/std/array>
+#include <cuda/std/array>
 
 // autodiff includes
 #include <autodiff/common/meta.hpp>
