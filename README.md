@@ -23,12 +23,11 @@ make
 
 ## Dependencies
 Bellow are the minimul required version supported by cuda-autodiff:
- - CUDA 11, both nvcc offline compiler and nvrtc JIT compiler are supported
- - libcu++ 1.3.0 (shipped with cuda 11.2, header only)
+ - CUDA 11.7, both nvcc offline compiler and nvrtc JIT compiler are supported
+ - libcu++ 1.3.0 (shipped with cuda 11.7, header only)
  - Eigen 3.4 (header only)
 
-Note that `std::complex` support can be added by using libcu++ 1.4.1 or later (shipped with cuda 11.3+).
-The library is currently developped and tested under CUDA 11.4
+The library is currently developped and tested under CUDA 11.7.
 
 
 
@@ -48,7 +47,7 @@ The library is currently developped and tested under CUDA 11.4
 ## Current limitations
 - Forward mode autodiff will work as expected.
 - Reverse mode autodiff exhibit some limitations due to the use of virtual inheritance and shared pointer to build the expression tree. This leads to the following device-side restrictions:
-    1. Types used in reversed mode autodiff such as `var` cannot be used as \_\_global\_\_ function arguments (it is not allowed to pass as an argument to a global function an object of a class with virtual functions). See [examples/reverse/example-reverse-multi-variable-function.cu](examples/reverse/example-reverse-multi-variable-function.cu).
+    1. Types used in reverse mode autodiff such as `var` cannot be used as \_\_global\_\_ function arguments (it is not allowed to pass as an argument to a global function an object of a class with virtual functions). See [examples/reverse/example-reverse-multi-variable-function.cu](examples/reverse/example-reverse-multi-variable-function.cu).
     2. Ptxas is not able to statically determine maximum stack size when using reverse mode autodiff on the device and will emit a warning about it. A stack overflow may occur with default device stack limit when using large expressions. In this case, you will get  `cudaErrorHardwareStackError (714)` on stream synchronization. Maximum device supported stack size can be retrieved with `cudaDeviceGetLimit(size_t *pValue, cudaLimitStackSize)` and effective device limit can be set with `cudaDeviceSetLimit(new_limit, cudaLimitStackSize)`. See [examples/reverse/example-reverse-hessian-derivatives-using-eigen.cu](examples/reverse/example-reverse-hessian-derivatives-using-eigen.cu).
     3. The expression tree is built dynamically by using heap allocations. If required, maximum device supported heap size can be retrieved with `cudaDeviceGetLimit(size_t *pValue, cudaLimitMallocHeapSize)` and effective device limit can be set with `cudaDeviceSetLimit(new_limit, cudaLimitMallocHeapSize)`.
 

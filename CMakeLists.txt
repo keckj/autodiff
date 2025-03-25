@@ -29,7 +29,7 @@ option(AUTODIFF_BUILD_DOCS "Enable the build of the documentation and website." 
 option(USE_SYSTEM_EIGEN "Use system system eigen instead of internal eigen" ON)
 
 # Find CUDA with C++17 support
-find_package(CUDAToolkit 11 REQUIRED)
+find_package(CUDAToolkit 11.7 REQUIRED)
 add_compile_definitions("AUTODIFF_CUDA_INCLUDE_DIR=${CUDAToolkit_INCLUDE_DIRS}")
 
 # We need to rely on deprecated FindCUDA to determine device architecture
