@@ -297,6 +297,15 @@ TEST_CASE("testing autodiff::var", "[reverse][var]")
     REQUIRE( val(tanh(x)) == approx(std::tanh(val(x))) );
     REQUIRE( grad(tanh(x), x) == approx(1.0 / (std::cosh(val(x)) * std::cosh(val(x)))) );
 
+    REQUIRE( val(asinh(x)) == approx(std::asinh(val(x))) );
+    REQUIRE( grad(asinh(x), x) == approx(1.0 / std::sqrt(val(x) * val(x) + 1)) );
+
+    REQUIRE( val(acosh(x + 1)) == approx(std::acosh(val(x) + 1)) );
+    REQUIRE( grad(acosh(x + 1), x) == approx(1.0 / std::sqrt((val(x) + 1) * (val(x) + 1) - 1)) );
+
+    REQUIRE( val(atanh(x)) == approx(std::atanh(val(x))) );
+    REQUIRE( grad(atanh(x), x) == approx(1.0 / (1 - val(x) * val(x))) );
+
     //--------------------------------------------------------------------------
     // TEST EXPONENTIAL AND LOGARITHMIC FUNCTIONS
     //--------------------------------------------------------------------------
@@ -492,6 +501,16 @@ TEST_CASE("testing autodiff::var", "[reverse][var]")
     square.update();
     REQUIRE( square == 0.0 );
 
+    // Negation of a condition (the negated condition must not refer to the temporary it was built from)
+    var notsquare = condition(!(0 <= x && x <= 1), 1.0, 0.0);
+    REQUIRE( notsquare == 1.0 );
+    x.update(0.5);
+    notsquare.update();
+    REQUIRE( notsquare == 0.0 );
+    x.update(-1.0);
+    notsquare.update();
+    REQUIRE( notsquare == 1.0 );
+
     // boolref
     bool arbitraryCondition = true;
     conditional = condition(autodiff::boolref(arbitraryCondition), 1.0, 0.0);
@@ -542,6 +561,43 @@ TEST_CASE("testing autodiff::var", "[reverse][var]")
     constexpr double pi = 3.141592653589793238462643383279502884197169399375105820974;
     REQUIRE( val(erf(x)) == approx(std::erf(val(x))) );
     REQUIRE( grad(erf(x), x) == approx(2/sqrt(pi) * std::exp(-val(x)*val(x))) );
+
+    // Functions missing upstream
+    REQUIRE( val(log2(x)) == approx(std::log2(val(x))) );
+    REQUIRE( grad(log2(x), x) == approx(1.0 / (std::log(2.0) * val(x))) );
+    REQUIRE( val(log1p(x)) == approx(std::log1p(val(x))) );
+    REQUIRE( grad(log1p(x), x) == approx(1.0 / (1.0 + val(x))) );
+    REQUIRE( val(exp2(x)) == approx(std::exp2(val(x))) );
+    REQUIRE( grad(exp2(x), x) == approx(std::log(2.0) * std::exp2(val(x))) );
+    REQUIRE( val(expm1(x)) == approx(std::expm1(val(x))) );
+    REQUIRE( grad(expm1(x), x) == approx(std::exp(val(x))) );
+    REQUIRE( val(cbrt(x)) == approx(std::cbrt(val(x))) );
+    REQUIRE( grad(cbrt(x), x) == approx(1.0 / (3.0 * std::cbrt(val(x) * val(x)))) );
+    REQUIRE( val(erfc(x)) == approx(std::erfc(val(x))) );
+    REQUIRE( grad(erfc(x), x) == approx(-2/sqrt(pi) * std::exp(-val(x)*val(x))) );
+    REQUIRE( val(floor(3 * x)) == approx(1.0) );
+    REQUIRE( grad(floor(3 * x), x) == approx(0.0) );
+    REQUIRE( val(ceil(3 * x)) == approx(2.0) );
+    REQUIRE( grad(ceil(3 * x), x) == approx(0.0) );
+    REQUIRE( val(round(3 * x)) == approx(2.0) );
+    REQUIRE( grad(round(3 * x), x) == approx(0.0) );
+    REQUIRE( val(trunc(-3 * x)) == approx(-1.0) );
+    REQUIRE( grad(trunc(-3 * x), x) == approx(0.0) );
+    var p = 0.2;
+    REQUIRE( val(fmod(x, p)) == std::fmod(val(x), val(p)) );
+    REQUIRE( grad(fmod(x, p), x) == approx(1.0) );
+    REQUIRE( grad(fmod(x, p), p) == approx(-2.0) );
+    REQUIRE( val(fmod(x, 0.2)) == std::fmod(val(x), 0.2) );
+    REQUIRE( grad(fmod(2.0, p), p) == approx(-std::round((2.0 - std::fmod(2.0, 0.2)) / 0.2)) );
+    REQUIRE( val(fmin(x, p)) == approx(0.2) );
+    REQUIRE( grad(fmin(x, p), p) == approx(1.0) );
+    REQUIRE( val(fmax(x, p)) == approx(0.5) );
+    REQUIRE( grad(fmax(x, p), x) == approx(1.0) );
+    REQUIRE( val(copysign(x, -p)) == approx(-0.5) );
+    REQUIRE( grad(copysign(x, -p), x) == approx(-1.0) );
+    REQUIRE( grad(copysign(-x, 1.0), x) == approx(1.0) );
+    REQUIRE( val(sign(-x)) == approx(-1.0) );
+    REQUIRE( val(sign(p)) == approx(1.0) );
 
     //--------------------------------------------------------------------------
     // TEST HIGHER ORDER DERIVATIVES (2nd order)

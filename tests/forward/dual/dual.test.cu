@@ -618,6 +618,15 @@ TEST_CASE("testing autodiff::dual", "[forward][dual][cuda]")
         // Testing tanh function
         CHECK_DERIVATIVES_FX(tanh(x), tanh(val(x)), 1 / (cosh(x) * cosh(x)));
 
+        // Testing asinh function
+        CHECK_DERIVATIVES_FX(asinh(x), asinh(val(x)), 1 / sqrt(x * x + 1));
+
+        // Testing acosh function
+        CHECK_DERIVATIVES_FX(acosh(x + 1), acosh(val(x) + 1), 1 / sqrt((x + 1) * (x + 1) - 1));
+
+        // Testing atanh function
+        CHECK_DERIVATIVES_FX(atanh(x), atanh(val(x)), 1 / (1 - x * x));
+
         // Testing asin function
         CHECK_DERIVATIVES_FX(asin(x), asin(val(x)), 1 / sqrt(1 - x * x));
 
@@ -659,6 +668,26 @@ TEST_CASE("testing autodiff::dual", "[forward][dual][cuda]")
 
         // Testing erf function (when x = -1.4)
         x = -1.4; CHECK_DERIVATIVES_FX(erf(x), erf(val(x)), 0.1589417077);
+
+        // Testing functions missing upstream
+        x = 0.5;
+        CHECK_DERIVATIVES_FX(log2(x), log2(val(x)), 1 / (log(2.0) * x));
+        CHECK_DERIVATIVES_FX(log1p(x), log1p(val(x)), 1 / (1 + x));
+        CHECK_DERIVATIVES_FX(exp2(x), exp2(val(x)), log(2.0) * exp2(x));
+        CHECK_DERIVATIVES_FX(expm1(x), expm1(val(x)), exp(x));
+        CHECK_DERIVATIVES_FX(cbrt(x), cbrt(val(x)), 1 / (3 * cbrt(x) * cbrt(x)));
+        CHECK_DERIVATIVES_FX(erfc(x), erfc(val(x)), -1.1283791670955126 * exp(-x * x));
+        CHECK_DERIVATIVES_FX(fmin(x, 0.2), 0.2, 0.0);
+        CHECK_DERIVATIVES_FX(fmax(x, 0.2), val(x), 1.0);
+        x = 1.3;
+        CHECK_DERIVATIVES_FX(floor(x), floor(val(x)), 0.0);
+        CHECK_DERIVATIVES_FX(ceil(x), ceil(val(x)), 0.0);
+        CHECK_DERIVATIVES_FX(round(x), round(val(x)), 0.0);
+        CHECK_DERIVATIVES_FX(trunc(-x), trunc(-val(x)), 0.0);
+        x = 7.3;
+        CHECK_DERIVATIVES_FX(fmod(x, 2.1), fmod(val(x), 2.1), 1.0);
+        x = 2.1;
+        CHECK_DERIVATIVES_FX(fmod(7.3, x), fmod(7.3, val(x)), -3.0);
 
         // Testing atan2 function on (double, dual)
         x = 1.0; CHECK_DERIVATIVES_FX(atan2(2.0, x), atan2(2.0, val(x)), -2.0 / (2*2 + x*x));

@@ -360,7 +360,7 @@ TEST_CASE("testing autodiff::real", "[forward][real]")
     CHECK_4TH_ORDER_REAL_NUMBERS(y, z);
 
     y = asinh(x);
-    z = 1/sqrt(x*x + 1);
+    z = xprime/sqrt(x*x + 1);
 
     CHECK_APPROX( y[0], asinh(x[0]) );
     CHECK_APPROX( y[1], z[0] );
@@ -369,7 +369,7 @@ TEST_CASE("testing autodiff::real", "[forward][real]")
     CHECK_APPROX( y[4], z[3] );
 
     y = acosh(10*x); // acosh requires x > 1
-    z = 1/sqrt(100*x*x - 1);
+    z = 10*xprime/sqrt(100*x*x - 1);
 
     CHECK_APPROX( y[0], acosh(10*x[0]) );
     CHECK_APPROX( y[1], z[0] );
@@ -378,13 +378,85 @@ TEST_CASE("testing autodiff::real", "[forward][real]")
     CHECK_APPROX( y[4], z[3] );
 
     y = atanh(x);
-    z = 1/(1 - x*x);
+    z = xprime/(1 - x*x);
 
     CHECK_APPROX( y[0], atanh(x[0]) );
     CHECK_APPROX( y[1], z[0] );
     CHECK_APPROX( y[2], z[1] );
     CHECK_APPROX( y[3], z[2] );
     CHECK_APPROX( y[4], z[3] );
+
+    // Functions missing upstream
+    y = log2(x);
+    z = log(x) / log(2.0);
+    CHECK_4TH_ORDER_REAL_NUMBERS(y, z);
+
+    y = log1p(x);
+    z = log(1 + x);
+    CHECK_4TH_ORDER_REAL_NUMBERS(y, z);
+
+    y = exp2(x);
+    z = exp(x * log(2.0));
+    CHECK_4TH_ORDER_REAL_NUMBERS(y, z);
+
+    y = expm1(x);
+    z = exp(x) - 1;
+    CHECK_4TH_ORDER_REAL_NUMBERS(y, z);
+
+    y = erfc(x);
+    z = 1 - erf(x);
+    CHECK_4TH_ORDER_REAL_NUMBERS(y, z);
+
+    y = hypot(x, 2 * x);
+    z = sqrt(5 * x * x);
+    CHECK_4TH_ORDER_REAL_NUMBERS(y, z);
+
+    y = hypot(x, 2.0);
+    z = sqrt(x * x + 4);
+    CHECK_4TH_ORDER_REAL_NUMBERS(y, z);
+
+    y = hypot(x, 2 * x, 3.0);
+    z = sqrt(5 * x * x + 9);
+    CHECK_4TH_ORDER_REAL_NUMBERS(y, z);
+
+    y = abs2(x);
+    z = x * x;
+    CHECK_4TH_ORDER_REAL_NUMBERS(y, z);
+
+    y = conj(x);
+    z = x;
+    CHECK_4TH_ORDER_REAL_NUMBERS(y, z);
+
+    y = fmod(x, 0.2);
+    z = x - 0.4;
+    CHECK_4TH_ORDER_REAL_NUMBERS(y, z);
+
+    y = fmod(1.7, x);
+    z = 1.7 - 3 * x;
+    CHECK_4TH_ORDER_REAL_NUMBERS(y, z);
+
+    y = fmin(x, 2 * x);
+    z = x;
+    CHECK_4TH_ORDER_REAL_NUMBERS(y, z);
+
+    y = fmax(x, 2 * x);
+    z = 2 * x;
+    CHECK_4TH_ORDER_REAL_NUMBERS(y, z);
+
+    y = floor(3 * x) + ceil(3 * x) + round(3 * x) + trunc(-3 * x);
+    z = x - x + 4;
+    CHECK_4TH_ORDER_REAL_NUMBERS(y, z);
+
+    y = erf(x);
+    z = 1.1283791670955126 * exp(-x * x) * xprime;
+
+    CHECK_APPROX( y[0], erf(x[0]) );
+    CHECK_APPROX( y[1], z[0] );
+    CHECK_APPROX( y[2], z[1] );
+    CHECK_APPROX( y[3], z[2] );
+    CHECK_APPROX( y[4], z[3] );
+
+    CHECK( fmod(x, 0.2)[0] == std::fmod(x[0], 0.2) );
 
     //=====================================================================================================================
     //

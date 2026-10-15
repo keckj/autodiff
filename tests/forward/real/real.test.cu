@@ -33,6 +33,16 @@
 using namespace autodiff;
 
 namespace {
+// Function and kernel of autodiff issue #386
+__host__ __device__ real4th issue386(real4th x) { return sin(x) * x; }
+
+__global__ void issue386Kernel(real4th* x, std::size_t n, stdx::array<double, 5>* d)
+{
+    const auto idx = threadIdx.x + blockIdx.x * blockDim.x;
+    if(idx < n)
+        d[idx] = derivatives(issue386, wrt(x[idx]), at(x[idx]));
+}
+
 template<typename To, typename Callable>
 __global__ void assignKernel(std::size_t n, To* to, Callable callee)
 {
@@ -181,7 +191,7 @@ __managed__ real4th x_managed;
 
 TEST_CASE("testing autodiff::real", "[forward][real]")
 {
-    real4th x, y, z, u, v, w;
+    real4th x, y, z, u;
 
     unary(x, x, [] __host__ __device__(real4th x) -> real4th { x = 1.0; return x; });
 
@@ -484,7 +494,7 @@ TEST_CASE("testing autodiff::real", "[forward][real]")
     CHECK_4TH_ORDER_REAL_NUMBERS(y, z);
 
     unary(x, y, [] __host__ __device__(real4th x) -> real4th { return asinh(x); });
-    unary(x, z, [] __host__ __device__(real4th x) -> real4th { return 1 / sqrt(x * x + 1); });
+    binary(x, xprime, z, [] __host__ __device__(real4th x, real4th xprime) -> real4th { return xprime / sqrt(x * x + 1); });
 
     CHECK_APPROX(y[0], asinh(x[0]));
     CHECK_APPROX(y[1], z[0]);
@@ -493,7 +503,7 @@ TEST_CASE("testing autodiff::real", "[forward][real]")
     CHECK_APPROX(y[4], z[3]);
 
     unary(x, y, [] __host__ __device__(real4th x) -> real4th { return acosh(10*x); /* acosh requires x > 1 */ });
-    unary(x, z, [] __host__ __device__(real4th x) -> real4th { return 1 / sqrt(100 * x * x - 1); });
+    binary(x, xprime, z, [] __host__ __device__(real4th x, real4th xprime) -> real4th { return 10 * xprime / sqrt(100 * x * x - 1); });
 
     CHECK_APPROX(y[0], acosh(10 * x[0]));
     CHECK_APPROX(y[1], z[0]);
@@ -502,9 +512,79 @@ TEST_CASE("testing autodiff::real", "[forward][real]")
     CHECK_APPROX(y[4], z[3]);
 
     unary(x, y, [] __host__ __device__(real4th x) -> real4th { return atanh(x); });
-    unary(x, z, [] __host__ __device__(real4th x) -> real4th { return 1 / (1 - x * x); });
+    binary(x, xprime, z, [] __host__ __device__(real4th x, real4th xprime) -> real4th { return xprime / (1 - x * x); });
 
     CHECK_APPROX(y[0], atanh(x[0]));
+    CHECK_APPROX(y[1], z[0]);
+    CHECK_APPROX(y[2], z[1]);
+    CHECK_APPROX(y[3], z[2]);
+    CHECK_APPROX(y[4], z[3]);
+
+    // Functions missing upstream
+    unary(x, y, [] __host__ __device__(real4th x) -> real4th { return log2(x); });
+    unary(x, z, [] __host__ __device__(real4th x) -> real4th { return log(x) / log(2.0); });
+    CHECK_4TH_ORDER_REAL_NUMBERS(y, z);
+
+    unary(x, y, [] __host__ __device__(real4th x) -> real4th { return log1p(x); });
+    unary(x, z, [] __host__ __device__(real4th x) -> real4th { return log(1 + x); });
+    CHECK_4TH_ORDER_REAL_NUMBERS(y, z);
+
+    unary(x, y, [] __host__ __device__(real4th x) -> real4th { return exp2(x); });
+    unary(x, z, [] __host__ __device__(real4th x) -> real4th { return exp(x * log(2.0)); });
+    CHECK_4TH_ORDER_REAL_NUMBERS(y, z);
+
+    unary(x, y, [] __host__ __device__(real4th x) -> real4th { return expm1(x); });
+    unary(x, z, [] __host__ __device__(real4th x) -> real4th { return exp(x) - 1; });
+    CHECK_4TH_ORDER_REAL_NUMBERS(y, z);
+
+    unary(x, y, [] __host__ __device__(real4th x) -> real4th { return erfc(x); });
+    unary(x, z, [] __host__ __device__(real4th x) -> real4th { return 1 - erf(x); });
+    CHECK_4TH_ORDER_REAL_NUMBERS(y, z);
+
+    unary(x, y, [] __host__ __device__(real4th x) -> real4th { return hypot(x, 2 * x); });
+    unary(x, z, [] __host__ __device__(real4th x) -> real4th { return sqrt(5 * x * x); });
+    CHECK_4TH_ORDER_REAL_NUMBERS(y, z);
+
+    unary(x, y, [] __host__ __device__(real4th x) -> real4th { return hypot(x, 2.0); });
+    unary(x, z, [] __host__ __device__(real4th x) -> real4th { return sqrt(x * x + 4); });
+    CHECK_4TH_ORDER_REAL_NUMBERS(y, z);
+
+    unary(x, y, [] __host__ __device__(real4th x) -> real4th { return hypot(x, 2 * x, 3.0); });
+    unary(x, z, [] __host__ __device__(real4th x) -> real4th { return sqrt(5 * x * x + 9); });
+    CHECK_4TH_ORDER_REAL_NUMBERS(y, z);
+
+    unary(x, y, [] __host__ __device__(real4th x) -> real4th { return abs2(x); });
+    unary(x, z, [] __host__ __device__(real4th x) -> real4th { return x * x; });
+    CHECK_4TH_ORDER_REAL_NUMBERS(y, z);
+
+    unary(x, y, [] __host__ __device__(real4th x) -> real4th { return conj(x); });
+    unary(x, z, [] __host__ __device__(real4th x) -> real4th { return x; });
+    CHECK_4TH_ORDER_REAL_NUMBERS(y, z);
+
+    unary(x, y, [] __host__ __device__(real4th x) -> real4th { return fmod(x, 0.2); });
+    unary(x, z, [] __host__ __device__(real4th x) -> real4th { return x - 0.4; });
+    CHECK_4TH_ORDER_REAL_NUMBERS(y, z);
+
+    unary(x, y, [] __host__ __device__(real4th x) -> real4th { return fmod(1.7, x); });
+    unary(x, z, [] __host__ __device__(real4th x) -> real4th { return 1.7 - 3 * x; });
+    CHECK_4TH_ORDER_REAL_NUMBERS(y, z);
+
+    unary(x, y, [] __host__ __device__(real4th x) -> real4th { return fmin(x, 2 * x); });
+    unary(x, z, [] __host__ __device__(real4th x) -> real4th { return x; });
+    CHECK_4TH_ORDER_REAL_NUMBERS(y, z);
+
+    unary(x, y, [] __host__ __device__(real4th x) -> real4th { return fmax(x, 2 * x); });
+    unary(x, z, [] __host__ __device__(real4th x) -> real4th { return 2 * x; });
+    CHECK_4TH_ORDER_REAL_NUMBERS(y, z);
+
+    unary(x, y, [] __host__ __device__(real4th x) -> real4th { return floor(3 * x) + ceil(3 * x) + round(3 * x) + trunc(-3 * x); });
+    unary(x, z, [] __host__ __device__(real4th x) -> real4th { return x - x + 4; });
+    CHECK_4TH_ORDER_REAL_NUMBERS(y, z);
+
+    unary(x, y, [] __host__ __device__(real4th x) -> real4th { return erf(x); });
+    binary(x, xprime, z, [] __host__ __device__(real4th x, real4th xprime) -> real4th { return 1.1283791670955126 * exp(-x * x) * xprime; });
+
+    CHECK_APPROX(y[0], erf(x[0]));
     CHECK_APPROX(y[1], z[0]);
     CHECK_APPROX(y[2], z[1]);
     CHECK_APPROX(y[3], z[2]);
@@ -669,4 +749,28 @@ TEST_CASE("testing autodiff::real", "[forward][real]")
 //        CHECK_APPROX( u0[1], y[0] ); CHECK_APPROX( u1[1], y[1] ); CHECK_APPROX( u2[1], y[2] ); CHECK_APPROX( u3[1], y[3] ); CHECK_APPROX( u4[1], y[4] );
 //        CHECK_APPROX( u0[2], z[0] ); CHECK_APPROX( u1[2], z[1] ); CHECK_APPROX( u2[2], z[2] ); CHECK_APPROX( u3[2], z[3] ); CHECK_APPROX( u4[2], z[4] );
 //    }
+}
+
+TEST_CASE("testing higher-order derivatives of autodiff::real with respect to one variable (#386)", "[forward][real]")
+{
+    constexpr std::size_t n = 64;
+    real4th* x;
+    stdx::array<double, 5>* d;
+    CHECK(cudaMallocManaged(&x, n * sizeof(real4th)) == cudaSuccess);
+    CHECK(cudaMallocManaged(&d, n * sizeof(stdx::array<double, 5>)) == cudaSuccess);
+    for(std::size_t i = 0; i < n; ++i)
+        x[i] = 0.1 * i;
+    issue386Kernel<<<2, 32>>>(x, n, d);
+    CHECK(cudaDeviceSynchronize() == cudaSuccess);
+    for(std::size_t i = 0; i < n; ++i) {
+        const double a = 0.1 * i, s = std::sin(a), c = std::cos(a);
+        CHECK_APPROX(d[i][0], s * a);
+        CHECK_APPROX(d[i][1], c * a + s);
+        CHECK_APPROX(d[i][2], 2 * c - s * a);
+        CHECK_APPROX(d[i][3], -3 * s - c * a);
+        CHECK_APPROX(d[i][4], -4 * c + s * a);
+        CHECK(x[i][1] == 0.0); // unseeded
+    }
+    CHECK(cudaFree(d) == cudaSuccess);
+    CHECK(cudaFree(x) == cudaSuccess);
 }
