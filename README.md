@@ -96,8 +96,9 @@ program that includes autodiff:
   in `autodiff/common/config.hpp` with an error naming the option;
 - `-I<autodiff include directory>` and `-I<CUDA include directory>` (for the
   libcu++ headers);
-- if Eigen is used: `-I<patched Eigen directory>` and `-DAUTODIFF_EIGEN_FOUND`
-  (for the Eigen overloads of `gradient`, `jacobian` and `hessian`).
+- if Eigen is used: `-I<patched Eigen directory>` (see below). Defining
+  `AUTODIFF_EIGEN_FOUND` is not needed: the Eigen overloads of `gradient`,
+  `jacobian` and `hessian` are available whenever Eigen is included.
 
 When autodiff is installed, its CMake package provides `autodiff_INCLUDE_DIR`
 and `autodiff_NVRTC_OPTIONS` (`-std=c++17 -default-device

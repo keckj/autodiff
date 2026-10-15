@@ -1,16 +1,8 @@
 name: bazel
 
-disabled: true
-
+# Disabled upstream (with an invalid "disabled" key): only run on demand
 on:
-  push:
-    branches:
-      - main
-
-  pull_request:
-
-  schedule:
-    - cron: "0 5 * * 1"  # runs at 05:00 UTC on Mondays
+  workflow_dispatch:
 
 jobs:
   bazel:

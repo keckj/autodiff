@@ -15,8 +15,7 @@ endif()
 
 # Code compiled at runtime with NVRTC can not use the autodiff::autodiff target: these variables give what is needed
 # to build the NVRTC options. The include directories of the CUDA toolkit (CUDAToolkit_INCLUDE_DIRS) and of Eigen
-# headers patched for NVRTC (using the patch in autodiff_NVRTC_EIGEN_PATCH_DIR) must be added if Eigen is used, together
-# with -DAUTODIFF_EIGEN_FOUND for the Eigen overloads of gradient, jacobian and hessian.
+# headers patched for NVRTC (using the patch in autodiff_NVRTC_EIGEN_PATCH_DIR) must be added if Eigen is used.
 set_and_check(autodiff_INCLUDE_DIR "@PACKAGE_AUTODIFF_INSTALL_INCLUDEDIR@")
 set(autodiff_NVRTC_OPTIONS "-std=c++17" "-default-device" "-I${autodiff_INCLUDE_DIR}")
 set(autodiff_NVRTC_EIGEN_PATCH_DIR "@PACKAGE_AUTODIFF_INSTALL_NVRTC_EIGEN_PATCHDIR@")
