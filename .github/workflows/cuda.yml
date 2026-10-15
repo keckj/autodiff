@@ -34,7 +34,7 @@ jobs:
       - uses: actions/checkout@v4
 
       - name: Configuring
-        run: cmake -S . -B build -GNinja -DCMAKE_BUILD_TYPE=Release -DCMAKE_CUDA_ARCHITECTURES=89
+        run: cmake -S . -B build -GNinja -DCMAKE_BUILD_TYPE=Release -DCMAKE_CUDA_ARCHITECTURES=89 -DAUTODIFF_BUILD_PYTHON=OFF -DAUTODIFF_BUILD_DOCS=OFF
 
       - name: Building
         run: cmake --build build
