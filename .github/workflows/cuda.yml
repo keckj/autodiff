@@ -1,0 +1,50 @@
+name: cuda
+
+on:
+  push:
+    branches:
+      - main
+      - master
+
+  pull_request:
+
+concurrency:
+  group: ${{ github.workflow }}-${{ github.ref }}
+  cancel-in-progress: true
+
+# GitHub hosted runners have no GPU: the host tests are run, the nvcc tests are only compiled and the NVRTC kernels are
+# only compiled (autodiff-nvrtctests --compile-only).
+jobs:
+  build:
+    name: CUDA ${{ matrix.cuda }} build
+    runs-on: ubuntu-latest
+    container: nvidia/cuda:${{ matrix.cuda }}-devel-ubuntu22.04
+    strategy:
+      fail-fast: false
+      matrix:
+        cuda: ["12.9.1"]
+
+    steps:
+      - name: Installing dependencies
+        run: |
+          apt-get update
+          DEBIAN_FRONTEND=noninteractive apt-get install -y --no-install-recommends git ninja-build python3-pip libeigen3-dev
+          pip3 install cmake
+
+      - uses: actions/checkout@v4
+
+      - name: Configuring
+        run: cmake -S . -B build -GNinja -DCMAKE_BUILD_TYPE=Release -DCMAKE_CUDA_ARCHITECTURES=89
+
+      - name: Building
+        run: cmake --build build
+
+      - name: Running host tests
+        run: ./build/tests/autodiff-cpptests
+
+      - name: Compiling NVRTC tests
+        run: |
+          # The runner links against the CUDA driver, only available as a stub library without GPU
+          mkdir -p /tmp/cuda-stubs
+          ln -sf /usr/local/cuda/lib64/stubs/libcuda.so /tmp/cuda-stubs/libcuda.so.1
+          LD_LIBRARY_PATH=/tmp/cuda-stubs:$LD_LIBRARY_PATH ./build/tests/nvrtc/autodiff-nvrtctests --compile-only

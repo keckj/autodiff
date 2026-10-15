@@ -1,3 +1,244 @@
+<p align="center">
+  <a href="https://github.com/keckj/autodiff" target="_blank">
+    <img src='art/cuda-autodiff-logo.svg' width='260'>
+  </a>
+</p>
+
+# CUDA and NVRTC support
+
+This fork of [autodiff](https://github.com/autodiff/autodiff) is based on
+**autodiff v1.1.2** and makes the library usable in CUDA device code, both with
+the offline compiler **nvcc** and with the runtime compiler **NVRTC**. The host
+API is the one of upstream autodiff: code written for autodiff v1.1.2 compiles
+unchanged with a regular C++17 compiler. The rest of this README, starting at
+[Overview](#overview), is the upstream documentation.
+
+The library stays header only. Functions are annotated with
+`AUTODIFF_DEVICE_FUNC` (`__host__ __device__` with CUDA and HIP compilers,
+empty otherwise) so that `dual`, `real` and `var` can be used in kernels, alone
+or with Eigen vectors and matrices.
+
+## What is supported on the device
+
+- Forward mode with `dual` (all orders) and `real` (all orders), including
+  `derivative`, `derivatives`, `gradient`, `jacobian`, `hessian`, directional
+  derivatives (`along`) and Taylor series.
+- Reverse mode with `var`: arithmetic, mathematical functions, conditions
+  (`condition`, `min`, `max`, `!`, `&&`, `||`), `update`, `derivatives` and
+  `derivativesx` (higher order).
+- Eigen vectors and matrices of `dual`, `real` and `var`, with fixed and
+  dynamic sizes (dynamic sizes allocate on the device heap).
+
+`gradient`, `jacobian` and `hessian` return Eigen types with fixed sizes
+(e.g. `Eigen::Vector3d` or `Eigen::Matrix<double, 2, 3>`) when the sizes of
+all the variables given in `wrt(...)` are known at compile time, and dynamic
+types (`Eigen::VectorXd`, `Eigen::MatrixXd`) otherwise. Code that assigns the
+result to `Eigen::VectorXd` or `Eigen::MatrixXd` keeps working.
+
+## Requirements
+
+- A C++17 compiler for host code. Device code requires C++17 or C++20.
+- CUDA 12.x. The library is developed and tested with CUDA 12.9 (nvcc and
+  NVRTC, sm_120). Older toolkits have not been tested.
+- Eigen 3.4 or Eigen 5 with nvcc (and on host). NVRTC requires Eigen headers
+  patched for NVRTC (see below).
+
+## Usage with nvcc
+
+Include the autodiff headers in `.cu` files as usual, for instance:
+
+```c++
+#include <autodiff/forward/dual.hpp>
+using namespace autodiff;
+
+__global__ void kernel(const double* x, double* dfdx)
+{
+    const int i = blockIdx.x * blockDim.x + threadIdx.x;
+    dual u = x[i];
+    dfdx[i] = derivative([](dual u) -> dual { return u * sin(u); }, wrt(u), at(u));
+}
+```
+
+The following nvcc options are required. They are added automatically when
+linking against the CMake target `autodiff::autodiff`:
+
+- `--expt-relaxed-constexpr`: autodiff calls `constexpr` functions of the
+  standard library (`std::forward_as_tuple`, `std::get`, ...) from device
+  code. Without this option nvcc only emits warnings (#20013, #20015) and the
+  kernels silently compute wrong results;
+- `--extended-lambda`, to pass `[] __host__ __device__ (...) { ... }` lambdas
+  to `derivative`, `gradient`, ... (lambdas defined in device code do not need
+  it).
+
+The following options are recommended:
+
+- `--diag-error=20011,20014` turns the calls of host functions from device
+  functions into errors. Without it, nvcc only warns and the kernel aborts at
+  runtime (possibly silently).
+- `-Xcudafe --diag_suppress=esa_on_defaulted_function_ignored` hides spurious
+  warnings emitted when Eigen 3.4 is used in device code.
+
+By default the library uses the `std` namespace for its utilities (`array`,
+`tuple`, type traits, ...) with nvcc. Defining `AUTODIFF_USE_CUDA_STD=1` before
+including any autodiff header makes it use `cuda::std` from libcu++ instead,
+as with NVRTC.
+
+## Usage with NVRTC
+
+NVRTC has no C++ standard library: autodiff then uses libcu++ (`cuda::std`)
+and the CUDA math API. The following options are required to compile a
+program that includes autodiff:
+
+- `-std=c++17` (or `-std=c++20`);
+- `-default-device`: autodiff (and Eigen) rely on functions without execution
+  space annotations, such as generic lambdas, that NVRTC otherwise considers
+  as host functions and rejects. Without this option, the compilation fails
+  in `autodiff/common/config.hpp` with an error naming the option;
+- `-I<autodiff include directory>` and `-I<CUDA include directory>` (for the
+  libcu++ headers);
+- if Eigen is used: `-I<patched Eigen directory>` and `-DAUTODIFF_EIGEN_FOUND`
+  (for the Eigen overloads of `gradient`, `jacobian` and `hessian`).
+
+When autodiff is installed, its CMake package provides `autodiff_INCLUDE_DIR`
+and `autodiff_NVRTC_OPTIONS` (`-std=c++17 -default-device
+-I${autodiff_INCLUDE_DIR}`), to be completed with the CUDA include directory
+(`CUDAToolkit_INCLUDE_DIRS` from `find_package(CUDAToolkit)`), and
+`autodiff_NVRTC_EIGEN_PATCH_DIR`, the directory where the Eigen patch is
+installed.
+
+### Eigen with NVRTC
+
+Upstream Eigen does not support NVRTC. The fork
+[keckj/eigen-nvrtc](https://github.com/keckj/eigen-nvrtc) (release
+[5.0.1-nvrtc](https://github.com/keckj/eigen-nvrtc/releases/tag/5.0.1-nvrtc))
+is Eigen 5.0.1 with NVRTC support. The same changes are available as a patch
+in [ext/eigen-nvrtc](ext/eigen-nvrtc), to be applied to an Eigen 5.0.1
+checkout (see [ext/eigen-nvrtc/NVRTC.md](ext/eigen-nvrtc/NVRTC.md) for
+details). All the changes are guarded by `__CUDACC_RTC__`: other compilers see
+the same code as with Eigen 5.0.1. The CMake module
+[cmake/AutodiffNvrtcEigen.cmake](cmake/AutodiffNvrtcEigen.cmake), used by the
+NVRTC tests and examples, fetches the release at configure time; a directory
+with already patched headers can be given with
+`-DAUTODIFF_NVRTC_EIGEN_INCLUDE_DIR=...` instead.
+
+With NVRTC, Eigen must be included first, before any autodiff header:
+
+```c++
+#include <Eigen/Core>
+#include <autodiff/forward/dual/eigen.hpp>
+```
+
+## Reverse mode on the device
+
+The expression trees of `var` are stored with reference counted pointers and
+type erased functions. `std::shared_ptr` and `std::function` are host only,
+so with CUDA compilers autodiff uses `autodiff::detail::shared_ptr` and
+`autodiff::detail::function` from
+[autodiff/common/memory.hpp](autodiff/common/memory.hpp) instead. This is
+controlled by `AUTODIFF_VAR_USE_STD_MEMORY`: it defaults to 0 with nvcc, hipcc
+and NVRTC, and to 1 otherwise; it can be overridden before including
+autodiff, except with NVRTC where it is always 0.
+
+This has the following consequences:
+
+- The reference counts of `autodiff::detail::shared_ptr` are not atomic: an
+  expression tree must not be shared between threads.
+- Expression trees allocated on the device can only be used on the device, and
+  conversely: `var` objects can not be passed as arguments of `__global__`
+  functions nor copied between host and device. Pass `double` values to the
+  kernels and create the variables in device code.
+- The trees are allocated on the device heap and traversed recursively. Large
+  expressions may require to increase the device heap size
+  (`cudaDeviceSetLimit(cudaLimitMallocHeapSize, ...)`) or the stack size
+  (`cudaDeviceSetLimit(cudaLimitStackSize, ...)`). A stack overflow is
+  reported as `cudaErrorHardwareStackError` (714) at synchronization. ptxas
+  warns that it can not determine the stack size statically because of the
+  recursion: this warning is expected.
+
+## Other limitations
+
+- Stream output operators (`operator<<`) are host only with nvcc and are not
+  available with NVRTC.
+- Device code can not throw: errors that throw exceptions on host trigger an
+  `assert` on the device.
+
+## Changes with respect to autodiff v1.1.2
+
+Besides the device annotations, this fork contains the following changes,
+which also apply to host code:
+
+- `copysign` is defined for `dual`, and `abs` of `real` no longer calls
+  `std::copysign` (host only).
+- `!condition` in reverse mode no longer refers to a destroyed temporary
+  (dangling `this` capture in `BooleanExpr::operator!`).
+- `derivatives(y, wrt(...))` in reverse mode no longer calls `std::array::fill`
+  (host only).
+- Compatibility with Eigen 5 (`Eigen::internal::SingleRange` became a
+  template).
+- `gradient`, `jacobian` and `hessian` return fixed size types when possible
+  (see above).
+
+It also fixes the following upstream bugs (regression tests in
+[tests/issues.test.cpp](tests/issues.test.cpp) and
+[tests/nvrtc/kernels/issues.test.cu](tests/nvrtc/kernels/issues.test.cu)):
+
+- Forward and reverse modes can be included in the same compilation unit:
+  they share the same `wrt` ([#179](https://github.com/autodiff/autodiff/issues/179)).
+- `val(x)` of a non-const `real` no longer fails when the `dual` header is
+  also included, and `eval(x)` is a no-op for `real` numbers
+  ([#201](https://github.com/autodiff/autodiff/issues/201)).
+- Higher-order derivatives of `real` numbers with respect to one variable,
+  `derivatives(f, wrt(x), at(x))`, no longer fail to compile, and gradients
+  can be computed with higher-order `real` numbers
+  ([#201](https://github.com/autodiff/autodiff/issues/201),
+  [#386](https://github.com/autodiff/autodiff/issues/386)).
+- Directional derivatives of higher-order `dual` numbers,
+  `derivatives(f, along(v), at(x))` and `taylorseries`, are no longer zero
+  beyond the first order.
+- `asinh`, `acosh` and `atanh` of `real` numbers apply the chain rule
+  ([#395](https://github.com/autodiff/autodiff/issues/395),
+  [#396](https://github.com/autodiff/autodiff/issues/396)). They are also
+  available for `dual` and `var` numbers, which did not provide them.
+- Matrices of `var` can be inverted and solved with Eigen 3.4
+  ([#141](https://github.com/autodiff/autodiff/issues/141)): the conversion
+  of `var` to `ExprPtr` is now explicit.
+- The `gradient`, `jacobian` and `hessian` overloads returning Eigen types
+  are available whenever Eigen is included, even without defining
+  `AUTODIFF_EIGEN_FOUND` ([#372](https://github.com/autodiff/autodiff/issues/372)).
+
+It finally adds math functions that were missing upstream, for the three
+number types `dual`, `real` and `var` (on host, with nvcc and with NVRTC):
+
+- `exp2`, `log2`, `expm1`, `log1p` and `erfc`;
+- `fmin`, `fmax` and `fmod` (the value of `fmod` is exactly the one of
+  `std::fmod`, its derivatives are 1 and minus the integral quotient);
+- `floor`, `ceil`, `round` and `trunc`, with zero derivatives;
+- the ones that only some types provided: `erf`, `hypot` (2 and 3 arguments),
+  `abs2` and `conj` for `real`, `cbrt` for `dual` and `var`, `copysign` and
+  `sign` for `var`.
+
+## Building the tests and examples
+
+```
+git clone https://github.com/keckj/autodiff.git
+cd autodiff
+cmake -S . -B build -DCMAKE_CUDA_ARCHITECTURES=native
+cmake --build build -j
+./build/tests/autodiff-cpptests      # host tests
+./build/tests/autodiff-cudatests     # nvcc tests, run on the device
+./build/tests/nvrtc/autodiff-nvrtctests   # NVRTC tests, run on the device
+```
+
+The CUDA examples in [examples/cuda](examples/cuda) compute the same results
+on the host, on the device with nvcc and on the device with NVRTC, and check
+that they match. They are built with the other examples
+(`-DAUTODIFF_BUILD_EXAMPLES=ON`) and can all be run with
+`cmake --build build --target cuda-examples`.
+
+The CUDA tests and examples are enabled when a CUDA compiler is found. The NVRTC test
+runner can be disabled with `-DAUTODIFF_BUILD_NVRTC_TESTS=OFF`, and accepts
+`--compile-only` to compile the kernels without a GPU.
+
 <a href="https://autodiff.github.io" target="_blank">
     <img src='art/autodiff-header.svg' width='100%'>
 </a>
