@@ -1,0 +1,870 @@
+diff --git a/Eigen/Core b/Eigen/Core
+index 34838f5d7..6f42ba068 100644
+--- a/Eigen/Core
++++ b/Eigen/Core
+@@ -14,6 +14,9 @@
+ // Eigen version information.
+ #include "Version"
+ 
++// NVRTC support: maps std onto libcu++, must come before any other include.
++#include "src/Core/util/NVRTCSupport.h"
++
+ // first thing Eigen does: stop the compiler from reporting useless warnings.
+ #include "src/Core/util/DisableStupidWarnings.h"
+ 
+@@ -26,13 +29,16 @@
+ 
+ // We need cuda_runtime.h/hip_runtime.h to ensure that
+ // the EIGEN_USING_STD macro works properly on the device side
+-#if defined(EIGEN_CUDACC)
++// (NVRTC declares the CUDA runtime device functions implicitly).
++#if defined(EIGEN_CUDACC_RTC)
++// nothing to include
++#elif defined(EIGEN_CUDACC)
+ #include <cuda_runtime.h>
+ #elif defined(EIGEN_HIPCC)
+ #include <hip/hip_runtime.h>
+ #endif
+ 
+-#ifdef EIGEN_EXCEPTIONS
++#if defined(EIGEN_EXCEPTIONS) && !defined(EIGEN_CUDACC_RTC)
+ #include <new>
+ #endif
+ 
+@@ -48,7 +54,9 @@
+ #if EIGEN_COMP_ICC && defined(EIGEN_GPU_COMPILE_PHASE) && !defined(_OVERRIDE_COMPLEX_SPECIALIZATION_)
+ #define _OVERRIDE_COMPLEX_SPECIALIZATION_ 1
+ #endif
++#ifndef EIGEN_CUDACC_RTC
+ #include <complex>
++#endif
+ 
+ // this include file manages BLAS and MKL related macros
+ // and inclusion of their respective header files
+@@ -76,6 +84,9 @@
+ #define EIGEN_HAS_ERRNO
+ #endif
+ 
++// The standard library is not available under NVRTC, the libcu++ replacements
++// are included by NVRTCSupport.h.
++#ifndef EIGEN_CUDACC_RTC
+ #ifdef EIGEN_HAS_ERRNO
+ #include <cerrno>
+ #endif
+@@ -126,6 +137,7 @@
+ #if EIGEN_COMP_MSVC && (EIGEN_ARCH_i386_OR_x86_64 || EIGEN_ARCH_ARM64) && !EIGEN_OS_WINCE
+ #include <intrin.h>
+ #endif
++#endif  // EIGEN_CUDACC_RTC
+ 
+ #if defined(EIGEN_USE_SYCL)
+ #undef min
+diff --git a/Eigen/Geometry b/Eigen/Geometry
+index efe3e1fa3..383afeb06 100644
+--- a/Eigen/Geometry
++++ b/Eigen/Geometry
+@@ -12,7 +12,9 @@
+ 
+ #include "SVD"
+ #include "LU"
++#ifndef EIGEN_CUDACC_RTC
+ #include <limits>
++#endif
+ 
+ #include "src/Core/util/DisableStupidWarnings.h"
+ 
+diff --git a/Eigen/src/Core/NumTraits.h b/Eigen/src/Core/NumTraits.h
+index bf41c3bb6..a3a617e30 100644
+--- a/Eigen/src/Core/NumTraits.h
++++ b/Eigen/src/Core/NumTraits.h
+@@ -307,6 +307,8 @@ struct NumTraits<Array<Scalar, Rows, Cols, Options, MaxRows, MaxCols> > {
+   constexpr static int max_digits10() { return NumTraits<Scalar>::max_digits10(); }
+ };
+ 
++// std::string is not available with NVRTC.
++#ifndef EIGEN_CUDACC_RTC
+ template <>
+ struct NumTraits<std::string> : GenericNumTraits<std::string> {
+   enum { RequireInitialization = 1, ReadCost = HugeCost, AddCost = HugeCost, MulCost = HugeCost };
+@@ -322,6 +324,7 @@ struct NumTraits<std::string> : GenericNumTraits<std::string> {
+   static inline std::string infinity();
+   static inline std::string quiet_NaN();
+ };
++#endif
+ 
+ // Empty specialization for void to allow template specialization based on NumTraits<T>::Real with T==void and SFINAE.
+ template <>
+diff --git a/Eigen/src/Core/RandomImpl.h b/Eigen/src/Core/RandomImpl.h
+index 1a82e6253..2389928f5 100644
+--- a/Eigen/src/Core/RandomImpl.h
++++ b/Eigen/src/Core/RandomImpl.h
+@@ -43,12 +43,27 @@ inline EIGEN_MATHFUNC_RETVAL(random, Scalar) random() {
+ }
+ 
+ // TODO: replace or provide alternatives to this, e.g. std::random_device
++#if defined(EIGEN_CUDACC_RTC)
++// There is no std::rand() with NVRTC: random number generation (e.g. DenseBase::Random()) is not
++// available and traps at runtime. (This cannot be a compile-time error since random_impl<bool> is not a
++// template.)
++struct eigen_random_device {
++  using ReturnType = int;
++  static constexpr int Entropy = 31;
++  static constexpr ReturnType Highest = 0x7fffffff;
++  static EIGEN_DEVICE_FUNC inline ReturnType run() {
++    __trap();
++    return 0;
++  }
++};
++#else
+ struct eigen_random_device {
+   using ReturnType = int;
+   static constexpr int Entropy = meta_floor_log2<(unsigned int)(RAND_MAX) + 1>::value;
+   static constexpr ReturnType Highest = RAND_MAX;
+   static EIGEN_DEVICE_FUNC inline ReturnType run() { return std::rand(); }
+ };
++#endif
+ 
+ // Fill a built-in unsigned integer with numRandomBits beginning with the least significant bit
+ template <typename Scalar>
+diff --git a/Eigen/src/Core/arch/Default/BFloat16.h b/Eigen/src/Core/arch/Default/BFloat16.h
+index b93c4bc2e..7aec08f6f 100644
+--- a/Eigen/src/Core/arch/Default/BFloat16.h
++++ b/Eigen/src/Core/arch/Default/BFloat16.h
+@@ -228,7 +228,7 @@ EIGEN_CONSTEXPR const bool numeric_limits_bfloat16_impl<T>::tinyness_before;
+ }  // end namespace bfloat16_impl
+ }  // end namespace Eigen
+ 
+-namespace std {
++EIGEN_STD_NS_BEGIN
+ // If std::numeric_limits<T> is specialized, should also specialize
+ // std::numeric_limits<const T>, std::numeric_limits<volatile T>, and
+ // std::numeric_limits<const volatile T>
+@@ -241,7 +241,7 @@ template <>
+ class numeric_limits<volatile Eigen::bfloat16> : public numeric_limits<Eigen::bfloat16> {};
+ template <>
+ class numeric_limits<const volatile Eigen::bfloat16> : public numeric_limits<Eigen::bfloat16> {};
+-}  // end namespace std
++EIGEN_STD_NS_END
+ 
+ namespace Eigen {
+ 
+diff --git a/Eigen/src/Core/arch/Default/Half.h b/Eigen/src/Core/arch/Default/Half.h
+index 210dfff1e..da2ebbf7f 100644
+--- a/Eigen/src/Core/arch/Default/Half.h
++++ b/Eigen/src/Core/arch/Default/Half.h
+@@ -319,7 +319,7 @@ constexpr const bool numeric_limits_half_impl<T>::tinyness_before;
+ }  // end namespace half_impl
+ }  // end namespace Eigen
+ 
+-namespace std {
++EIGEN_STD_NS_BEGIN
+ // If std::numeric_limits<T> is specialized, should also specialize
+ // std::numeric_limits<const T>, std::numeric_limits<volatile T>, and
+ // std::numeric_limits<const volatile T>
+@@ -332,7 +332,7 @@ template <>
+ class numeric_limits<volatile Eigen::half> : public numeric_limits<Eigen::half> {};
+ template <>
+ class numeric_limits<const volatile Eigen::half> : public numeric_limits<Eigen::half> {};
+-}  // end namespace std
++EIGEN_STD_NS_END
+ 
+ namespace Eigen {
+ 
+diff --git a/Eigen/src/Core/products/GeneralBlockPanelKernel.h b/Eigen/src/Core/products/GeneralBlockPanelKernel.h
+index e72c6b48e..f1e8485d8 100644
+--- a/Eigen/src/Core/products/GeneralBlockPanelKernel.h
++++ b/Eigen/src/Core/products/GeneralBlockPanelKernel.h
+@@ -82,6 +82,17 @@ struct CacheSizes {
+   std::ptrdiff_t m_l3;
+ };
+ 
++#if defined(EIGEN_CUDACC_RTC)
++/** \internal NVRTC: the CPU cache sizes cannot be queried and device code cannot have dynamically initialized
++ * function-scope statics, so the default cache sizes are always used and SetAction is ignored. */
++inline void manage_caching_sizes(Action action, std::ptrdiff_t* l1, std::ptrdiff_t* l2, std::ptrdiff_t* l3) {
++  if (action == GetAction) {
++    *l1 = defaultL1CacheSize;
++    *l2 = defaultL2CacheSize;
++    *l3 = defaultL3CacheSize;
++  }
++}
++#else
+ /** \internal */
+ inline void manage_caching_sizes(Action action, std::ptrdiff_t* l1, std::ptrdiff_t* l2, std::ptrdiff_t* l3) {
+   static CacheSizes m_cacheSizes;
+@@ -101,6 +112,7 @@ inline void manage_caching_sizes(Action action, std::ptrdiff_t* l1, std::ptrdiff
+     eigen_internal_assert(false);
+   }
+ }
++#endif
+ 
+ /* Helper for computeProductBlockingSizes.
+  *
+diff --git a/Eigen/src/Core/util/Assert.h b/Eigen/src/Core/util/Assert.h
+index 09a411a0d..861abbd92 100644
+--- a/Eigen/src/Core/util/Assert.h
++++ b/Eigen/src/Core/util/Assert.h
+@@ -29,7 +29,11 @@
+ //  - gpu debugging is enabled.
+ #if !defined(EIGEN_NO_DEBUG) && (!defined(EIGEN_GPU_COMPILE_PHASE) || !defined(EIGEN_NO_DEBUG_GPU))
+ 
++#ifdef EIGEN_CUDACC_RTC
++#include <cuda/std/cassert>
++#else
+ #include <cassert>
++#endif
+ 
+ #ifndef EIGEN_USE_CUSTOM_PLAIN_ASSERT
+ // Disable new custom asserts by default for now.
+diff --git a/Eigen/src/Core/util/ConfigureVectorization.h b/Eigen/src/Core/util/ConfigureVectorization.h
+index c2546a083..69f97c72d 100644
+--- a/Eigen/src/Core/util/ConfigureVectorization.h
++++ b/Eigen/src/Core/util/ConfigureVectorization.h
+@@ -478,14 +478,18 @@ extern "C" {
+ 
+ #if defined EIGEN_CUDACC
+ #define EIGEN_VECTORIZE_GPU
++#ifndef EIGEN_CUDACC_RTC  // NVRTC declares the CUDA vector types implicitly
+ #include <vector_types.h>
++#endif
+ #if EIGEN_CUDA_SDK_VER >= 70500
+ #define EIGEN_HAS_CUDA_FP16
+ #endif
+ #endif
+ 
+ #if defined(EIGEN_HAS_CUDA_FP16)
++#ifndef EIGEN_CUDACC_RTC  // not available under NVRTC, and not needed
+ #include <cuda_runtime_api.h>
++#endif
+ #include <cuda_fp16.h>
+ #endif
+ 
+@@ -504,6 +508,8 @@ extern "C" {
+ 
+ namespace Eigen {
+ 
++// Host-only (NVRTC only compiles device code).
++#ifndef EIGEN_CUDACC_RTC
+ inline static const char *SimdInstructionSetsInUse(void) {
+ #if defined(EIGEN_VECTORIZE_AVX512)
+   return "AVX512, FMA, AVX2, AVX, SSE, SSE2, SSE3, SSSE3, SSE4.1, SSE4.2";
+@@ -537,6 +543,7 @@ inline static const char *SimdInstructionSetsInUse(void) {
+   return "None";
+ #endif
+ }
++#endif  // EIGEN_CUDACC_RTC
+ 
+ }  // end namespace Eigen
+ 
+diff --git a/Eigen/src/Core/util/Constants.h b/Eigen/src/Core/util/Constants.h
+index fcc2db822..66e8eb1ac 100644
+--- a/Eigen/src/Core/util/Constants.h
++++ b/Eigen/src/Core/util/Constants.h
+@@ -537,6 +537,20 @@ struct MatrixXpr {};
+ struct ArrayXpr {};
+ 
+ // An evaluator must define its shape. By default, it can be one of the following:
++#ifdef EIGEN_CUDACC_RTC
++// std::string is not available with NVRTC, debugName() is omitted.
++struct DenseShape {};
++struct SolverShape {};
++struct HomogeneousShape {};
++struct DiagonalShape {};
++struct SkewSymmetricShape {};
++struct BandShape {};
++struct TriangularShape {};
++struct SelfAdjointShape {};
++struct PermutationShape {};
++struct TranspositionsShape {};
++struct SparseShape {};
++#else
+ struct DenseShape {
+   static std::string debugName() { return "DenseShape"; }
+ };
+@@ -570,6 +584,7 @@ struct TranspositionsShape {
+ struct SparseShape {
+   static std::string debugName() { return "SparseShape"; }
+ };
++#endif
+ 
+ namespace internal {
+ 
+diff --git a/Eigen/src/Core/util/DisableStupidWarnings.h b/Eigen/src/Core/util/DisableStupidWarnings.h
+index ab0c542d0..3389ae6f0 100644
+--- a/Eigen/src/Core/util/DisableStupidWarnings.h
++++ b/Eigen/src/Core/util/DisableStupidWarnings.h
+@@ -83,7 +83,7 @@
+ #endif
+ #endif
+ 
+-#if defined __NVCC__ && defined __CUDACC__
++#if (defined __NVCC__ || defined __CUDACC_RTC__) && defined __CUDACC__
+ // MSVC 14.16 (required by CUDA 9.*) does not support the _Pragma keyword, so
+ // we instead use Microsoft's __pragma extension.
+ #if defined _MSC_VER
+@@ -131,6 +131,10 @@ EIGEN_NV_DIAG_SUPPRESS(2886)
+ EIGEN_NV_DIAG_SUPPRESS(2929)
+ EIGEN_NV_DIAG_SUPPRESS(2977)
+ EIGEN_NV_DIAG_SUPPRESS(20012)
++#if defined __CUDACC_RTC__
++// Disable the "support for trigraphs is disabled" message of NVRTC
++EIGEN_NV_DIAG_SUPPRESS(1406)
++#endif
+ #undef EIGEN_NV_DIAG_SUPPRESS
+ #undef EIGEN_MAKE_PRAGMA
+ #endif
+diff --git a/Eigen/src/Core/util/Macros.h b/Eigen/src/Core/util/Macros.h
+index dad367169..c7afefe01 100644
+--- a/Eigen/src/Core/util/Macros.h
++++ b/Eigen/src/Core/util/Macros.h
+@@ -147,7 +147,8 @@
+ #define EIGEN_COMP_MSVC 0
+ #endif
+ 
+-#if defined(__NVCC__)
++// NVRTC (__CUDACC_RTC__) shares the nvcc front-end.
++#if defined(__NVCC__) || defined(__CUDACC_RTC__)
+ #if defined(__CUDACC_VER_MAJOR__) && (__CUDACC_VER_MAJOR__ >= 9)
+ #define EIGEN_COMP_NVCC ((__CUDACC_VER_MAJOR__ * 10000) + (__CUDACC_VER_MINOR__ * 100))
+ #elif defined(__CUDACC_VER__)
+@@ -561,7 +562,10 @@
+ #define EIGEN_CUDA_ARCH __CUDA_ARCH__
+ #endif
+ 
+-#if defined(EIGEN_CUDACC)
++#if defined(EIGEN_CUDACC_RTC)
++// NVRTC: <cuda.h> is not available, derive the SDK version from the compiler version.
++#define EIGEN_CUDA_SDK_VER (__CUDACC_VER_MAJOR__ * 10000 + __CUDACC_VER_MINOR__ * 100)
++#elif defined(EIGEN_CUDACC)
+ #include <cuda.h>
+ #define EIGEN_CUDA_SDK_VER (CUDA_VERSION * 10)
+ #else
+@@ -751,7 +755,9 @@
+ 
+ // Does the compiler support C99?
+ // Need to include <cmath> to make sure _GLIBCXX_USE_C99 gets defined
++#ifndef EIGEN_CUDACC_RTC
+ #include <cmath>
++#endif
+ #ifndef EIGEN_HAS_C99_MATH
+ #if ((defined(__STDC_VERSION__) && (__STDC_VERSION__ >= 199901)) ||                                          \
+      (defined(__GNUC__) && defined(_GLIBCXX_USE_C99)) || (defined(_LIBCPP_VERSION) && !defined(_MSC_VER)) || \
+@@ -1123,7 +1129,7 @@ EIGEN_DEVICE_FUNC EIGEN_STRONG_INLINE constexpr void ignore_unused_variable(cons
+ // pull in math functions from the global namespace.
+ // In host mode, and when device code is compiled with clang,
+ // use the std versions.
+-#if (defined(EIGEN_CUDA_ARCH) && defined(__NVCC__)) || defined(EIGEN_HIP_DEVICE_COMPILE)
++#if (defined(EIGEN_CUDA_ARCH) && (defined(__NVCC__) || defined(EIGEN_CUDACC_RTC))) || defined(EIGEN_HIP_DEVICE_COMPILE)
+ #define EIGEN_USING_STD(FUNC) using ::FUNC;
+ #else
+ #define EIGEN_USING_STD(FUNC) using std::FUNC;
+diff --git a/Eigen/src/Core/util/Memory.h b/Eigen/src/Core/util/Memory.h
+index 1492f72c9..ad9603224 100644
+--- a/Eigen/src/Core/util/Memory.h
++++ b/Eigen/src/Core/util/Memory.h
+@@ -145,6 +145,31 @@ EIGEN_DEVICE_FUNC inline void throw_std_bad_alloc() {
+ #endif
+ }
+ 
++#if defined(EIGEN_CUDACC_RTC)
++// The CUDA device runtime provides malloc, free and memcpy, but neither realloc nor memmove.
++
++/** \internal realloc() replacement for NVRTC, \a old_size is the size of the block pointed to by \a ptr. */
++EIGEN_DEVICE_FUNC inline void* nvrtc_realloc(void* ptr, std::size_t new_size, std::size_t old_size) {
++  void* result = ::malloc(new_size);
++  if (result != nullptr && ptr != nullptr) {
++    ::memcpy(result, ptr, old_size < new_size ? old_size : new_size);
++    ::free(ptr);
++  }
++  return result;
++}
++
++/** \internal memmove() replacement for NVRTC. */
++EIGEN_DEVICE_FUNC inline void nvrtc_memmove(void* dst, const void* src, std::size_t count) {
++  unsigned char* d = static_cast<unsigned char*>(dst);
++  const unsigned char* s = static_cast<const unsigned char*>(src);
++  if (d < s) {
++    for (std::size_t i = 0; i < count; ++i) d[i] = s[i];
++  } else if (d > s) {
++    for (std::size_t i = count; i > 0; --i) d[i - 1] = s[i - 1];
++  }
++}
++#endif
++
+ /*****************************************************************************
+ *** Implementation of handmade aligned functions                           ***
+ *****************************************************************************/
+@@ -194,8 +219,12 @@ EIGEN_DEVICE_FUNC inline void* handmade_aligned_realloc(void* ptr, std::size_t n
+   void* old_original = static_cast<uint8_t*>(ptr) - old_offset;
+ 
+   check_that_malloc_is_allowed();
++#if defined(EIGEN_CUDACC_RTC)
++  void* original = nvrtc_realloc(old_original, new_size + alignment, old_size + alignment);
++#else
+   EIGEN_USING_STD(realloc)
+   void* original = realloc(old_original, new_size + alignment);
++#endif
+   if (original == nullptr) return nullptr;
+   if (original == old_original) return ptr;
+   std::size_t offset = alignment - (reinterpret_cast<std::size_t>(original) & (alignment - 1));
+@@ -203,7 +232,11 @@ EIGEN_DEVICE_FUNC inline void* handmade_aligned_realloc(void* ptr, std::size_t n
+   if (offset != old_offset) {
+     const void* src = static_cast<const void*>(static_cast<uint8_t*>(original) + old_offset);
+     std::size_t count = (std::min)(new_size, old_size);
++#if defined(EIGEN_CUDACC_RTC)
++    nvrtc_memmove(aligned, src, count);
++#else
+     std::memmove(aligned, src, count);
++#endif
+   }
+   // Store offset - 1, since it is guaranteed to be at least 1.
+   *(static_cast<uint8_t*>(aligned) - 1) = static_cast<uint8_t>(offset - 1);
+@@ -270,8 +303,12 @@ EIGEN_DEVICE_FUNC inline void* aligned_realloc(void* ptr, std::size_t new_size,
+   EIGEN_UNUSED_VARIABLE(old_size)
+ 
+   check_that_malloc_is_allowed();
++#if defined(EIGEN_CUDACC_RTC)
++  result = nvrtc_realloc(ptr, new_size, old_size);
++#else
+   EIGEN_USING_STD(realloc)
+   result = realloc(ptr, new_size);
++#endif
+ #else
+   result = handmade_aligned_realloc(ptr, new_size, old_size);
+ #endif
+@@ -336,8 +373,12 @@ EIGEN_DEVICE_FUNC inline void* conditional_aligned_realloc<false>(void* ptr, std
+   }
+ 
+   check_that_malloc_is_allowed();
++#if defined(EIGEN_CUDACC_RTC)
++  return nvrtc_realloc(ptr, new_size, old_size);
++#else
+   EIGEN_USING_STD(realloc)
+   return realloc(ptr, new_size);
++#endif
+ }
+ 
+ /*****************************************************************************
+@@ -618,7 +659,11 @@ struct smart_memmove_helper<T, true> {
+     std::intptr_t size = std::intptr_t(end) - std::intptr_t(start);
+     if (size == 0) return;
+     eigen_internal_assert(start != 0 && end != 0 && target != 0);
++#if defined(EIGEN_CUDACC_RTC)
++    nvrtc_memmove(target, start, size);
++#else
+     std::memmove(target, start, size);
++#endif
+   }
+ };
+ 
+diff --git a/Eigen/src/Core/util/Meta.h b/Eigen/src/Core/util/Meta.h
+index ddbc898e1..52369e1e2 100644
+--- a/Eigen/src/Core/util/Meta.h
++++ b/Eigen/src/Core/util/Meta.h
+@@ -16,7 +16,9 @@
+ 
+ #if defined(EIGEN_GPU_COMPILE_PHASE)
+ 
++#ifndef EIGEN_CUDACC_RTC
+ #include <cfloat>
++#endif
+ 
+ #if defined(EIGEN_CUDA_ARCH)
+ #include <math_constants.h>
+@@ -29,7 +31,9 @@
+ #endif
+ 
+ // Define portable (u)int{32,64} types
++#ifndef EIGEN_CUDACC_RTC
+ #include <cstdint>
++#endif
+ 
+ namespace Eigen {
+ namespace numext {
+diff --git a/Eigen/src/Core/util/Serializer.h b/Eigen/src/Core/util/Serializer.h
+index dc3bd1308..8dab3f62f 100644
+--- a/Eigen/src/Core/util/Serializer.h
++++ b/Eigen/src/Core/util/Serializer.h
+@@ -10,7 +10,9 @@
+ #ifndef EIGEN_SERIALIZER_H
+ #define EIGEN_SERIALIZER_H
+ 
++#ifndef EIGEN_CUDACC_RTC
+ #include <type_traits>
++#endif
+ 
+ // The Serializer class encodes data into a memory buffer so it can be later
+ // reconstructed. This is mainly used to send objects back-and-forth between
+diff --git a/Eigen/src/Core/util/NVRTCSupport.h b/Eigen/src/Core/util/NVRTCSupport.h
+new file mode 100644
+index 000000000..4280c9ed9
+--- /dev/null
++++ b/Eigen/src/Core/util/NVRTCSupport.h
+@@ -0,0 +1,157 @@
++// This file is part of Eigen, a lightweight C++ template library
++// for linear algebra.
++//
++// This Source Code Form is subject to the terms of the Mozilla
++// Public License v. 2.0. If a copy of the MPL was not distributed
++// with this file, You can obtain one at http://mozilla.org/MPL/2.0/.
++
++#ifndef EIGEN_NVRTC_SUPPORT_H
++#define EIGEN_NVRTC_SUPPORT_H
++
++// Support for NVRTC (CUDA runtime compilation).
++//
++// NVRTC compiles device code only and ships no C or C++ standard library:
++// none of <cmath>, <limits>, <type_traits>, ... can be included. The only
++// standard library available is libcu++ (CCCL), which provides a subset of the
++// standard library in namespace cuda::std through <cuda/std/...> headers.
++// In addition, NVRTC implicitly declares the CUDA device runtime functions in
++// the global namespace (math functions such as ::sqrt or ::isnan, ::malloc,
++// ::free, ::memcpy, ::memset, ::printf, ...).
++//
++// This header is included first by Eigen/Core. When compiling with NVRTC it:
++//  - defines EIGEN_CUDACC_RTC, which is used to guard all system includes and
++//    the few code paths that rely on host-only facilities,
++//  - includes the libcu++ headers corresponding to the standard headers used
++//    by Eigen,
++//  - makes the libcu++ entities visible as std::xxx (see below),
++//  - defines EIGEN_STD_NS_BEGIN / EIGEN_STD_NS_END that must be used instead of
++//    "namespace std {" / "}" to specialize standard templates (numeric_limits).
++//
++// Requirements: the libcu++ headers must be reachable, i.e. NVRTC must be given
++// "-I<cuda>/include" (or the CCCL include directory). C++17 or later is needed.
++//
++// When not compiling with NVRTC this header only defines EIGEN_STD_NS_BEGIN and
++// EIGEN_STD_NS_END as "namespace std {" and "}".
++
++#if defined(__CUDACC_RTC__)
++
++#define EIGEN_CUDACC_RTC 1
++
++#if __cplusplus < 201703L
++#error "Eigen with NVRTC requires -std=c++17 or later."
++#endif
++
++// No system headers are available under NVRTC, these are the libcu++ replacements.
++#include <cuda/std/cstddef>
++#include <cuda/std/cstdint>
++#include <cuda/std/climits>
++#include <cuda/std/cfloat>
++#include <cuda/std/cstdlib>
++#include <cuda/std/cmath>
++#include <cuda/std/limits>
++#include <cuda/std/type_traits>
++#include <cuda/std/utility>
++#include <cuda/std/functional>
++#include <cuda/std/initializer_list>
++#include <cuda/std/iterator>
++#include <cuda/std/array>
++#include <cuda/std/tuple>
++#include <cuda/std/complex>
++#include <cuda/std/bit>
++#include <cuda/std/memory>
++#include <cuda/std/version>
++#if __has_include(<cuda/std/algorithm>)
++#include <cuda/std/algorithm>
++#else
++// CCCL 2.x only ships the algorithms through an internal header.
++#include <cuda/std/__algorithm_>
++#endif
++
++// Make the libcu++ entities available as std::xxx.
++//
++// A using-directive is used rather than a list of using-declarations because:
++//  - Eigen refers to well over a hundred different std entities (type traits,
++//    std::numeric_limits, std::complex, math functions, functors, iterators,
++//    std::array, ...) spread over all modules; listing them would be fragile
++//    and any omission would be a hard error,
++//  - user code compiled together with Eigen (e.g. automatic differentiation
++//    libraries) usually relies on std:: names as well (std::is_same_v, ...),
++//  - an explicit list would not help for explicit specializations anyway, see
++//    EIGEN_STD_NS_BEGIN below.
++// Qualified lookup of std::xxx searches the namespaces nominated by this
++// directive, so std::xxx finds cuda::std::xxx. Declarations made directly in
++// namespace std (below) take precedence over the nominated ones.
++namespace std {
++using namespace cuda::std;
++}  // namespace std
++
++// The C library functions used by Eigen that libcu++ does not provide but that
++// the CUDA device runtime declares in the global namespace.
++namespace std {
++using ::free;
++using ::malloc;
++using ::memcpy;
++using ::memset;
++// <cmath> functions missing from libcu++ under NVRTC (CCCL 2.x), declared by
++// the device runtime in the global namespace.
++using ::cbrt;
++using ::erf;
++using ::erfc;
++using ::exp2;
++using ::expm1;
++using ::fdim;
++using ::floor;
++using ::fma;
++using ::fmod;
++using ::frexp;
++using ::ldexp;
++using ::lgamma;
++using ::llrint;
++using ::llround;
++using ::lrint;
++using ::lround;
++using ::modf;
++using ::nan;
++using ::nearbyint;
++using ::nextafter;
++using ::remainder;
++using ::remquo;
++using ::rint;
++using ::round;
++using ::scalbln;
++using ::scalbn;
++using ::tgamma;
++using ::trunc;
++// Tag type used by Eigen's nothrow operator new overloads. NVRTC has no <new>
++// and therefore no std::nothrow_t; Eigen only needs the type to declare these
++// overloads.
++#if !defined(EIGEN_NVRTC_NO_NOTHROW_T)
++struct nothrow_t {
++  explicit nothrow_t() = default;
++};
++#endif
++}  // namespace std
++
++// Explicit specializations of standard templates must be declared in the
++// namespace that actually declares the primary template, which is cuda::std
++// under NVRTC (a using-directive or using-declaration is not enough).
++#define EIGEN_STD_NS_BEGIN \
++  namespace cuda {         \
++  namespace std {
++#define EIGEN_STD_NS_END \
++  }                      \
++  }
++
++// There is no I/O under NVRTC.
++#ifndef EIGEN_NO_IO
++#define EIGEN_NO_IO
++#endif
++
++#else  // defined(__CUDACC_RTC__)
++
++#define EIGEN_STD_NS_BEGIN namespace std {
++#define EIGEN_STD_NS_END }
++
++#endif  // defined(__CUDACC_RTC__)
++
++#endif  // EIGEN_NVRTC_SUPPORT_H
+diff --git a/NVRTC.md b/NVRTC.md
+new file mode 100644
+index 000000000..fb70318a4
+--- /dev/null
++++ b/NVRTC.md
+@@ -0,0 +1,204 @@
++# Using Eigen with NVRTC
++
++This branch (`nvrtc-5.0.1`, based on the Eigen 5.0.1 tag) makes Eigen usable
++from device code compiled at runtime with NVRTC, the CUDA runtime compilation
++library. All changes are guarded by `EIGEN_CUDACC_RTC`, which is only defined
++when `__CUDACC_RTC__` is defined (i.e. by NVRTC). Builds with g++, clang, MSVC
++or nvcc see exactly the same token stream as with pristine Eigen 5.0.1 (checked
++by comparing the preprocessed output of `Eigen/Dense`, `Eigen/Sparse` and
++`Eigen/Geometry` with g++ (C++17 and C++20) and with both nvcc phases: only
++`__LINE__` values in assertion messages and blank lines differ).
++
++## Requirements and options
++
++- CUDA 12.x NVRTC with the libcu++ (CCCL) headers. Tested with CUDA 12.9
++  (CCCL 2.8.2) on sm_120.
++- C++17 or later (`-std=c++17` or `-std=c++20`). An `#error` is raised
++  otherwise.
++- `-default-device` is REQUIRED (see below).
++- Include paths: the Eigen root and the CUDA include directory (for
++  `<cuda/std/...>` and `<cuda_fp16.h>`).
++
++Typical option set:
++
++    -std=c++17 -default-device --gpu-architecture=compute_120
++    -I/path/to/eigen -I/usr/local/cuda/include
++
++Nothing else is needed: no `-D` macro, no pre-include, no
++`--pre-include`. `-expt-relaxed-constexpr` does not exist in NVRTC and is not
++needed.
++
++### Why `-default-device` is required
++
++Without `-default-device`, NVRTC rejects every function declaration that has
++no execution space annotation, including uninstantiated templates,
++declaration-only member templates and constexpr functions ("A function without
++execution space annotations (__host__/__device__/__global__) is considered a
++host function, and host functions are not allowed in JIT mode"). This is a
++hard error that cannot be suppressed or turned into a warning, and there is
++no pragma equivalent to `-default-device`.
++
++Eigen leaves a large number of functions unannotated (type-trait helpers,
++symbolic index operators, IntegralConstant, Memory.h, the CPU product kernels,
++...). An automated experiment that added `__host__ __device__` to every
++function NVRTC complained about needed more than 1000 annotations in 72
++files just to compile a `Matrix3d * Vector3d` kernel, and still had not
++converged (some declarations cannot be annotated mechanically). Such a patch
++would not be upstreamable, so this port relies on `-default-device`, which
++makes NVRTC treat unannotated functions and namespace-scope variables as
++`__device__`. Without the flag the compilation fails at the first such
++declaration (Meta.h).
++
++## Usage
++
++    #include <Eigen/Dense>      // or Eigen/Core, Eigen/Geometry, ...
++
++    extern "C" __global__ void kernel(const double* in, double* out) {
++      Eigen::Map<const Eigen::Matrix3d> A(in);
++      Eigen::Vector3d b(in[9], in[10], in[11]);
++      Eigen::Map<Eigen::Vector3d> x(out);
++      x = A.partialPivLu().solve(b);
++    }
++
++Include Eigen before any header that uses `std::` names (see "std namespace"
++below). Do not include standard headers (`<cmath>`, `<type_traits>`, ...)
++yourself under NVRTC: they do not exist. Guard them with
++`#ifndef __CUDACC_RTC__` (or `EIGEN_CUDACC_RTC` after Eigen is included).
++
++## What is supported
++
++Validated by `nvrtc-test/` (GPU results compared with the same code compiled
++for the host by g++), with `-std=c++17` and `-std=c++20`:
++
++- fixed-size Matrix/Vector/Array arithmetic (double, float, int), products,
++  coefficient-wise operations and comparisons;
++- coefficient-wise math: sin, cos, exp, log, sqrt, abs, pow, tanh, square,
++  floor, round; isnan/isinf/isfinite (CUDA device builtins `::isnan` etc.);
++- reductions: sum, prod, mean, norm, squaredNorm, lpNorm, min/maxCoeff (with
++  index), dot, cross, colwise/rowwise, count, any, trace;
++- transpose, block, head, tail, segment (compile-time and runtime sizes),
++  corners, row/col, diagonal, reverse, swap, reshaped, indexed views with
++  `Eigen::seq`, `seqN`, `Eigen::placeholders::last`, `lastN`, `all`,
++  `Eigen::fix<N>`;
++- Map over device pointers, with inner/outer strides;
++- dynamic-size objects (VectorXd, MatrixXd, conservativeResize): allocation
++  goes through the device heap (`malloc`/`free`);
++- LU: determinant, inverse (2x2, 3x3, 4x4, double and float), PartialPivLU,
++  FullPivLU (solve, rank);
++- LLT, LDLT, triangular and self-adjoint views, triangular solve;
++- HouseholderQR, ColPivHouseholderQR;
++- JacobiSVD (3x3, 4x3), SelfAdjointEigenSolver (iterative and computeDirect);
++- Geometry: Quaternion, AngleAxis, slerp, FromTwoVectors, Isometry3d,
++  Rotation2D, canonicalEulerAngles, homogeneous/hnormalized;
++- `Eigen::half` and `Eigen::bfloat16` matrices and scalar operations,
++  `std::numeric_limits<half>`;
++- custom scalar types (a dual number type with its own NumTraits, sqrt, abs)
++  in matrix products, norm, dot, sum.
++
++## Limitations
++
++- `-default-device` is required (see above).
++- Random number generation (`Random()`, `setRandom()`, `internal::random`):
++  there is no `std::rand` on the device; it compiles but calls `__trap()` at
++  runtime.
++- No I/O: `EIGEN_NO_IO` is defined (no `operator<<`, no `IOFormat`).
++- `std::string` is not available: `NumTraits<std::string>` and the
++  `debugName()` members of the evaluator shape tags are not defined.
++- `setCpuCacheSizes()` is ignored and the default cache sizes are used (only
++  relevant for large dynamic-size products, which should be avoided in device
++  code anyway).
++- Large dynamic-size objects use the device heap (default 8 MB, see
++  `cudaLimitMallocHeapSize`).
++- `std::hash` specializations for half/bfloat16 are not provided (as with
++  nvcc device code).
++- Compilation is slow when many decompositions are instantiated in one
++  program (about 160 s for the full test file, which instantiates all of the
++  above); a single small kernel takes 2 to 4 seconds.
++- With a global `using namespace std;`, unqualified calls such as `abs(1.0)`
++  or `isnan(x)` are ambiguous between the NVRTC builtins and libcu++. This is
++  a property of libcu++ under NVRTC (the same happens with
++  `using namespace cuda::std;` and no Eigen). Qualify the call (`std::abs`) or
++  use a block-scope using-declaration (`using std::abs;`).
++
++## Design of the shim (Eigen/src/Core/util/NVRTCSupport.h)
++
++`Eigen/Core` includes this header right after `Eigen/Version`, before anything
++else. Under NVRTC it:
++
++1. defines `EIGEN_CUDACC_RTC` (and raises an error before C++17);
++2. includes the libcu++ headers corresponding to the standard headers Eigen
++   uses (`<cuda/std/cmath>`, `<cuda/std/limits>`, `<cuda/std/type_traits>`,
++   `<cuda/std/complex>`, `<cuda/std/array>`, `<cuda/std/bit>`, ...). CCCL 2.x
++   does not provide a public `<cuda/std/algorithm>`; the internal
++   `<cuda/std/__algorithm_>` is used in that case;
++3. adds `namespace std { using namespace cuda::std; }`, so that every
++   `std::xxx` used by Eigen (and by user code, e.g. `std::is_same_v`,
++   `std::enable_if_t`, `std::numeric_limits`, `std::sqrt`) resolves to the
++   libcu++ entity. A using-directive is used instead of a list of
++   using-declarations because Eigen uses well over a hundred std names and a
++   missing one is a hard error;
++4. adds using-declarations in namespace std for the C library functions that
++   libcu++ does not provide under NVRTC but that the CUDA device runtime
++   declares globally: `malloc`, `free`, `memcpy`, `memset`, and the math
++   functions `cbrt erf erfc exp2 expm1 fdim floor fma fmod frexp ldexp lgamma
++   llrint llround lrint lround modf nan nearbyint nextafter remainder remquo
++   rint round scalbln scalbn tgamma trunc`. Direct declarations in std take
++   precedence over the nominated cuda::std ones, so this stays unambiguous if
++   a later CCCL adds them;
++5. declares `std::nothrow_t` (there is no `<new>`), needed by Eigen's
++   nothrow operator new overloads. Define `EIGEN_NVRTC_NO_NOTHROW_T` if
++   another header already provides it;
++6. defines `EIGEN_STD_NS_BEGIN` / `EIGEN_STD_NS_END` as
++   `namespace cuda { namespace std {` / `} }`: explicit specializations
++   (`numeric_limits<half>`) must be declared in the namespace of the primary
++   template, which is cuda::std. Outside NVRTC they expand to
++   `namespace std {` / `}`;
++7. defines `EIGEN_NO_IO`.
++
++Outside NVRTC the header only defines `EIGEN_STD_NS_BEGIN` and
++`EIGEN_STD_NS_END`.
++
++Under NVRTC Eigen behaves like nvcc device code: `EIGEN_COMP_NVCC`,
++`EIGEN_CUDACC`, `EIGEN_CUDA_ARCH`, `EIGEN_GPU_COMPILE_PHASE` are defined, so
++the existing GPU code paths are used (math functions from the global
++namespace, no CPU SIMD, `cuda_fp16.h` for half).
++
++## Patch list
++
++| File | Change | Rationale |
++|------|--------|-----------|
++| Eigen/src/Core/util/NVRTCSupport.h | new | shim described above |
++| Eigen/Core | include NVRTCSupport.h first; skip `<cuda_runtime.h>`, `<new>`, `<complex>` and the block of system includes (`<cerrno>` ... `<intrin.h>`) | no system headers under NVRTC; libcu++ replacements come from the shim; the runtime functions are implicitly declared |
++| Eigen/Geometry | skip `<limits>` | same |
++| util/Macros.h | `EIGEN_COMP_NVCC` also for `__CUDACC_RTC__`; `EIGEN_CUDA_SDK_VER` from `__CUDACC_VER_MAJOR__/MINOR__` instead of `<cuda.h>`; skip `<cmath>`; `EIGEN_USING_STD` uses the global namespace on the device for NVRTC as for nvcc | NVRTC shares the nvcc front-end; `<cuda.h>` is not available; device math functions are global builtins |
++| util/ConfigureVectorization.h | skip `<vector_types.h>` and `<cuda_runtime_api.h>`; hide `SimdInstructionSetsInUse()` | headers not available (types are builtin); host-only function |
++| util/Meta.h, util/Serializer.h | skip `<cfloat>`, `<cstdint>`, `<type_traits>` | provided by the shim |
++| util/Assert.h | `<cuda/std/cassert>` instead of `<cassert>` | no `<cassert>` |
++| util/Constants.h | shape tags without `debugName()` | it returns `std::string`, which libcu++ does not have |
++| NumTraits.h | no `NumTraits<std::string>` | same |
++| util/Memory.h | `nvrtc_realloc` (malloc + memcpy + free, using the known old size) and `nvrtc_memmove` (overlap-safe byte copy), used where Eigen calls `realloc`/`memmove` | the device runtime has neither `realloc` nor `memmove` |
++| RandomImpl.h | `eigen_random_device` with constant RAND_MAX-like values and a `__trap()`ing `run()` | no `std::rand`; `random_impl<bool>` is not a template, so the code must compile |
++| products/GeneralBlockPanelKernel.h | `manage_caching_sizes` returns the default sizes | the original uses a function-scope static whose constructor queries the CPU |
++| arch/Default/Half.h, BFloat16.h | `numeric_limits` specializations use `EIGEN_STD_NS_BEGIN/END` | specializations must be in cuda::std |
++| util/DisableStupidWarnings.h | apply the nvcc diagnostic suppressions for NVRTC too, plus 1406 (trigraph message) | same front-end, same spurious warnings |
++
++## Testing
++
++`nvrtc-test/` is a standalone CMake project (C++17, `CUDA::nvrtc`,
++`CUDA::cuda_driver`):
++
++    cmake -S nvrtc-test -B build-nvrtc-test && cmake --build build-nvrtc-test
++    ./build-nvrtc-test/eigen_nvrtc_test        # -v prints the NVRTC logs
++
++`tests.cuh` holds the test functions. The program compiles it with NVRTC for
++the architecture of device 0 using three option sets (C++17 and C++20 with
++`-default-device`, C++17 without it, which is expected to fail), launches one
++kernel per test, and compares the results with the same functions compiled
++for the host (relative tolerance 1e-5, 1e-2 for half/bfloat16). It prints
++PASS/FAIL per test and returns non-zero on failure.
++
++Non-NVRTC regression checks done for this port: the host test subset
++basicstuff, adjoint, array_cwise, product_small, lu, qr, cholesky,
++geo_quaternion, half_float, bfloat16_float, numext, meta, indexed_view,
++symbolic_index and nullary (129 ctest entries, g++ 11.4) and the nvcc tests
++gpu_basic and gpu_example (CUDA 12.9, sm_120) all pass.

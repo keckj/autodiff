@@ -29,9 +29,6 @@
 
 #pragma once
 
-// C++ includes
-#include <array>
-
 // autodiff includes
 #include <autodiff/forward/utils/derivative.hpp>
 #include <autodiff/common/meta.hpp>
@@ -47,18 +44,18 @@ class TaylorSeries
 {
 public:
     /// The numeric floating point type of the derivatives, which can be a vector of values or just one.
-    using T = std::conditional_t<isVector<V>, VectorValueType<V>, V>;
+    using T = stdx::conditional_t<isVector<V>, VectorValueType<V>, V>;
 
     /// Construct a default TaylorSeries object.
     TaylorSeries() = default;
 
     /// Construct a TaylorSeries object with given directional derivatives.
-    explicit TaylorSeries(const std::array<V, N + 1>& derivatives)
+    AUTODIFF_DEVICE_FUNC explicit TaylorSeries(const stdx::array<V, N + 1>& derivatives)
     : _derivatives(derivatives)
     {}
 
     /// Evaluate the Taylor series object with given directional derivatives.
-    auto operator()(const T& t)
+    AUTODIFF_DEVICE_FUNC auto operator()(const T& t)
     {
         auto res = _derivatives[0];
         auto factor = t;
@@ -70,22 +67,22 @@ public:
     }
 
     /// Return the directional derivatives of this TaylorSeries.
-    auto derivatives()
+    AUTODIFF_DEVICE_FUNC auto derivatives()
     {
         return _derivatives;
     }
 
 private:
     /// The directional derivatives of the function up to Nth order.
-    std::array<V, N + 1> _derivatives;
+    stdx::array<V, N + 1> _derivatives;
 };
 
 /// Return a TaylorSeries of a scalar or vector function *f* along a direction *v* at *x*.
 template<typename Fun, typename...Vecs, typename... Args>
-auto taylorseries(const Fun& f, const Along<Vecs...>& along, const At<Args...>& at)
+AUTODIFF_DEVICE_FUNC auto taylorseries(const Fun& f, const Along<Vecs...>& along, const At<Args...>& at)
 {
     auto data = derivatives(f, along, at);
-    constexpr auto N = data.size() - 1;
+    constexpr auto N = stdx::tuple_size_v<decltype(data)> - 1;
     using V = typename decltype(data)::value_type;
     return TaylorSeries<N, V>(data);
 }

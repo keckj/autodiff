@@ -43,13 +43,13 @@ namespace detail {
 template <typename... Args> struct ambiguate : public Args... {};
 
 template<typename A, typename = void>
-struct got_type : std::false_type {};
+struct got_type : stdx::false_type {};
 
 template<typename A>
-struct got_type<A> : std::true_type { typedef A type; };
+struct got_type<A> : stdx::true_type { typedef A type; };
 
 template<typename T, T>
-struct sig_check : std::true_type {};
+struct sig_check : stdx::true_type {};
 
 template<typename Alias, typename AmbiguitySeed>
 struct has_member {
@@ -68,12 +68,12 @@ struct has_member {
 //Check for any member with given name, whether var, func, class, union, enum.
 #define CREATE_MEMBER_CHECK(member)                                         \
                                                                             \
-template<typename T, typename = std::true_type>                             \
+template<typename T, typename = stdx::true_type>                             \
 struct Alias_##member;                                                      \
                                                                             \
 template<typename T>                                                        \
 struct Alias_##member <                                                     \
-    T, std::integral_constant<bool, got_type<decltype(&T::member)>::value>  \
+    T, stdx::integral_constant<bool, got_type<decltype(&T::member)>::value>  \
 > { static const decltype(&T::member) value; };                             \
                                                                             \
 struct AmbiguitySeed_##member { char member; };                             \
@@ -96,8 +96,8 @@ template<typename T>
 constexpr bool hasSize = has_member_size<PlainType<T>>::value;
 
 // Create type trait struct `has_operator_bracket`.
-template<class, typename T> struct has_operator_bracket_impl : std::false_type {};
-template<typename T> struct has_operator_bracket_impl<decltype( void(std::declval<T>().operator [](0)) ), T> : std::true_type {};
+template<class, typename T> struct has_operator_bracket_impl : stdx::false_type {};
+template<typename T> struct has_operator_bracket_impl<decltype( void(stdx::declval<T>().operator [](0)) ), T> : stdx::true_type {};
 
 /// Boolean type that is true if type T implements `operator[](int)` method.
 template<typename T> struct has_operator_bracket : has_operator_bracket_impl<void, T> {};

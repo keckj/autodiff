@@ -119,7 +119,7 @@ using Mat = Eigen::Matrix<T, Rows, Cols, 0, MaxRows, MaxCols>;
 
 /// Return the gradient vector of variable y with respect to variables x.
 template<typename T, typename X>
-auto gradient(const Variable<T>& y, Eigen::DenseBase<X>& x)
+AUTODIFF_DEVICE_FUNC auto gradient(const Variable<T>& y, Eigen::DenseBase<X>& x)
 {
     using U = VariableValueType<T>;
 
@@ -149,7 +149,7 @@ auto gradient(const Variable<T>& y, Eigen::DenseBase<X>& x)
 
 /// Return the Hessian matrix of variable y with respect to variables x.
 template<typename T, typename X, typename GradientVec>
-auto hessian(const Variable<T>& y, Eigen::DenseBase<X>& x, GradientVec& g)
+AUTODIFF_DEVICE_FUNC auto hessian(const Variable<T>& y, Eigen::DenseBase<X>& x, GradientVec& g)
 {
     using U = VariableValueType<T>;
 
@@ -157,7 +157,7 @@ auto hessian(const Variable<T>& y, Eigen::DenseBase<X>& x, GradientVec& g)
     static_assert(isVariable<ScalarX>, "Argument x is not a vector with Variable<T> (aka var) objects.");
 
     using ScalarG = typename GradientVec::Scalar;
-    static_assert(std::is_same_v<U, ScalarG>, "Argument g does not have the same arithmetic type as y.");
+    static_assert(stdx::is_same_v<U, ScalarG>, "Argument g does not have the same arithmetic type as y.");
 
     constexpr auto Rows = X::RowsAtCompileTime;
     constexpr auto MaxRows = X::MaxRowsAtCompileTime;
@@ -205,7 +205,7 @@ auto hessian(const Variable<T>& y, Eigen::DenseBase<X>& x, GradientVec& g)
 
 /// Return the Hessian matrix of variable y with respect to variables x.
 template<typename T, typename X>
-auto hessian(const Variable<T>& y, Eigen::DenseBase<X>& x)
+AUTODIFF_DEVICE_FUNC auto hessian(const Variable<T>& y, Eigen::DenseBase<X>& x)
 {
     using U = VariableValueType<T>;
     constexpr auto Rows = X::RowsAtCompileTime;

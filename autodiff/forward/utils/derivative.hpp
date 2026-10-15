@@ -27,13 +27,10 @@
 // OUT OF OR IN CONNECTION WITH THE SOFTWARE OR THE USE OR OTHER DEALINGS IN THE
 // SOFTWARE.
 
-// C++ includes
-#include <cassert>
-#include <cstddef>
-
 // autodiff includes
 #include <autodiff/common/meta.hpp>
 #include <autodiff/common/vectortraits.hpp>
+#include <autodiff/common/wrt.hpp>
 
 #pragma once
 
@@ -43,40 +40,27 @@ namespace detail {
 template<typename... Args>
 struct At
 {
-    std::tuple<Args...> args;
-};
-
-template<typename... Args>
-struct Wrt
-{
-    std::tuple<Args...> args;
+    stdx::tuple<Args...> args;
 };
 
 template<typename... Args>
 struct Along
 {
-    std::tuple<Args...> args;
+    stdx::tuple<Args...> args;
 };
-
-/// The keyword used to denote the variables *with respect to* the derivative is calculated.
-template<typename... Args>
-AUTODIFF_DEVICE_FUNC auto wrt(Args&&... args)
-{
-    return Wrt<Args&&...>{ std::forward_as_tuple(std::forward<Args>(args)...) };
-}
 
 /// The keyword used to denote the variables *at* which the derivatives are calculated.
 template<typename... Args>
 AUTODIFF_DEVICE_FUNC auto at(Args&&... args)
 {
-    return At<Args&&...>{ std::forward_as_tuple(std::forward<Args>(args)...) };
+    return At<Args&&...>{ stdx::forward_as_tuple(stdx::forward<Args>(args)...) };
 }
 
 /// The keyword used to denote the direction vector *along* which the derivatives are calculated.
 template<typename... Args>
 AUTODIFF_DEVICE_FUNC auto along(Args&&... args)
 {
-    return Along<Args&&...>{ std::forward_as_tuple(std::forward<Args>(args)...) };
+    return Along<Args&&...>{ stdx::forward_as_tuple(stdx::forward<Args>(args)...) };
 }
 
 /// Seed each dual number in the **wrt** list using its position as the derivative order to be seeded.
@@ -94,11 +78,13 @@ AUTODIFF_DEVICE_FUNC auto seed(const Wrt<Var&, Vars&...>& wrt, T&& seedval)
     constexpr static auto N = Order<Var>;
     constexpr static auto size = 1 + sizeof...(Vars);
     static_assert(size <= N, "It is not possible to compute higher-order derivatives with order greater than that of the autodiff number (e.g., using wrt(x, x, y, z) will fail if the autodiff numbers in use have order below 4).");
-    For<N>([&](auto i) constexpr {
+    if constexpr (size == 1)
+        seedalong(stdx::get<0>(wrt.args), seedval); // the derivatives of all orders are with respect to the same variable, which Real<N, T> also supports
+    else For<N>([&](auto i) constexpr {
         if constexpr (i.index < size)
-            seed<i.index + 1>(std::get<i>(wrt.args), seedval);
+            seed<i.index + 1>(stdx::get<i>(wrt.args), seedval);
         else
-            seed<i.index + 1>(std::get<size - 1>(wrt.args), seedval); // use the last variable in the wrt list as the variable for which the remaining higher-order derivatives are calculated (e.g., derivatives(f, wrt(x), at(x)) will produce [f0, fx, fxx, fxxx, fxxxx] when x is a 4th order dual number).
+            seed<i.index + 1>(stdx::get<size - 1>(wrt.args), seedval); // use the last variable in the wrt list as the variable for which the remaining higher-order derivatives are calculated (e.g., derivatives(f, wrt(x), at(x)) will produce [f0, fx, fxx, fxxx, fxxxx] when x is a 4th order dual number).
     });
 }
 
@@ -124,9 +110,9 @@ AUTODIFF_DEVICE_FUNC auto seed(const At<Args...>& at, const Along<Vecs...>& alon
             static_assert(isVector<decltype(dir)>);
             assert(arg.size() == dir.size());
             for(auto i = 0; i < dir.size(); ++i)
-                seed<1>(arg[i], dir[i]);
+                seedalong(arg[i], dir[i]);
         }
-        else seed<1>(arg, dir);
+        else seedalong(arg, dir);
     });
 }
 
@@ -136,9 +122,9 @@ AUTODIFF_DEVICE_FUNC auto unseed(const At<Args...>& at)
     ForEach(at.args, [&](auto& arg) constexpr {
         if constexpr (isVector<decltype(arg)>) {
             for(auto i = 0; i < arg.size(); ++i)
-                seed<1>(arg[i], 0.0);
+                seedalong(arg[i], 0.0);
         }
-        else seed<1>(arg, 0.0);
+        else seedalong(arg, 0.0);
     });
 }
 
@@ -154,18 +140,18 @@ AUTODIFF_DEVICE_FUNC auto unseed(T& x)
     seed<order>(x, 0.0);
 }
 
-#ifdef __CUDA_ARCH__
-template<typename F, typename Tuple, std::size_t... I>
-AUTODIFF_DEVICE_FUNC constexpr decltype(auto) device_apply_impl(F&& f, Tuple&& t, std::index_sequence<I...>) {
-    return std::forward<F>(f)(std::get<I>(std::forward<Tuple>(t))...);
+#if AUTODIFF_DEVICE_COMPILE
+template<typename F, typename Tuple, size_t... I>
+AUTODIFF_DEVICE_FUNC constexpr decltype(auto) device_apply_impl(F&& f, Tuple&& t, stdx::index_sequence<I...>) {
+    return stdx::forward<F>(f)(stdx::get<I>(stdx::forward<Tuple>(t))...);
 }
 
 template<typename F, typename Tuple>
 AUTODIFF_DEVICE_FUNC constexpr decltype(auto) device_apply(F&& f, Tuple&& t) {
     return device_apply_impl(
-        std::forward<F>(f),
-        std::forward<Tuple>(t),
-        std::make_index_sequence<std::tuple_size_v<std::remove_reference_t<Tuple>>>{}
+        stdx::forward<F>(f),
+        stdx::forward<Tuple>(t),
+        stdx::make_index_sequence<stdx::tuple_size_v<stdx::remove_reference_t<Tuple>>>{}
     );
 }
 #endif
@@ -174,10 +160,10 @@ template<typename Fun, typename... Args, typename... Vars>
 AUTODIFF_DEVICE_FUNC auto eval(const Fun& f, const At<Args...>& at, const Wrt<Vars...>& wrt)
 {
     seed(wrt);
-#ifdef __CUDA_ARCH__
+#if AUTODIFF_DEVICE_COMPILE
     auto u = device_apply(f, at.args);
 #else
-    auto u = std::apply(f, at.args);
+    auto u = stdx::apply(f, at.args);
 #endif
     unseed(wrt);
     return u;
@@ -187,10 +173,10 @@ template<typename Fun, typename... Args, typename... Vecs>
 AUTODIFF_DEVICE_FUNC auto eval(const Fun& f, const At<Args...>& at, const Along<Vecs...>& along)
 {
     seed(at, along);
-#ifdef __CUDA_ARCH__
+#if AUTODIFF_DEVICE_COMPILE
     auto u = device_apply(f, at.args);
 #else
-    auto u = std::apply(f, at.args);
+    auto u = stdx::apply(f, at.args);
 #endif
     unseed(at);
     return u;
@@ -204,7 +190,8 @@ AUTODIFF_DEVICE_FUNC auto derivative(const Vec& u)
     using NumType = decltype(u[0]); // get the type of the dual/real number
     using T = NumericType<NumType>; // get the numeric/floating point type of the dual/real number
     using Res = VectorReplaceValueType<Vec, T>; // get the type of the vector containing numeric values instead of dual/real numbers (e.g., vector<real> becomes vector<double>, VectorXdual becomes VectorXd, etc.)
-    Res res(len); // create an array to store the derivatives stored inside the dual/real number
+    Res res{}; // create an array to store the derivatives stored inside the dual/real number
+    resizeVector(res, len);
     for(auto i = 0U; i < len; ++i)
         res[i] = derivative<order>(u[i]); // get the derivative of given order from i-th dual/real number
     return res;
@@ -221,7 +208,6 @@ AUTODIFF_DEVICE_FUNC auto grad(const T& x)
 template<typename Result>
 AUTODIFF_DEVICE_FUNC auto derivatives(const Result& result)
 {
-#ifndef __CUDA_ARCH__
     if constexpr (isVector<Result>) // check if the argument is a vector container of dual/real numbers
     {
         size_t len = result.size(); // the length of the vector containing dual/real numbers
@@ -229,20 +215,19 @@ AUTODIFF_DEVICE_FUNC auto derivatives(const Result& result)
         using T = NumericType<NumType>; // get the numeric/floating point type of the dual/real number
         using Vec = VectorReplaceValueType<Result, T>; // get the type of the vector containing numeric values instead of dual/real numbers (e.g., vector<real> becomes vector<double>, VectorXdual becomes VectorXd, etc.)
         constexpr auto N = Order<NumType>; // the order of the dual/real number
-        std::array<Vec, N + 1> values; // create an array to store the derivatives stored inside the dual/real number
+        stdx::array<Vec, N + 1> values; // create an array to store the derivatives stored inside the dual/real number
         For<N + 1>([&](auto i) constexpr {
-            values[i].resize(len);
+            resizeVector(values[i], len);
             for(auto j = 0U; j < len; ++j)
                 values[i][j] = derivative<i>(result[j]); // get the ith derivative of the jth dual/real number
         });
         return values;
     }
     else // result is then just a dual/real number
-#endif
     {
         using T = NumericType<Result>; // get the numeric/floating point type of the dual/real result number
         constexpr auto N = Order<Result>; // the order of the dual/real result number
-        std::array<T, N + 1> values; // create an array to store the derivatives stored inside the dual/real number
+        stdx::array<T, N + 1> values; // create an array to store the derivatives stored inside the dual/real number
         For<N + 1>([&](auto i) constexpr {
             values[i] = derivative<i>(result);
         });

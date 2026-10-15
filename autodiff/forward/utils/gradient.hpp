@@ -30,7 +30,9 @@
 #pragma once
 
 // autodiff includes
-#ifdef AUTODIFF_EIGEN_FOUND
+// The Eigen overloads are enabled if autodiff was configured with Eigen or if Eigen was included before this header
+// (as done by autodiff/forward/dual/eigen.hpp and autodiff/forward/real/eigen.hpp).
+#if defined(AUTODIFF_EIGEN_FOUND) || defined(EIGEN_WORLD_VERSION)
 #include <autodiff/common/eigen.hpp>
 #endif
 #include <autodiff/common/meta.hpp>
@@ -40,9 +42,17 @@
 namespace autodiff {
 namespace detail {
 
+/// The length of an item in a `wrt(...)` list known at compile time (DynamicSize if not known).
+template<typename Item>
+constexpr int WrtItemStaticLength = isVector<Item> ? VectorSize<Item> : 1;
+
+/// The sum of lengths of all items in a `wrt(...)` list known at compile time (DynamicSize if any is not known).
+template<typename... Vars>
+constexpr int WrtStaticLength = ((WrtItemStaticLength<Vars> == DynamicSize) || ...) ? DynamicSize : (0 + ... + WrtItemStaticLength<Vars>);
+
 /// Return the length of an item in a `wrt(...)` list.
 template<typename Item>
-auto wrt_item_length(const Item& item) -> size_t
+AUTODIFF_DEVICE_FUNC auto wrt_item_length(const Item& item) -> size_t
 {
     if constexpr (isVector<Item>)
         return item.size(); // if item is a vector, return its size
@@ -52,7 +62,7 @@ auto wrt_item_length(const Item& item) -> size_t
 
 /// Return the sum of lengths of all itens in a `wrt(...)` list.
 template<typename... Vars>
-auto wrt_total_length(const Wrt<Vars...>& wrt) -> size_t
+AUTODIFF_DEVICE_FUNC auto wrt_total_length(const Wrt<Vars...>& wrt) -> size_t
 {
     return Reduce(wrt.args, [&](auto&& item) constexpr {
         return wrt_item_length(item);
@@ -63,7 +73,7 @@ auto wrt_total_length(const Wrt<Vars...>& wrt) -> size_t
 // accepts an index i and the variable x[i], where i is the global index of the
 // variable in the list.
 template<typename Function, typename... Vars>
-constexpr auto ForEachWrtVar(const Wrt<Vars...>& wrt, Function&& f)
+AUTODIFF_DEVICE_FUNC constexpr auto ForEachWrtVar(const Wrt<Vars...>& wrt, Function&& f)
 {
     auto i = 0; // the current index of the variable in the wrt list
     ForEach(wrt.args, [&](auto& item) constexpr
@@ -85,14 +95,14 @@ constexpr auto ForEachWrtVar(const Wrt<Vars...>& wrt, Function&& f)
 
 /// Return the gradient of scalar function *f* with respect to some or all variables *x*.
 template<typename Fun, typename... Vars, typename... Args, typename Y, typename G>
-void gradient(const Fun& f, const Wrt<Vars...>& wrt, const At<Args...>& at, Y& u, G& g)
+AUTODIFF_DEVICE_FUNC void gradient(const Fun& f, const Wrt<Vars...>& wrt, const At<Args...>& at, Y& u, G& g)
 {
     static_assert(sizeof...(Vars) >= 1);
     static_assert(sizeof...(Args) >= 1);
 
     const size_t n = wrt_total_length(wrt);
 
-    g.resize(n);
+    resizeVector(g, n);
 
     if(n == 0) return;
 
@@ -105,13 +115,13 @@ void gradient(const Fun& f, const Wrt<Vars...>& wrt, const At<Args...>& at, Y& u
 
 }
 
-#ifdef AUTODIFF_EIGEN_FOUND
+#if defined(AUTODIFF_EIGEN_FOUND) || defined(EIGEN_WORLD_VERSION)
 /// Return the gradient of scalar function *f* with respect to some or all variables *x*.
 template<typename Fun, typename... Vars, typename... Args, typename Y>
-auto gradient(const Fun& f, const Wrt<Vars...>& wrt, const At<Args...>& at, Y& u)
+AUTODIFF_DEVICE_FUNC auto gradient(const Fun& f, const Wrt<Vars...>& wrt, const At<Args...>& at, Y& u)
 {
     using T = NumericType<decltype(u)>; // the underlying numeric floating point type in the autodiff number u
-    using Vec = VectorX<T>; // the gradient vector type with floating point values (not autodiff numbers!)
+    using Vec = VectorN<T, WrtStaticLength<Vars...>>; // the gradient vector type with floating point values (not autodiff numbers!), with fixed length if known at compile time
 
     Vec g;
     gradient(f, wrt, at, u, g);
@@ -120,7 +130,7 @@ auto gradient(const Fun& f, const Wrt<Vars...>& wrt, const At<Args...>& at, Y& u
 
 /// Return the gradient of scalar function *f* with respect to some or all variables *x*.
 template<typename Fun, typename... Vars, typename... Args>
-auto gradient(const Fun& f, const Wrt<Vars...>& wrt, const At<Args...>& at)
+AUTODIFF_DEVICE_FUNC auto gradient(const Fun& f, const Wrt<Vars...>& wrt, const At<Args...>& at)
 {
     ReturnType<Fun, Args...> u;
     return gradient(f, wrt, at, u);
@@ -129,7 +139,7 @@ auto gradient(const Fun& f, const Wrt<Vars...>& wrt, const At<Args...>& at)
 
 /// Return the Jacobian matrix of a function *f* with respect to some or all variables.
 template<typename Fun, typename... Vars, typename... Args, typename Y, typename Jac>
-void jacobian(const Fun& f, const Wrt<Vars...>& wrt, const At<Args...>& at, Y& F, Jac& J)
+AUTODIFF_DEVICE_FUNC void jacobian(const Fun& f, const Wrt<Vars...>& wrt, const At<Args...>& at, Y& F, Jac& J)
 {
     static_assert(sizeof...(Vars) >= 1);
     static_assert(sizeof...(Args) >= 1);
@@ -140,20 +150,20 @@ void jacobian(const Fun& f, const Wrt<Vars...>& wrt, const At<Args...>& at, Y& F
     ForEachWrtVar(wrt, [&](auto&& i, auto&& xi) constexpr {
         static_assert(!isConst<decltype(xi)>, "Expecting non-const autodiff numbers in wrt list because these need to be seeded, and thus altered!");
         F = eval(f, at, detail::wrt(xi)); // evaluate F with xi seeded so that dF/dxi is also computed
-        if(m == 0) { m = F.size(); J.resize(m, n); };
+        if(m == 0) { m = F.size(); resizeMatrix(J, m, n); };
         for(size_t row = 0; row < m; ++row)
             J(row, i) = derivative<1>(F[row]);
     });
 }
 
-#ifdef AUTODIFF_EIGEN_FOUND
+#if defined(AUTODIFF_EIGEN_FOUND) || defined(EIGEN_WORLD_VERSION)
 /// Return the Jacobian matrix of a function *f* with respect to some or all variables.
 template<typename Fun, typename... Vars, typename... Args, typename Y>
-auto jacobian(const Fun& f, const Wrt<Vars...>& wrt, const At<Args...>& at, Y& F)
+AUTODIFF_DEVICE_FUNC auto jacobian(const Fun& f, const Wrt<Vars...>& wrt, const At<Args...>& at, Y& F)
 {
     using U = VectorValueType<decltype(F)>; // the type of the autodiff numbers in vector F
     using T = NumericType<U>; // the underlying numeric floating point type in the autodiff number U
-    using Mat = MatrixX<T>; // the jacobian matrix type with floating point values (not autodiff numbers!)
+    using Mat = MatrixMN<T, VectorSize<decltype(F)>, WrtStaticLength<Vars...>>; // the jacobian matrix type with floating point values (not autodiff numbers!), with fixed dimensions if known at compile time
 
     Mat J;
     jacobian(f, wrt, at, F, J);
@@ -162,10 +172,10 @@ auto jacobian(const Fun& f, const Wrt<Vars...>& wrt, const At<Args...>& at, Y& F
 
 /// Return the Jacobian matrix of a function *f* with respect to some or all variables.
 template<typename Fun, typename... Vars, typename... Args>
-auto jacobian(const Fun& f, const Wrt<Vars...>& wrt, const At<Args...>& at)
+AUTODIFF_DEVICE_FUNC auto jacobian(const Fun& f, const Wrt<Vars...>& wrt, const At<Args...>& at)
 {
     using Y = ReturnType<Fun, Args...>;
-    static_assert(!std::is_same_v<Y, void>,
+    static_assert(!stdx::is_same_v<Y, void>,
         "In jacobian(f, wrt(x), at(x)), the type of x "
         "might not be the same as in the definition of f. "
         "For example, x is Eigen::VectorXdual but the "
@@ -177,15 +187,15 @@ auto jacobian(const Fun& f, const Wrt<Vars...>& wrt, const At<Args...>& at)
 
 /// Return the hessian matrix of scalar function *f* with respect to some or all variables *x*.
 template<typename Fun, typename... Vars, typename... Args, typename U, typename G, typename H>
-void hessian(const Fun& f, const Wrt<Vars...>& wrt, const At<Args...>& at, U& u, G& g, H& h)
+AUTODIFF_DEVICE_FUNC void hessian(const Fun& f, const Wrt<Vars...>& wrt, const At<Args...>& at, U& u, G& g, H& h)
 {
     static_assert(sizeof...(Vars) >= 1);
     static_assert(sizeof...(Args) >= 1);
 
     size_t n = wrt_total_length(wrt);
 
-    g.resize(n);
-    h.resize(n, n);
+    resizeVector(g, n);
+    resizeMatrix(h, n, n);
 
     ForEachWrtVar(wrt, [&](auto&& i, auto&& xi) constexpr {
         ForEachWrtVar(wrt, [&](auto&& j, auto&& xj) constexpr
@@ -200,13 +210,14 @@ void hessian(const Fun& f, const Wrt<Vars...>& wrt, const At<Args...>& at, U& u,
     });
 }
 
-#ifdef AUTODIFF_EIGEN_FOUND
+#if defined(AUTODIFF_EIGEN_FOUND) || defined(EIGEN_WORLD_VERSION)
 /// Return the hessian matrix of scalar function *f* with respect to some or all variables *x*.
 template<typename Fun, typename... Vars, typename... Args, typename U, typename G>
-auto hessian(const Fun& f, const Wrt<Vars...>& wrt, const At<Args...>& at, U& u, G& g)
+AUTODIFF_DEVICE_FUNC auto hessian(const Fun& f, const Wrt<Vars...>& wrt, const At<Args...>& at, U& u, G& g)
 {
     using T = NumericType<decltype(u)>; // the underlying numeric floating point type in the autodiff number u
-    using Mat = MatrixX<T>; // the Hessian matrix type with floating point values (not autodiff numbers!)
+    constexpr auto N = WrtStaticLength<Vars...>;
+    using Mat = MatrixMN<T, N, N>; // the Hessian matrix type with floating point values (not autodiff numbers!), with fixed dimensions if known at compile time
 
     Mat H;
     hessian(f, wrt, at, u, g, H);
@@ -215,11 +226,11 @@ auto hessian(const Fun& f, const Wrt<Vars...>& wrt, const At<Args...>& at, U& u,
 
 /// Return the hessian matrix of scalar function *f* with respect to some or all variables *x*.
 template<typename Fun, typename... Vars, typename... Args>
-auto hessian(const Fun& f, const Wrt<Vars...>& wrt, const At<Args...>& at)
+AUTODIFF_DEVICE_FUNC auto hessian(const Fun& f, const Wrt<Vars...>& wrt, const At<Args...>& at)
 {
     using U = ReturnType<Fun, Args...>;
     using T = NumericType<U>;
-    using Vec = VectorX<T>;
+    using Vec = VectorN<T, WrtStaticLength<Vars...>>;
     U u;
     Vec g;
     return hessian(f, wrt, at, u, g);

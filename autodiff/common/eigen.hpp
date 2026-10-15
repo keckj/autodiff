@@ -79,6 +79,8 @@ struct VectorTraits<Eigen::Matrix<Scalar, Rows, Cols, Options, MaxRows, MaxCols>
 
     template<typename NewValueType>
     using ReplaceValueType = Eigen::Matrix<NewValueType, Rows, Cols, Options, MaxRows, MaxCols>;
+
+    static constexpr int Size = Eigen::Matrix<Scalar, Rows, Cols, Options, MaxRows, MaxCols>::SizeAtCompileTime;
 };
 
 template<typename Scalar, int Rows, int Cols, int Options, int MaxRows, int MaxCols>
@@ -88,18 +90,43 @@ struct VectorTraits<Eigen::Array<Scalar, Rows, Cols, Options, MaxRows, MaxCols>>
 
     template<typename NewValueType>
     using ReplaceValueType = Eigen::Array<NewValueType, Rows, Cols, Options, MaxRows, MaxCols>;
+
+    static constexpr int Size = Eigen::Array<Scalar, Rows, Cols, Options, MaxRows, MaxCols>::SizeAtCompileTime;
 };
 
-template<typename VectorType, int Size>
-struct VectorTraits<Eigen::VectorBlock<VectorType, Size>>
+template<typename VectorType, int BlockSize>
+struct VectorTraits<Eigen::VectorBlock<VectorType, BlockSize>>
 {
     using ValueType = typename PlainType<VectorType>::Scalar;
 
     template<typename NewValueType>
     using ReplaceValueType = VectorReplaceValueType<VectorType, NewValueType>;
+
+    static constexpr int Size = BlockSize;
 };
 
-#if EIGEN_VERSION_AT_LEAST(3, 3, 90)
+#if EIGEN_VERSION_AT_LEAST(5, 0, 0)
+
+    // Since Eigen 5, SingleRange is a class template on the index known at compile time
+    template<typename VectorType, typename IndicesType, Eigen::Index Value>
+    struct VectorTraits<Eigen::IndexedView<VectorType, IndicesType, Eigen::internal::SingleRange<Value>>>
+    {
+        using ValueType = typename PlainType<VectorType>::Scalar;
+
+        template<typename NewValueType>
+        using ReplaceValueType = VectorReplaceValueType<VectorType, NewValueType>;
+    };
+
+    template<typename VectorType, typename IndicesType, Eigen::Index Value>
+    struct VectorTraits<Eigen::IndexedView<VectorType, Eigen::internal::SingleRange<Value>, IndicesType>>
+    {
+        using ValueType = typename PlainType<VectorType>::Scalar;
+
+        template<typename NewValueType>
+        using ReplaceValueType = VectorReplaceValueType<VectorType, NewValueType>;
+    };
+
+#elif EIGEN_VERSION_AT_LEAST(3, 3, 90)
 
     template<typename VectorType, typename IndicesType>
     struct VectorTraits<Eigen::IndexedView<VectorType, IndicesType, Eigen::internal::SingleRange>>
@@ -128,6 +155,8 @@ struct VectorTraits<Eigen::Ref<MatrixType>>
 
     template<typename NewValueType>
     using ReplaceValueType = VectorReplaceValueType<MatrixType, NewValueType>;
+
+    static constexpr int Size = VectorSize<MatrixType>;
 };
 
 template<typename VectorType, int MapOptions, typename StrideType>
@@ -137,6 +166,8 @@ struct VectorTraits<Eigen::Map<VectorType, MapOptions, StrideType>>
 
     template<typename NewValueType>
     using ReplaceValueType = Eigen::Map<VectorReplaceValueType<VectorType, NewValueType>, MapOptions, StrideType>;
+
+    static constexpr int Size = VectorSize<VectorType>;
 };
 
 //=====================================================================================================================
@@ -150,6 +181,14 @@ using VectorX = Eigen::Matrix<Scalar, Eigen::Dynamic, 1, 0, Eigen::Dynamic, 1>;
 
 template<typename Scalar>
 using MatrixX = Eigen::Matrix<Scalar, Eigen::Dynamic, Eigen::Dynamic, 0, Eigen::Dynamic, Eigen::Dynamic>;
+
+/// A column vector of length known at compile time, or dynamic if Size is Eigen::Dynamic.
+template<typename Scalar, int Size>
+using VectorN = Eigen::Matrix<Scalar, Size, 1, 0, Size, 1>;
+
+/// A matrix with dimensions known at compile time, or dynamic if Rows or Cols is Eigen::Dynamic.
+template<typename Scalar, int Rows, int Cols>
+using MatrixMN = Eigen::Matrix<Scalar, Rows, Cols, (Rows == 1 && Cols != 1) ? Eigen::RowMajor : Eigen::ColMajor, Rows, Cols>;
 
 } // namespace detail
 } // namespace autodiff

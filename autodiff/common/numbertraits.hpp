@@ -39,7 +39,7 @@ namespace detail {
 template<typename T>
 struct ArithmeticTraits
 {
-    static constexpr bool isArithmetic = std::is_arithmetic_v<T>;
+    static constexpr bool isArithmetic = stdx::is_arithmetic_v<T>;
 };
 
 /// A compile-time constant that indicates whether a type is arithmetic.
@@ -55,7 +55,7 @@ template<typename T>
 struct NumberTraits
 {
     /// The underlying floating point type of the autodiff number type.
-    using NumericType = std::conditional_t<isArithmetic<T>, T, NumericTypeInfoNotDefinedFor<T>>;
+    using NumericType = stdx::conditional_t<isArithmetic<T>, T, NumericTypeInfoNotDefinedFor<T>>;
 
     /// The order of the autodiff number type.
     static constexpr auto Order = 0;

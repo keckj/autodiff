@@ -52,6 +52,14 @@ else()
     message(STATUS "No CUDA compiler found")
 endif()
 
+# Tests of autodiff compiled at runtime with NVRTC (require the CUDA toolkit, but not necessarily a GPU)
+if(CMAKE_CUDA_COMPILER)
+    set(AUTODIFF_BUILD_NVRTC_TESTS_DEFAULT ON)
+else()
+    set(AUTODIFF_BUILD_NVRTC_TESTS_DEFAULT OFF)
+endif()
+option(AUTODIFF_BUILD_NVRTC_TESTS "Enable the compilation of the NVRTC test runner." ${AUTODIFF_BUILD_NVRTC_TESTS_DEFAULT})
+
 # Build the library (actually, just provide details about the library target, specify required compile options, etc. because autodiff is header-only)
 add_subdirectory(autodiff)
 
